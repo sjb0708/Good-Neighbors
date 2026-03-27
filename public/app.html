@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Good Neighbors — Costa Blanca Villas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="/lucide.js"></script>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <!-- ── TOPBAR ────────────────────────────────────────────────────── -->
+  <header class="topbar" id="topbar">
+    <div class="topbar-inner">
+      <div class="topbar-left">
+        <div class="topbar-logo" onclick="navigate('feed')">
+          <div class="logo-mark">
+            <img src="/logo.png" alt="Good Neighbors" style="width:52px;height:52px;border-radius:50%;object-fit:cover;display:block;">
+          </div>
+          <div class="logo-text">
+            <span class="logo-name">Good Neighbors</span>
+            <span class="logo-hood">Costa Blanca Villas</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="topbar-center">
+        <div class="search-bar">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" placeholder="Search Costa Blanca Villas..." class="search-input" id="searchInput" />
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <button class="topbar-btn create-post-btn" onclick="openCreatePost()">
+          <i data-lucide="plus"></i>
+          <span>Post</span>
+        </button>
+
+        <button class="topbar-btn icon-btn" onclick="navigate('notifications')" id="notifBtn">
+          <i data-lucide="bell"></i>
+          <span class="notif-badge" id="notifBadge" style="display:none"></span>
+        </button>
+
+        <div class="topbar-avatar" id="topbarAvatar" onclick="toggleProfileMenu()">
+          <span class="avatar-initials" id="topbarInitials">SM</span>
+        </div>
+
+        <div class="profile-dropdown" id="profileDropdown">
+          <div class="dropdown-header">
+            <div class="avatar-lg" id="dropdownAvatar"><span id="dropdownInitials">SM</span></div>
+            <div>
+              <div class="dropdown-name" id="dropdownName">Sarah Bailey</div>
+              <div class="dropdown-sub">Costa Blanca Villas · Verified</div>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" onclick="navigate('profile'); closeDropdowns()">
+            <i data-lucide="user"></i> My Profile
+          </button>
+          <button class="dropdown-item" onclick="navigate('settings'); closeDropdowns()">
+            <i data-lucide="settings"></i> Settings
+          </button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item danger" onclick="logout()">
+            <i data-lucide="log-out"></i> Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── APP BODY ──────────────────────────────────────────────────── -->
+  <div class="app-body">
+
+    <!-- Left Sidebar -->
+    <aside class="sidebar-left">
+      <!-- User Card -->
+      <div class="sidebar-user-card" id="sidebarUserCard">
+        <div class="sidebar-avatar" id="sidebarAvatar">
+          <span id="sidebarInitials">SM</span>
+        </div>
+        <div class="sidebar-user-name" id="sidebarName">Sarah Bailey</div>
+        <div class="sidebar-user-hood">
+          <i data-lucide="map-pin" style="width:12px;height:12px"></i>
+          Farallón, Coclé, Panama
+          <span class="verified-badge-sm">✓</span>
+        </div>
+        <div class="sidebar-stats">
+          <div class="sidebar-stat">
+            <span class="stat-val" id="sidebarPosts">27</span>
+            <span class="stat-lbl">Posts</span>
+          </div>
+          <div class="sidebar-stat">
+            <span class="stat-val" id="sidebarNeighbors">94</span>
+            <span class="stat-lbl">Neighbors</span>
+          </div>
+          <div class="sidebar-stat">
+            <span class="stat-val" id="sidebarPoints">438</span>
+            <span class="stat-lbl">Points</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Neighborhood</div>
+        <button class="nav-item active" data-section="feed" onclick="navigate('feed')">
+          <i data-lucide="home"></i>
+          <span>Feed</span>
+        </button>
+        <button class="nav-item" data-section="marketplace" onclick="navigate('marketplace')">
+          <i data-lucide="shopping-bag"></i>
+          <span>Marketplace</span>
+          <span class="nav-badge">10</span>
+        </button>
+        <button class="nav-item" data-section="events" onclick="navigate('events')">
+          <i data-lucide="calendar"></i>
+          <span>Events</span>
+          <span class="nav-badge">5</span>
+        </button>
+        <button class="nav-item" data-section="safety" onclick="navigate('safety')">
+          <i data-lucide="shield-alert"></i>
+          <span>Safety</span>
+          <span class="nav-badge danger">3</span>
+        </button>
+
+        <div class="nav-section-label">Discover</div>
+        <button class="nav-item" data-section="businesses" onclick="navigate('businesses')">
+          <i data-lucide="store"></i>
+          <span>Businesses</span>
+        </button>
+        <button class="nav-item" data-section="neighbors" onclick="navigate('neighbors')">
+          <i data-lucide="users"></i>
+          <span>Neighbors</span>
+        </button>
+        <button class="nav-item" data-section="groups" onclick="navigate('groups')">
+          <i data-lucide="layers"></i>
+          <span>Groups</span>
+        </button>
+        <button class="nav-item" data-section="realestate" onclick="navigate('realestate')">
+          <i data-lucide="home"></i>
+          <span>Real Estate</span>
+          <span class="nav-badge" style="background:var(--seafoam)">8</span>
+        </button>
+      </nav>
+
+      <!-- Emergency Contacts -->
+      <div class="sidebar-emergency">
+        <div class="emergency-title">
+          <i data-lucide="phone-call" style="width:14px;height:14px"></i>
+          Emergency Contacts
+        </div>
+        <a href="tel:911" class="ec-row ec-ems">
+          <span class="ec-icon">🚑</span>
+          <div class="ec-info">
+            <div class="ec-name">SUME — National EMS</div>
+            <div class="ec-num">911</div>
+          </div>
+        </a>
+        <a href="tel:104" class="ec-row ec-police">
+          <span class="ec-icon">👮</span>
+          <div class="ec-info">
+            <div class="ec-name">Policía Nacional</div>
+            <div class="ec-num">104</div>
+          </div>
+        </a>
+        <a href="tel:103" class="ec-row ec-fire">
+          <span class="ec-icon">🚒</span>
+          <div class="ec-info">
+            <div class="ec-name">Bomberos — Fire</div>
+            <div class="ec-num">103</div>
+          </div>
+        </a>
+        <a href="tel:+5076790-4807" class="ec-row ec-private">
+          <span class="ec-icon">🏥</span>
+          <div class="ec-info">
+            <div class="ec-name">Buenaventura EMTS</div>
+            <div class="ec-num">507 6790-4807</div>
+          </div>
+        </a>
+        <div class="ec-divider">Local Emergency Contacts</div>
+        <a href="tel:+507993-3233" class="ec-row ec-local">
+          <span class="ec-icon">🚔</span>
+          <div class="ec-info">
+            <div class="ec-name">Río Hato Station</div>
+            <div class="ec-num">507 993-3233</div>
+          </div>
+        </a>
+        <a href="tel:+5076590-4374" class="ec-row ec-local">
+          <span class="ec-icon">🚔</span>
+          <div class="ec-info">
+            <div class="ec-name">Farallón Station</div>
+            <div class="ec-num">507 6590-4374</div>
+          </div>
+        </a>
+        <a href="tel:+507906-1125" class="ec-row ec-local">
+          <span class="ec-icon">🚒</span>
+          <div class="ec-info">
+            <div class="ec-name">Antón Fire Station</div>
+            <div class="ec-num">507 906-1125</div>
+          </div>
+        </a>
+      </div>
+
+      <!-- Neighborhood Stats -->
+      <div class="sidebar-hood-stats">
+        <div class="hood-stat-title">
+          <i data-lucide="sun" style="width:14px;height:14px;color:#F4A261"></i>
+          Costa Blanca Villas
+        </div>
+        <div class="hood-stat-row">
+          <span>Villa homes</span>
+          <strong>200</strong>
+        </div>
+        <div class="hood-stat-row">
+          <span>Verified residents</span>
+          <strong>312</strong>
+        </div>
+        <div class="hood-stat-row">
+          <span>Active this week</span>
+          <strong>148</strong>
+        </div>
+        <div class="hood-weather">
+          <span class="weather-icon">☀️</span>
+          <div>
+            <div class="weather-temp">84°F</div>
+            <div class="weather-desc">Sunny · Dry Season · Farallón, Panama</div>
+          </div>
+        </div>
+        <div class="hood-tides" id="tideWidget">
+          <div class="tide-header">🌊 Playa Farallón Tides</div>
+          <div id="tideData" class="tide-rows">
+            <div class="tide-loading">Loading tides…</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+      <div id="sectionContent" class="section-content"></div>
+    </main>
+
+    <!-- Right Sidebar -->
+    <aside class="sidebar-right">
+      <div class="right-widget" id="whatsHappening">
+        <div class="widget-title">
+          <i data-lucide="zap" style="width:16px;height:16px;color:#F4A261"></i>
+          What's Happening
+        </div>
+        <div class="happening-item">
+          <span class="happening-dot safety"></span>
+          <div class="happening-text">
+            <strong>Safety Alert</strong> — suspicious vehicle near north gate
+            <div class="happening-time">3 hours ago</div>
+          </div>
+        </div>
+        <div class="happening-item">
+          <span class="happening-dot event"></span>
+          <div class="happening-text">
+            <strong>Bingo Night</strong> at Costa Blanca Beach Club
+            <div class="happening-time">Friday 7 PM · 48 going</div>
+          </div>
+        </div>
+        <div class="happening-item">
+          <span class="happening-dot lost"></span>
+          <div class="happening-text">
+            <strong>Lost Cat</strong> — orange tabby near Villa #47
+            <div class="happening-time">Please share</div>
+          </div>
+        </div>
+        <div class="happening-item">
+          <span class="happening-dot recommend"></span>
+          <div class="happening-text">
+            <strong>Amar By La Playa</strong> getting rave reviews
+            <div class="happening-time">52 agrees</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-widget" id="upcomingEvent">
+        <div class="widget-title">
+          <i data-lucide="calendar" style="width:16px;height:16px;color:#6C63FF"></i>
+          Next Event
+        </div>
+        <div class="next-event-card" onclick="navigate('events')">
+          <div class="next-event-date">
+            <span class="nev-month">APR</span>
+            <span class="nev-day">4</span>
+          </div>
+          <div class="next-event-info">
+            <div class="nev-title">Bingo Night — Beach Club</div>
+            <div class="nev-meta">7:00 PM · Costa Blanca Beach Club</div>
+            <div class="nev-going">🙋 48 going</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-widget">
+        <div class="widget-title">
+          <i data-lucide="trending-up" style="width:16px;height:16px;color:#2A9D8F"></i>
+          Trending Topics
+        </div>
+        <div class="trend-item" onclick="navigate('businesses')">🦞 Amar By La Playa — best ceviche</div>
+        <div class="trend-item" onclick="navigate('safety')">🚗 Suspicious vehicle near north gate</div>
+        <div class="trend-item" onclick="navigate('events')">🎉 Bingo Night this Friday</div>
+        <div class="trend-item" onclick="navigate('marketplace')">⛳ Golf cart for sale — Villa #3</div>
+        <div class="trend-item" onclick="navigate('events')">🎤 Karaoke at Nico's Beach Bar</div>
+      </div>
+
+      <div class="right-widget">
+        <div class="widget-title">
+          <i data-lucide="users" style="width:16px;height:16px;color:#0077B6"></i>
+          New Neighbors
+        </div>
+        <div class="new-neighbor">
+          <div class="avatar-sm" style="background:#E63946">EH</div>
+          <div class="nn-info">
+            <div class="nn-name">Emily Hart</div>
+            <div class="nn-street">Villa 318</div>
+          </div>
+          <button class="btn-wave">👋</button>
+        </div>
+        <div class="new-neighbor">
+          <div class="avatar-sm" style="background:#2A9D8F">DG</div>
+          <div class="nn-info">
+            <div class="nn-name">Daniel Giroux</div>
+            <div class="nn-street">Villa 102</div>
+          </div>
+          <button class="btn-wave">👋</button>
+        </div>
+        <div class="new-neighbor">
+          <div class="avatar-sm" style="background:#457B9D">KM</div>
+          <div class="nn-info">
+            <div class="nn-name">Kerry Maurer</div>
+            <div class="nn-street">Villa 323</div>
+          </div>
+          <button class="btn-wave">👋</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ── CREATE POST MODAL ─────────────────────────────────────────── -->
+  <div class="modal-overlay" id="createPostModal" onclick="handleModalOverlayClick(event,'createPostModal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Create a Post</h3>
+        <button class="modal-close" onclick="closeModal('createPostModal')">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Author row -->
+        <div class="create-author-row">
+          <div class="avatar-md" id="createAvatar" style="background:#0077B6">
+            <span id="createInitials">SM</span>
+          </div>
+          <div>
+            <div class="create-name" id="createName">Sarah Bailey</div>
+            <div class="create-hood">Costa Blanca Villas · <span class="verified-text">✓ Verified</span></div>
+          </div>
+        </div>
+
+        <!-- Post type tabs -->
+        <div class="post-type-tabs" id="postTypeTabs">
+          <button class="type-tab active" data-type="general" onclick="selectPostType('general',this)">
+            <span>💬</span> General
+          </button>
+          <button class="type-tab" data-type="safety" onclick="selectPostType('safety',this)">
+            <span>🚨</span> Safety
+          </button>
+          <button class="type-tab" data-type="lost_found" onclick="selectPostType('lost_found',this)">
+            <span>🔍</span> Lost & Found
+          </button>
+          <button class="type-tab" data-type="for_sale" onclick="selectPostType('for_sale',this)">
+            <span>🏷️</span> For Sale
+          </button>
+          <button class="type-tab" data-type="free" onclick="selectPostType('free',this)">
+            <span>🎁</span> Free
+          </button>
+          <button class="type-tab" data-type="events" onclick="selectPostType('events',this)">
+            <span>📅</span> Event
+          </button>
+          <button class="type-tab" data-type="recommendation" onclick="selectPostType('recommendation',this)">
+            <span>⭐</span> Recommend
+          </button>
+          <button class="type-tab" data-type="poll" onclick="selectPostType('poll',this)">
+            <span>📊</span> Poll
+          </button>
+        </div>
+
+        <!-- Text area -->
+        <textarea
+          id="postContent"
+          class="post-textarea"
+          placeholder="What's happening in Costa Blanca Villas? Share with your neighbors..."
+          rows="4"
+          oninput="updatePostBtn()"
+        ></textarea>
+
+        <!-- Price field (for sale) -->
+        <div class="extra-field" id="priceField" style="display:none">
+          <input type="number" id="postPrice" class="extra-input" placeholder="Price ($)" min="0" />
+          <select id="postCondition" class="extra-input">
+            <option value="">Condition</option>
+            <option>Like new</option>
+            <option>Good condition</option>
+            <option>Fair condition</option>
+            <option>For parts</option>
+          </select>
+        </div>
+
+        <!-- Poll options -->
+        <div id="pollOptions" style="display:none">
+          <div class="poll-option-row">
+            <input type="text" class="poll-option-input" placeholder="Option 1" />
+          </div>
+          <div class="poll-option-row">
+            <input type="text" class="poll-option-input" placeholder="Option 2" />
+          </div>
+          <button class="add-poll-option" onclick="addPollOption()">
+            <i data-lucide="plus-circle" style="width:14px;height:14px"></i> Add option
+          </button>
+        </div>
+
+        <!-- Actions row -->
+        <div class="create-actions">
+          <div class="create-actions-left">
+            <label class="action-btn" title="Add photo" style="cursor:pointer;">
+              <input type="file" accept="image/*" style="display:none" id="postPhotoInput" onchange="attachPostPhoto(this)">
+              <i data-lucide="image" style="width:16px;height:16px"></i>
+              Photo
+            </label>
+            <button class="action-btn" title="Add location" onclick="pickPostLocation(this)">
+              <i data-lucide="map-pin" style="width:16px;height:16px"></i>
+              Location
+            </button>
+          </div>
+          <div id="postPhotoPreview" style="display:none;margin-top:10px;position:relative;">
+            <img id="postPhotoImg" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;border:1px solid var(--border);">
+            <button onclick="removePostPhoto()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.5);border:none;color:white;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">✕</button>
+          </div>
+          <div id="postLocationTag" style="display:none;margin-top:8px;font-size:12px;color:var(--ocean);display:none;align-items:center;gap:4px;">
+            <i data-lucide="map-pin" style="width:12px;height:12px"></i>
+            <span id="postLocationText"></span>
+            <button onclick="removePostLocation()" style="background:none;border:none;color:var(--text-light);cursor:pointer;font-size:14px;margin-left:4px;">✕</button>
+          </div>
+          <button class="btn-submit-post" id="submitPostBtn" onclick="submitPost()" disabled>
+            Post to Costa Blanca Villas
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── POST DETAIL MODAL ─────────────────────────────────────────── -->
+  <div class="modal-overlay" id="postDetailModal" onclick="handleModalOverlayClick(event,'postDetailModal')">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Post</h3>
+        <button class="modal-close" onclick="closeModal('postDetailModal')"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" id="postDetailBody"></div>
+    </div>
+  </div>
+
+  <!-- ── EVENT DETAIL MODAL ─────────────────────────────────────────── -->
+  <div class="modal-overlay" id="eventDetailModal" onclick="handleModalOverlayClick(event,'eventDetailModal')">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Event Details</h3>
+        <button class="modal-close" onclick="closeModal('eventDetailModal')"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" id="eventDetailBody"></div>
+    </div>
+  </div>
+
+  <!-- ── ADD LISTING MODAL ─────────────────────────────────────────── -->
+  <div class="modal-overlay" id="addListingModal" onclick="handleModalOverlayClick(event,'addListingModal')">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;width:100%;">
+      <div class="modal-header">
+        <h3>🏡 Add New Listing</h3>
+        <button class="modal-close" onclick="closeModal('addListingModal')"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="add-listing-form">
+          <div>
+            <label class="form-label">Property Title *</label>
+            <input type="text" id="rlTitle" class="form-input" placeholder="e.g. Ocean View Villa — Costa Blanca" />
+          </div>
+          <div class="form-row-2">
+            <div>
+              <label class="form-label">Listing Type *</label>
+              <select id="rlType" class="form-input">
+                <option value="for_sale">For Sale</option>
+                <option value="for_rent">For Rent</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Price * (USD)</label>
+              <input type="number" id="rlPrice" class="form-input" placeholder="285000" />
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div>
+              <label class="form-label">Price Unit (rentals)</label>
+              <select id="rlPriceUnit" class="form-input">
+                <option value="night">Per Night</option>
+                <option value="week" selected>Per Week</option>
+                <option value="month">Per Month</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Location</label>
+              <input type="text" id="rlLocation" class="form-input" placeholder="Costa Blanca Villas, Farallón" />
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div>
+              <label class="form-label">Bedrooms</label>
+              <input type="number" id="rlBeds" class="form-input" placeholder="3" min="0" />
+            </div>
+            <div>
+              <label class="form-label">Bathrooms</label>
+              <input type="number" id="rlBaths" class="form-input" placeholder="3" min="0" />
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div>
+              <label class="form-label">Square Feet</label>
+              <input type="number" id="rlSqft" class="form-input" placeholder="2100" min="0" />
+            </div>
+            <div>
+              <label class="form-label">Agent Name</label>
+              <input type="text" id="rlAgent" class="form-input" placeholder="María Rodríguez" />
+            </div>
+          </div>
+          <div>
+            <label class="form-label">Agent Phone</label>
+            <input type="text" id="rlPhone" class="form-input" placeholder="+507 6622-8810" />
+          </div>
+          <div>
+            <label class="form-label">Features (comma-separated)</label>
+            <input type="text" id="rlFeatures" class="form-input" placeholder="Private Pool, Ocean View, Fully Furnished" />
+          </div>
+          <div>
+            <label class="form-label">Description</label>
+            <textarea id="rlDesc" class="form-input" rows="3" placeholder="Describe the property..." style="resize:vertical;min-height:80px;"></textarea>
+          </div>
+          <button class="re-btn-submit-listing" onclick="submitListing()">
+            Add Listing
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LIGHTBOX ───────────────────────────────────────────────────── -->
+  <div id="lightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out;">
+    <img id="lightboxImg" src="" alt="Full size" style="max-width:92vw;max-height:90vh;border-radius:12px;box-shadow:0 8px 48px rgba(0,0,0,0.6);object-fit:contain;" onclick="event.stopPropagation()">
+    <button onclick="closeLightbox()" style="position:fixed;top:20px;right:24px;background:rgba(255,255,255,0.15);border:none;color:white;font-size:28px;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">✕</button>
+  </div>
+
+  <!-- ── TOAST ──────────────────────────────────────────────────────── -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
