@@ -7,7 +7,8 @@ const multer = require('multer');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
-app.use(cookieParser());
+const COOKIE_SECRET = 'gn-secret-2026';
+app.use(cookieParser(COOKIE_SECRET));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -577,12 +578,11 @@ let comments = {
 };
 
 // ─── Sessions ────────────────────────────────────────────────────────────────
-const sessions = {};
 
 function getUser(req) {
-  const sessionId = req.cookies && req.cookies.sessionId;
-  if (!sessionId || !sessions[sessionId]) return null;
-  return sessions[sessionId];
+  const username = req.signedCookies && req.signedCookies.user;
+  if (!username || !users[username]) return null;
+  return { username, userId: users[username].id };
 }
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
@@ -601,17 +601,13 @@ app.post('/api/auth/login', (req, res) => {
   if (!user || user.password !== password) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
-  const sessionId = crypto.randomBytes(32).toString('hex');
-  sessions[sessionId] = { username: user.username, userId: user.id };
-  res.cookie('sessionId', sessionId, { httpOnly: true, maxAge: 7 * 24 * 3600 * 1000, sameSite: 'lax' });
+  res.cookie('user', user.username, { httpOnly: true, signed: true, maxAge: 7 * 24 * 3600 * 1000, sameSite: 'lax' });
   const { password: _, ...safeUser } = user;
   res.json(safeUser);
 });
 
 app.post('/api/auth/logout', (req, res) => {
-  const sessionId = req.cookies && req.cookies.sessionId;
-  if (sessionId) delete sessions[sessionId];
-  res.clearCookie('sessionId');
+  res.clearCookie('user');
   res.json({ ok: true });
 });
 
