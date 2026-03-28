@@ -14,8 +14,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   lucide.createIcons();
   await loadNotifications();
   loadTides();
+  initMobile();
   navigate('feed');
 });
+
+function initMobile() {
+  if (window.innerWidth > 700) return;
+  // Show hamburger button
+  const ham = document.getElementById('hamburgerBtn');
+  if (ham) ham.style.display = 'block';
+  // Show bottom nav
+  const bn = document.getElementById('mobileBottomNav');
+  if (bn) { bn.style.display = 'flex'; bn.style.cssText = 'display:flex!important;position:fixed;bottom:0;left:0;right:0;height:60px;background:white;border-top:1px solid #E5EBF2;z-index:9000;box-shadow:0 -2px 12px rgba(0,0,0,.08);'; }
+  // Add bottom padding to body so content isn't hidden behind nav
+  const body = document.querySelector('.app-body');
+  if (body) body.style.paddingBottom = '70px';
+}
 
 async function loadTides() {
   const el = document.getElementById('tideData');
@@ -129,7 +143,7 @@ async function renderFeed(container) {
     <div class="avatar-post" style="background:${currentUser?.avatar || '#0077B6'};width:40px;height:40px;">
       ${currentUser?.initials || 'ME'}
     </div>
-    <div class="create-post-input">What's happening in Costa Blanca Villas?</div>
+    <div class="create-post-input">What's happening?</div>
     <div class="create-type-btns">
       <button class="create-type-btn" onclick="event.stopPropagation();openCreatePost('for_sale')">
         🏷️ Sell
