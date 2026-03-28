@@ -10,22 +10,8 @@ app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const avatarStorage = multer.diskStorage({
-  destination: path.join(__dirname, 'public/images/avatars'),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg';
-    cb(null, `avatar_${req.cookies.sessionId || 'user'}${ext}`);
-  }
-});
-const bannerStorage = multer.diskStorage({
-  destination: path.join(__dirname, 'public/images/avatars'),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg';
-    cb(null, `banner_${req.cookies.sessionId || 'user'}${ext}`);
-  }
-});
-const upload = multer({ storage: avatarStorage, limits: { fileSize: 5 * 1024 * 1024 } });
-const uploadBanner = multer({ storage: bannerStorage, limits: { fileSize: 8 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const uploadBanner = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
 
 // ─── In-Memory Data Store ────────────────────────────────────────────────────
 
@@ -884,7 +870,7 @@ app.post('/api/profile/banner', uploadBanner.single('banner'), (req, res) => {
   const u = getUser(req);
   if (!u) return res.status(401).json({ error: 'Not logged in' });
   if (!req.file) return res.status(400).json({ error: 'No file' });
-  const bannerUrl = `/images/avatars/${req.file.filename}`;
+  const bannerUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
   u.bannerUrl = bannerUrl;
   res.json({ bannerUrl });
 });
@@ -894,7 +880,7 @@ app.post('/api/profile/avatar', upload.single('avatar'), (req, res) => {
   const u = getUser(req);
   if (!u) return res.status(401).json({ error: 'Not logged in' });
   if (!req.file) return res.status(400).json({ error: 'No file' });
-  const avatarUrl = `/images/avatars/${req.file.filename}`;
+  const avatarUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
   u.avatarUrl = avatarUrl;
   // Update allUsers too
   const au = allUsers.find(x => x.id === u.id);
