@@ -610,6 +610,8 @@
       </div>
       <button onclick="closeMobileMenu()" style="margin-left:auto;background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted)">✕</button>
     </div>
+
+    <!-- Navigation -->
     <div class="mmd-nav">
       <button class="mmd-item" onclick="navigate('businesses');closeMobileMenu()"><i data-lucide="store"></i> Businesses</button>
       <button class="mmd-item" onclick="navigate('neighbors');closeMobileMenu()"><i data-lucide="users"></i> Neighbors</button>
@@ -618,6 +620,48 @@
       <button class="mmd-item" onclick="navigate('profile');closeMobileMenu()"><i data-lucide="user"></i> My Profile</button>
       <button class="mmd-item" onclick="navigate('settings');closeMobileMenu()"><i data-lucide="settings"></i> Settings</button>
       <button class="mmd-item danger" onclick="logout()"><i data-lucide="log-out"></i> Sign Out</button>
+    </div>
+
+    <!-- Weather & Tides -->
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid #E5EBF2;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#9AA5B4;margin-bottom:10px;">☀️ Costa Blanca Villas</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#FFF9F0;border-radius:12px;margin-bottom:10px;">
+        <span style="font-size:24px;">☀️</span>
+        <div>
+          <div style="font-size:16px;font-weight:700;color:var(--text-dark)">84°F — Sunny</div>
+          <div style="font-size:12px;color:var(--text-muted)">Dry Season · Farallón, Panama</div>
+        </div>
+      </div>
+      <div style="background:#F0F7FF;border-radius:12px;padding:10px 12px;">
+        <div style="font-size:12px;font-weight:700;color:var(--ocean);margin-bottom:6px;">🌊 Playa Farallón Tides</div>
+        <div id="mobileDrawerTides" style="font-size:12px;color:var(--text-muted)">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Emergency Contacts -->
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid #E5EBF2;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#E63946;margin-bottom:10px;">🚨 Emergency Contacts</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <a href="tel:911" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#FFF0F0;border-radius:10px;text-decoration:none;">
+          <span>🚑</span><div><div style="font-size:13px;font-weight:700;color:#E63946">SUME — National EMS</div><div style="font-size:12px;color:#9AA5B4">911</div></div>
+        </a>
+        <a href="tel:104" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F0F4FF;border-radius:10px;text-decoration:none;">
+          <span>👮</span><div><div style="font-size:13px;font-weight:700;color:var(--ocean)">Policía Nacional</div><div style="font-size:12px;color:#9AA5B4">104</div></div>
+        </a>
+        <a href="tel:103" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#FFF4EC;border-radius:10px;text-decoration:none;">
+          <span>🚒</span><div><div style="font-size:13px;font-weight:700;color:#E07850">Bomberos — Fire</div><div style="font-size:12px;color:#9AA5B4">103</div></div>
+        </a>
+        <a href="tel:+5076790-4807" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F0FFF4;border-radius:10px;text-decoration:none;">
+          <span>🏥</span><div><div style="font-size:13px;font-weight:700;color:var(--seafoam)">Buenaventura EMTS</div><div style="font-size:12px;color:#9AA5B4">507 6790-4807</div></div>
+        </a>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#9AA5B4;margin:4px 0 2px 4px;">Local</div>
+        <a href="tel:+507993-3233" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F8F8F8;border-radius:10px;text-decoration:none;">
+          <span>🚔</span><div><div style="font-size:13px;font-weight:700;color:var(--text-dark)">Río Hato Station</div><div style="font-size:12px;color:#9AA5B4">507 993-3233</div></div>
+        </a>
+        <a href="tel:+5076590-4374" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F8F8F8;border-radius:10px;text-decoration:none;">
+          <span>🚔</span><div><div style="font-size:13px;font-weight:700;color:var(--text-dark)">Farallón Station</div><div style="font-size:12px;color:#9AA5B4">507 6590-4374</div></div>
+        </a>
+      </div>
     </div>
   </div>
 

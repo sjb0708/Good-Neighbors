@@ -1673,10 +1673,21 @@ document.addEventListener('click', (e) => {
 });
 
 // ─── Mobile Menu ─────────────────────────────────────────────────
-function toggleMobileMenu() {
+async function toggleMobileMenu() {
   document.getElementById('mobileMenuOverlay').classList.toggle('open');
   document.getElementById('mobileMenuDrawer').classList.toggle('open');
   lucide.createIcons();
+  // Populate tides in drawer
+  const tideEl = document.getElementById('mobileDrawerTides');
+  if (tideEl && tideEl.textContent === 'Loading…') {
+    const tides = await fetchJSON('/api/tides');
+    if (tides) {
+      const now = new Date();
+      const nowMins = now.getHours() * 60 + now.getMinutes();
+      const toMins = t => { const [time, ap] = t.split(' '); const [h, m] = time.split(':').map(Number); return ((h % 12) + (ap === 'PM' ? 12 : 0)) * 60 + m; };
+      tideEl.innerHTML = tides.map(t => `<div style="display:flex;justify-content:space-between;padding:2px 0;opacity:${toMins(t.time) < nowMins ? 0.4 : 1}"><span>${t.type === 'High' ? '▲' : '▼'} ${t.type}</span><span>${t.time}</span><span>${t.height}</span></div>`).join('');
+    } else { tideEl.textContent = 'Unavailable'; }
+  }
 }
 function closeMobileMenu() {
   document.getElementById('mobileMenuOverlay').classList.remove('open');
