@@ -9,6 +9,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="/lucide.js"></script>
   <link rel="stylesheet" href="/style.css" />
+  <style>
+    @media (max-width: 700px) {
+      #hamburgerBtn { display: block !important; }
+      .mobile-bottom-nav { display: flex !important; }
+      .app-body { padding-bottom: 70px !important; }
+    }
+  </style>
 </head>
 <body>
 
@@ -35,6 +42,8 @@
       </div>
 
       <div class="topbar-right">
+        <button id="hamburgerBtn" onclick="toggleMobileMenu()" style="display:none;background:none;border:none;cursor:pointer;padding:8px;color:#374151;font-size:22px;line-height:1;">☰</button>
+
         <button class="topbar-btn create-post-btn" onclick="openCreatePost()">
           <i data-lucide="plus"></i>
           <span>Post</span>
