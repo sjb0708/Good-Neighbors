@@ -9,6 +9,24 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="/lucide.js"></script>
   <link rel="stylesheet" href="/style.css" />
+  <script>
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: 'en,es',
+        autoDisplay: false
+      }, 'google_translate_element');
+    }
+    function toggleLanguage() {
+      const sel = document.querySelector('.goog-te-combo');
+      if (!sel) return;
+      sel.value = sel.value === 'es' ? 'en' : 'es';
+      sel.dispatchEvent(new Event('change'));
+      const btn = document.getElementById('langToggleBtn');
+      if (btn) btn.textContent = sel.value === 'es' ? '🌐 EN' : '🌐 ES';
+    }
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
   <style>
     @media (max-width: 700px) {
       #hamburgerBtn { display: block !important; }
@@ -42,6 +60,9 @@
       </div>
 
       <div class="topbar-right">
+        <div id="google_translate_element" style="display:none;"></div>
+        <button id="langToggleBtn" onclick="toggleLanguage()" style="background:none;border:1.5px solid #E5EBF2;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;color:#374151;font-family:'Inter',sans-serif;white-space:nowrap;">🌐 ES</button>
+
         <button id="hamburgerBtn" onclick="toggleMobileMenu()" style="display:none;background:none;border:none;cursor:pointer;padding:8px;color:#374151;font-size:22px;line-height:1;">☰</button>
 
         <button class="topbar-btn create-post-btn" onclick="openCreatePost()">

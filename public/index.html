@@ -505,12 +505,31 @@
         </div>
       </div>
 
+      <div id="gte_login" style="display:none;"></div>
+      <div style="text-align:center;margin-top:16px;">
+        <button id="loginLangBtn" onclick="toggleLang()" style="background:none;border:1.5px solid #E5EBF2;border-radius:20px;padding:6px 16px;font-size:13px;font-weight:700;cursor:pointer;color:#374151;font-family:'Inter',sans-serif;">🌐 Español</button>
+      </div>
+
       <div class="footer-text">
         By signing in you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
       </div>
     </div>
   </div>
 
+  <script>
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({ pageLanguage: 'en', includedLanguages: 'en,es', autoDisplay: false }, 'gte_login');
+    }
+    function toggleLang() {
+      const sel = document.querySelector('.goog-te-combo');
+      if (!sel) return;
+      sel.value = sel.value === 'es' ? 'en' : 'es';
+      sel.dispatchEvent(new Event('change'));
+      const btn = document.getElementById('loginLangBtn');
+      if (btn) btn.textContent = sel.value === 'es' ? '🌐 EN' : '🌐 ES';
+    }
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
   <script>
     // Stars
     const starsContainer = document.getElementById('stars');
