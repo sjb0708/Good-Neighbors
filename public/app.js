@@ -84,8 +84,8 @@ function setTextSafe(id, val) {
 function navigate(section) {
   currentSection = section;
 
-  // Update nav active state
-  document.querySelectorAll('.nav-item').forEach(el => {
+  // Update nav active state (sidebar + mobile bottom nav)
+  document.querySelectorAll('.nav-item, .mbn-item').forEach(el => {
     el.classList.toggle('active', el.dataset.section === section);
   });
 
@@ -1657,6 +1657,17 @@ document.addEventListener('click', (e) => {
     document.querySelectorAll('.reaction-picker.show').forEach(p => p.classList.remove('show'));
   }
 });
+
+// ─── Mobile Menu ─────────────────────────────────────────────────
+function toggleMobileMenu() {
+  document.getElementById('mobileMenuOverlay').classList.toggle('open');
+  document.getElementById('mobileMenuDrawer').classList.toggle('open');
+  lucide.createIcons();
+}
+function closeMobileMenu() {
+  document.getElementById('mobileMenuOverlay').classList.remove('open');
+  document.getElementById('mobileMenuDrawer').classList.remove('open');
+}
 
 // ─── Auth ────────────────────────────────────────────────────────
 async function logout() {

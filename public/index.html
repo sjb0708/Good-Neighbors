@@ -25,7 +25,7 @@
     body {
       font-family: 'Inter', sans-serif;
       min-height: 100vh;
-      overflow: hidden;
+      overflow-y: auto;
       background: linear-gradient(160deg,
         #0d2b4e 0%,
         #0a4a7c 25%,
@@ -38,6 +38,7 @@
       align-items: center;
       justify-content: center;
       position: relative;
+      padding: 20px 16px;
     }
 
     /* Animated sky particles */
@@ -120,7 +121,7 @@
       backdrop-filter: blur(20px);
       border-radius: 28px;
       padding: 48px 52px;
-      width: 440px;
+      width: min(440px, 100%);
       box-shadow:
         0 24px 80px rgba(0, 60, 120, 0.25),
         0 8px 24px rgba(0, 60, 120, 0.1),
@@ -400,6 +401,12 @@
       color: #0077B6;
       text-decoration: none;
       font-weight: 500;
+    }
+
+    @media (max-width: 480px) {
+      .login-card { padding: 32px 24px; border-radius: 20px; }
+      .logo-icon { width: 72px; height: 72px; }
+      .float-card { animation: none; }
     }
 
     /* Seagulls */

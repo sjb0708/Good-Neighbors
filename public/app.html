@@ -566,6 +566,52 @@
     <button onclick="closeLightbox()" style="position:fixed;top:20px;right:24px;background:rgba(255,255,255,0.15);border:none;color:white;font-size:28px;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">✕</button>
   </div>
 
+  <!-- ── MOBILE BOTTOM NAV ─────────────────────────────────────────── -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav">
+    <button class="mbn-item active" data-section="feed" onclick="navigate('feed')">
+      <i data-lucide="home"></i>
+      <span>Feed</span>
+    </button>
+    <button class="mbn-item" data-section="marketplace" onclick="navigate('marketplace')">
+      <i data-lucide="shopping-bag"></i>
+      <span>Market</span>
+    </button>
+    <button class="mbn-item" data-section="events" onclick="navigate('events')">
+      <i data-lucide="calendar"></i>
+      <span>Events</span>
+    </button>
+    <button class="mbn-item" data-section="safety" onclick="navigate('safety')">
+      <i data-lucide="shield-alert"></i>
+      <span>Safety</span>
+    </button>
+    <button class="mbn-item" onclick="toggleMobileMenu()">
+      <i data-lucide="menu"></i>
+      <span>More</span>
+    </button>
+  </nav>
+
+  <!-- ── MOBILE MENU DRAWER ─────────────────────────────────────────── -->
+  <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+  <div class="mobile-menu-drawer" id="mobileMenuDrawer">
+    <div class="mmd-header">
+      <img src="/logo.png" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+      <div>
+        <div style="font-weight:700;font-size:15px;color:var(--text-dark)">Good Neighbors</div>
+        <div style="font-size:12px;color:var(--text-muted)">Costa Blanca Villas</div>
+      </div>
+      <button onclick="closeMobileMenu()" style="margin-left:auto;background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted)">✕</button>
+    </div>
+    <div class="mmd-nav">
+      <button class="mmd-item" onclick="navigate('businesses');closeMobileMenu()"><i data-lucide="store"></i> Businesses</button>
+      <button class="mmd-item" onclick="navigate('neighbors');closeMobileMenu()"><i data-lucide="users"></i> Neighbors</button>
+      <button class="mmd-item" onclick="navigate('groups');closeMobileMenu()"><i data-lucide="layers"></i> Groups</button>
+      <button class="mmd-item" onclick="navigate('realestate');closeMobileMenu()"><i data-lucide="home"></i> Real Estate</button>
+      <button class="mmd-item" onclick="navigate('profile');closeMobileMenu()"><i data-lucide="user"></i> My Profile</button>
+      <button class="mmd-item" onclick="navigate('settings');closeMobileMenu()"><i data-lucide="settings"></i> Settings</button>
+      <button class="mmd-item danger" onclick="logout()"><i data-lucide="log-out"></i> Sign Out</button>
+    </div>
+  </div>
+
   <!-- ── TOAST ──────────────────────────────────────────────────────── -->
   <div class="toast" id="toast"></div>
 
