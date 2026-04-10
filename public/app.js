@@ -6,7 +6,34 @@
 let currentUser = null;
 let currentSection = 'feed';
 let selectedPostType = 'general';
+let selectedSeverity = 'medium';
 let openComments = new Set();
+let currentGroupId = null;
+let currentBizId = null;
+
+const GROUP_BANNERS = [
+  'linear-gradient(135deg,#0077B6,#00B4D8)',
+  'linear-gradient(135deg,#2A9D8F,#57CC99)',
+  'linear-gradient(135deg,#E76F51,#F4A261)',
+  'linear-gradient(135deg,#6D6875,#B5838D)',
+  'linear-gradient(135deg,#457B9D,#1D3557)',
+  'linear-gradient(135deg,#4CAF50,#81C784)',
+  'linear-gradient(135deg,#E9C46A,#F4A261)',
+  'linear-gradient(135deg,#264653,#2A9D8F)',
+];
+function groupBannerGradient(id) {
+  const sum = String(id).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return GROUP_BANNERS[sum % GROUP_BANNERS.length];
+}
+
+function groupTimeAgo(iso) {
+  if (!iso) return '';
+  const d = Math.floor((Date.now() - new Date(iso)) / 60000);
+  if (d < 1) return 'just now';
+  if (d < 60) return `${d}m ago`;
+  if (d < 1440) return `${Math.floor(d / 60)}h ago`;
+  return `${Math.floor(d / 1440)}d ago`;
+}
 
 // ─── Init ────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -14,8 +41,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   lucide.createIcons();
   await loadNotifications();
   loadTides();
+  loadWhatsHappening();
   initMobile();
-  navigate('feed');
+  navigate(currentUser?.role === 'realtor' ? 'realestate' : 'feed');
 });
 
 function initMobile() {
@@ -29,6 +57,42 @@ function initMobile() {
   // Add bottom padding to body so content isn't hidden behind nav
   const body = document.querySelector('.app-body');
   if (body) body.style.paddingBottom = '70px';
+}
+
+async function loadWhatsHappening() {
+  const el = document.getElementById('happeningList');
+  if (!el) return;
+
+  // Pull recent posts from feed + safety section
+  const [feedPosts, safetyPosts] = await Promise.all([
+    fetchJSON('/api/posts?section=feed'),
+    fetchJSON('/api/posts?section=safety')
+  ]);
+  const all = [...(safetyPosts || []), ...(feedPosts || [])];
+
+  // Deduplicate + pick the most relevant recent items (max 5)
+  const seen = new Set();
+  const picks = [];
+  for (const p of all) {
+    if (seen.has(p.id)) continue;
+    seen.add(p.id);
+    if (picks.length >= 5) break;
+    picks.push(p);
+  }
+
+  if (!picks.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-light);">Nothing new right now.</div>'; return; }
+
+  el.innerHTML = picks.map(p => {
+    const dotClass = p.type === 'safety' ? 'safety' : p.type === 'events' ? 'event' : p.type === 'lost_found' ? 'lost' : 'recommend';
+    const section = p.type === 'safety' ? 'safety' : p.type === 'events' ? 'events' : p.type === 'lost_found' ? 'feed' : 'feed';
+    const preview = (p.alertType ? `<strong>${p.alertType}</strong>` : `<strong>${escHtml(p.author?.name || '')}</strong>`) +
+      ' — ' + escHtml((p.content || '').slice(0, 52)) + ((p.content || '').length > 52 ? '…' : '');
+    const timeStr = p.createdAt ? groupTimeAgo(p.createdAt) : '';
+    return `<div class="happening-item" onclick="navigate('${section}')">
+      <span class="happening-dot ${dotClass}"></span>
+      <div class="happening-text">${preview}<div class="happening-time">${timeStr}</div></div>
+    </div>`;
+  }).join('');
 }
 
 async function loadTides() {
@@ -128,6 +192,7 @@ async function renderSection(section, container) {
     case 'profile':     await renderProfile(container); break;
     case 'settings':    renderSettings(container); break;
     case 'realestate':  await renderRealEstate(container); break;
+    case 'golf':        await renderGolf(container); break;
     default:            await renderFeed(container);
   }
   lucide.createIcons();
@@ -216,21 +281,28 @@ async function renderSafety(container) {
 }
 
 // ─── Businesses ─────────────────────────────────────────────────
+
+
 async function renderBusinesses(container) {
-  container.innerHTML = sectionHeaderHTML('businesses');
+  container.innerHTML = '';
+  currentBizId = null;
+  const topBar = document.createElement('div');
+  topBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;';
+  topBar.innerHTML = `<div><h2 style="font-size:19px;font-weight:800;color:var(--text-dark);margin:0;">Business Directory</h2><p style="font-size:13px;color:var(--text-light);margin:2px 0 0;">Local restaurants and services near Farallón</p></div>`;
+  container.appendChild(topBar);
   const businesses = await fetchJSON('/api/businesses');
   if (!businesses || !businesses.length) {
     container.innerHTML += emptyStateHTML('🏪', 'No businesses listed', 'Know a great local business? Recommend it!');
     return;
   }
-  const grid = document.createElement('div');
-  grid.className = 'business-grid';
+  const list = document.createElement('div');
+  list.style.cssText = 'display:flex;flex-direction:column;gap:12px;';
   businesses.forEach((biz, i) => {
-    const card = buildBusinessCard(biz);
-    card.style.animationDelay = `${i * 60}ms`;
-    grid.appendChild(card);
+    const card = buildBusinessListingCard(biz);
+    card.style.animationDelay = `${i * 50}ms`;
+    list.appendChild(card);
   });
-  container.appendChild(grid);
+  container.appendChild(list);
 }
 
 // ─── Neighbors ──────────────────────────────────────────────────
@@ -253,20 +325,35 @@ async function renderNeighbors(container) {
 
 // ─── Groups ─────────────────────────────────────────────────────
 async function renderGroups(container) {
-  container.innerHTML = sectionHeaderHTML('groups');
+  container.innerHTML = '';
+  currentGroupId = null;
+
+  // Top bar
+  const topBar = document.createElement('div');
+  topBar.className = 'groups-top-bar';
+  topBar.innerHTML = `
+    <div>
+      <h2>Groups</h2>
+      <p>Connect around shared interests</p>
+    </div>
+    <button onclick="openCreateGroupModal()" style="display:flex;align-items:center;gap:6px;padding:9px 18px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">
+      <span style="font-size:17px;line-height:1">+</span> Create Group
+    </button>`;
+  container.appendChild(topBar);
+
   const groups = await fetchJSON('/api/groups');
   if (!groups || !groups.length) {
-    container.innerHTML += emptyStateHTML('👥', 'No groups yet', 'Create a group to connect with neighbors who share your interests!');
+    container.appendChild(Object.assign(document.createElement('div'), { innerHTML: emptyStateHTML('👥', 'No groups yet', 'Be the first to create one!') }));
     return;
   }
-  const list = document.createElement('div');
-  list.className = 'groups-list';
+  const grid = document.createElement('div');
+  grid.className = 'groups-grid';
   groups.forEach((g, i) => {
     const card = buildGroupCard(g);
     card.style.animationDelay = `${i * 60}ms`;
-    list.appendChild(card);
+    grid.appendChild(card);
   });
-  container.appendChild(list);
+  container.appendChild(grid);
 }
 
 // ─── Notifications ───────────────────────────────────────────────
@@ -469,16 +556,19 @@ function renderSettings(container) {
 
 // ─── Build Post Card ─────────────────────────────────────────────
 function buildPostCard(post) {
+  const resolvedClass = (post.type === 'safety' && post.severity === 'resolved') ? ' resolved' : '';
   const card = document.createElement('div');
-  card.className = `post-card${post.type === 'safety' ? ' safety-card' : ''}`;
+  card.className = `post-card${post.type === 'safety' ? ' safety-card' + resolvedClass : ''}`;
   card.dataset.postId = post.id;
 
   const totalReactions = Object.values(post.reactions || {}).reduce((a, b) => a + b, 0);
   const topReactions = getTopReactions(post.reactions);
+  const canResolve = (currentUser?.role === 'admin' || currentUser?.role === 'hoa') && post.type === 'safety' && post.severity !== 'resolved';
 
   card.innerHTML = `
     <div class="post-card-inner">
-      ${post.alertType ? `<div class="alert-badge ${post.severity || 'medium'}">⚠ ${post.alertType}</div>` : ''}
+      ${post.isOfficial ? `<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#FFF3CD;border-bottom:1px solid #FFCA28;font-size:12px;font-weight:700;color:#856404;margin:-12px -12px 10px -12px;border-radius:12px 12px 0 0;">⚡ OFFICIAL ALERT · ${escHtml(post.author?.name || '')}</div>` : ''}
+      ${post.alertType ? `<div class="alert-badge ${post.severity === 'resolved' ? 'resolved' : (post.severity || 'medium')}">${post.severity === 'resolved' ? '✅ Resolved' : `⚠ ${post.alertType}`}</div>` : ''}
       ${post.price !== undefined ? `
         <span class="price-tag${post.free || post.price === 0 ? ' free' : ''}">
           ${post.free || post.price === 0 ? '🎁 FREE' : `$${post.price}`}
@@ -546,6 +636,8 @@ function buildPostCard(post) {
           <i data-lucide="share-2" style="width:15px;height:15px"></i>
           Share
         </button>
+        ${canResolve ? `<button onclick="resolveAlert('${post.id}')" style="margin-left:auto;padding:6px 14px;background:#2A9D8F;color:white;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">✅ Mark Resolved</button>` : ''}
+        ${post.severity === 'resolved' && post.resolvedBy ? `<span style="margin-left:auto;font-size:11.5px;color:#2A9D8F;font-weight:600;">✅ Resolved by ${escHtml(post.resolvedBy)}</span>` : ''}
       </div>
     </div>
 
@@ -1058,6 +1150,285 @@ async function openBusinessModal(bizId) {
   if (window.lucide) lucide.createIcons();
 }
 
+function buildBusinessListingCard(biz) {
+  const icon = bizIcons[biz.category] || bizIcons.default;
+  const bgColors = { 'Restaurant': '#FFF3E0', 'Bar & Grill': '#FCE4EC', 'Transportation': '#E8F5E9', 'default': '#E3F2FD' };
+  const fgColors = { 'Restaurant': '#E65100', 'Bar & Grill': '#880E4F', 'Transportation': '#1B5E20', 'default': '#0D47A1' };
+  const bg = bgColors[biz.category] || bgColors.default;
+  const fg = fgColors[biz.category] || fgColors.default;
+  const faveYears = biz.faveYears || [];
+
+  const card = document.createElement('div');
+  card.className = 'biz-listing-card';
+  card.onclick = () => openBusinessPage(biz.id);
+  card.innerHTML = `
+    <div class="biz-listing-logo" style="background:${bg};color:${fg};">${icon}</div>
+    <div class="biz-listing-body">
+      <div class="biz-listing-name">
+        ${escHtml(biz.name)}
+        <span class="biz-verified-badge">✓</span>
+        ${faveYears.length ? '<span style="font-size:12px;color:#3A7D44;font-weight:600;">🏆 Neighborhood Fave</span>' : ''}
+      </div>
+      <div class="biz-listing-category">${escHtml(biz.category)}</div>
+      <div class="biz-listing-rating">
+        ${buildStars(biz.rating)}
+        <span style="font-size:12px;font-weight:700;color:var(--text-dark)">${biz.rating}</span>
+        <span style="font-size:12px;color:var(--text-light)">(${biz.reviewCount})</span>
+      </div>
+      <div class="biz-listing-desc">${escHtml(biz.description)}</div>
+      <div class="biz-listing-tags">
+        ${(biz.tags || []).slice(0, 4).map(t => `<span class="biz-listing-tag">${t}</span>`).join('')}
+      </div>
+      <div class="biz-listing-footer">
+        <span class="biz-listing-fave-count">❤️ ${biz.currentYearFaves || biz.recommendedBy} neighbors faved this</span>
+        <button onclick="event.stopPropagation();openBusinessPage('${biz.id}')" style="padding:7px 16px;background:#3A7D44;color:white;border:none;border-radius:20px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">View Profile</button>
+      </div>
+    </div>
+  `;
+  return card;
+}
+
+async function openBusinessPage(bizId) {
+  currentBizId = bizId;
+  const container = document.getElementById('sectionContent');
+  container.innerHTML = '<div class="loading-spinner" style="margin:60px auto;display:block;"></div>';
+  await renderBusinessPage(bizId, container);
+}
+
+async function renderBusinessPage(bizId, container) {
+  const biz = await fetchJSON(`/api/businesses/${bizId}`);
+  if (!biz) { container.innerHTML = '<p style="padding:30px;color:var(--coral);">Could not load business.</p>'; return; }
+
+  const icon = bizIcons[biz.category] || bizIcons.default;
+  const bgColors = { 'Restaurant': '#FFF3E0', 'Bar & Grill': '#FCE4EC', 'Transportation': '#E8F5E9', 'default': '#E3F2FD' };
+  const bg = bgColors[biz.category] || bgColors.default;
+  const photos = biz.photos || [];
+  const reviews = biz.reviews || [];
+  const faveYears = biz.faveYears || [];
+  const currentYearFaves = biz.currentYearFaves || 0;
+  const faveThreshold = biz.faveThreshold || 30;
+  const userHasFaved = biz.userHasFaved || false;
+  const currentYear = new Date().getFullYear();
+  const alreadyWonThisYear = faveYears.includes(currentYear);
+  const pct = Math.min(100, Math.round((currentYearFaves / faveThreshold) * 100));
+
+  // Trophy icon — CSS circle outline style like Nextdoor
+  const trophySVG = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4a2 2 0 0 1-2-2V5h4"/><path d="M18 9h2a2 2 0 0 0 2-2V5h-4"/><path d="M12 17v4"/><path d="M8 21h8"/><path d="M6 5h12v4a6 6 0 0 1-12 0V5Z"/></svg>`;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'biz-page';
+  wrap.innerHTML = `
+    <button class="group-back-btn" onclick="navigate('businesses')">← Back to Businesses</button>
+
+    <!-- Header card — matches Nextdoor layout exactly -->
+    <div class="biz-page-header-card" style="flex-direction:column;padding:0;overflow:hidden;">
+      <!-- Top section: logo + name + actions -->
+      <div style="display:flex;align-items:flex-start;gap:18px;padding:24px 24px 16px;">
+        <div style="position:relative;flex-shrink:0;">
+          <div class="biz-logo-circle" style="background:${bg};font-size:40px;width:88px;height:88px;">${icon}</div>
+          <div style="position:absolute;bottom:-3px;right:-3px;width:22px;height:22px;background:var(--ocean);border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:10px;color:white;font-weight:700;">✓</div>
+        </div>
+        <div style="flex:1;min-width:0;padding-top:4px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
+            <span style="font-size:22px;font-weight:800;color:var(--text-dark);">${escHtml(biz.name)}</span>
+            <span style="font-size:14px;font-weight:600;color:var(--text-light);">${biz.recommendedBy}</span>
+          </div>
+          <div style="font-size:14px;color:var(--ocean);font-weight:500;margin-bottom:14px;">${escHtml(biz.category)}</div>
+          <div class="biz-action-bar">
+            <button class="btn-biz-fave${userHasFaved ? ' faved' : ''}" id="bizFaveBtn-${biz.id}" onclick="toggleBizFave('${biz.id}')">${userHasFaved ? '⭐ Faved' : '⭐ Fave'}</button>
+            <button class="btn-biz-message" onclick="showToast('Messaging coming soon!')">💬 Message</button>
+            <div style="position:relative;">
+              <button class="btn-biz-more" onclick="toggleBizMoreMenu('${biz.id}')">⋯</button>
+              <div class="biz-more-dropdown" id="bizMoreMenu-${biz.id}" style="display:none;">
+                <div class="biz-more-item" onclick="showToast('${escHtml(biz.name)} muted.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔇</span><div><div class="biz-more-item-text">Mute</div><div class="biz-more-item-sub">Hide all posts from ${escHtml(biz.name)}</div></div></div>
+                <div class="biz-more-item" onclick="showToast('${escHtml(biz.name)} blocked.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🚫</span><div><div class="biz-more-item-text">Block</div><div class="biz-more-item-sub">Stop messages from ${escHtml(biz.name)}</div></div></div>
+                <div class="biz-more-item" onclick="showToast('Reported. Thank you.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">⚑</span><div><div class="biz-more-item-text">Report</div><div class="biz-more-item-sub">Flag for review</div></div></div>
+                <div class="biz-more-item" onclick="showToast('Link copied!');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔗</span><div><div class="biz-more-item-text">Share ${escHtml(biz.name)}</div><div class="biz-more-item-sub">Share on or off Good Neighbors</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Description in header — like Nextdoor -->
+      <div style="padding:0 24px 20px;font-size:14px;color:var(--text-mid);line-height:1.65;">${escHtml(biz.description)}</div>
+      <!-- Claim page banner -->
+      <div style="border-top:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;background:#fafcff;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);">
+          <span style="font-size:15px;">ℹ️</span> Is this your business?
+        </div>
+        <button onclick="showToast('Claim page coming soon!')" style="font-size:13px;font-weight:700;color:var(--ocean);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit;">Claim page →</button>
+      </div>
+    </div>
+
+    <!-- Two-column layout -->
+    <div class="biz-page-layout">
+      <!-- Main content -->
+      <div class="biz-page-main">
+        <div class="biz-tab-bar">
+          <button class="biz-tab active" onclick="switchBizTab('overview')">Overview</button>
+          <button class="biz-tab" onclick="switchBizTab('recommendations')">Recommendations</button>
+          <button class="biz-tab" onclick="switchBizTab('photos')">Photos</button>
+        </div>
+
+        <!-- Overview tab -->
+        <div id="bizTab-overview">
+          ${photos.length ? `
+            <div style="display:flex;gap:6px;margin-bottom:20px;overflow:hidden;border-radius:12px;max-height:200px;">
+              ${photos.slice(0,4).map((url,i) => `<img src="${url}" alt="Photo" loading="lazy" style="flex:1;min-width:0;height:200px;object-fit:cover;${i===0?'border-radius:12px 0 0 12px;':''}${i===photos.length-1||i===3?'border-radius:0 12px 12px 0;':''}" />`).join('')}
+            </div>` : ''}
+
+          <div class="biz-fave-section" id="bizFaveSection-${biz.id}">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <h3 style="margin:0;">Neighborhood Fave</h3>
+            </div>
+            ${faveYears.length ? `
+            <div class="biz-fave-awards" style="margin-bottom:16px;">
+              ${faveYears.map(y => `
+                <div class="biz-fave-award">
+                  <div class="biz-fave-award-icon" style="color:#B8860B;">${trophySVG}</div>
+                  <div class="biz-fave-award-year">${y}</div>
+                </div>`).join('')}
+            </div>` : ''}
+            ${alreadyWonThisYear ? `
+            <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;background:#FFFBEA;border:1.5px solid #F6C90E;border-radius:10px;font-size:13px;font-weight:600;color:#7A5B00;">
+              🏆 ${currentYear} Neighborhood Fave Award earned!
+            </div>` : `
+            <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:14px 16px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:13px;font-weight:600;color:var(--text-dark);">Progress toward ${currentYear} Award</span>
+                <span style="font-size:13px;font-weight:700;color:var(--ocean);" id="bizFaveCount-${biz.id}">${currentYearFaves} / ${faveThreshold}</span>
+              </div>
+              <div style="background:#E8EDF2;border-radius:20px;height:8px;overflow:hidden;margin-bottom:8px;">
+                <div id="bizFaveBar-${biz.id}" style="height:100%;border-radius:20px;background:linear-gradient(90deg,#0077B6,#00B4D8);transition:width 0.4s ease;width:${pct}%;"></div>
+              </div>
+              <div style="font-size:12px;color:var(--text-light);">${faveThreshold - currentYearFaves} more fave${faveThreshold - currentYearFaves !== 1 ? 's' : ''} needed for the ${currentYear} Neighborhood Fave award</div>
+            </div>`}
+          </div>
+        </div>
+
+        <!-- Recommendations tab (hidden) -->
+        <div id="bizTab-recommendations" style="display:none;">
+          <div class="biz-rec-compose">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:38px;height:38px;border-radius:50%;background:${currentUser?.avatar||'#0077B6'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${currentUser?.initials||'?'}</div>
+              <div style="flex:1;position:relative;">
+                <input id="bizRecBox" type="text" placeholder="Add a recommendation..." style="width:100%;padding:11px 50px 11px 16px;border:1.5px solid var(--border);border-radius:30px;font-size:14px;font-family:inherit;outline:none;background:var(--bg);" />
+                <button onclick="submitBizRec('${biz.id}')" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:32px;height:32px;background:var(--ocean);color:white;border:none;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">→</button>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:12px;">${reviews.length} Recommendation${reviews.length !== 1 ? 's' : ''}</div>
+          ${reviews.length === 0 ? '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:30px;text-align:center;color:var(--text-light);font-size:14px;">No recommendations yet — be the first!</div>' :
+            reviews.map(r => `
+              <div class="biz-rec-card">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                  <div style="width:40px;height:40px;border-radius:50%;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${r.initials}</div>
+                  <div>
+                    <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${escHtml(r.author)}</div>
+                    <div style="display:flex;align-items:center;gap:6px;">${buildStars(r.rating)}<span style="font-size:11.5px;color:var(--text-light);">${r.date}</span></div>
+                  </div>
+                </div>
+                <div style="font-size:14px;color:var(--text-mid);line-height:1.65;">${escHtml(r.text)}</div>
+                ${r.ownerReply ? `<div style="margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:10px;font-size:13px;color:var(--text-mid);border-left:3px solid var(--ocean);"><span style="font-weight:700;color:var(--text-dark);">Owner replied:</span> ${escHtml(r.ownerReply)}</div>` : ''}
+              </div>`).join('')}
+        </div>
+
+        <!-- Photos tab (hidden) -->
+        <div id="bizTab-photos" style="display:none;">
+          ${photos.length ? `<div class="biz-photo-grid">${photos.map(url => `<img src="${url}" alt="Business photo" loading="lazy" />`).join('')}</div>`
+            : '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:40px;text-align:center;color:var(--text-light);">No photos yet.</div>'}
+        </div>
+      </div>
+
+      <!-- Right sidebar -->
+      <div class="biz-page-sidebar">
+        <div class="biz-sidebar-card">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+            <span style="font-size:18px;">🍽️</span>
+            <span style="font-size:13px;font-weight:600;color:var(--text-mid);">${escHtml(biz.category)} · ${(biz.tags||[]).slice(0,2).join(' · ')}</span>
+          </div>
+          <div class="biz-sidebar-row"><span class="biz-sidebar-icon">📞</span><span>${escHtml(biz.phone)}</span></div>
+          <div class="biz-sidebar-row"><span class="biz-sidebar-icon">🕐</span><span>${escHtml(biz.hours)}</span></div>
+          <div class="biz-sidebar-row"><span class="biz-sidebar-icon">📍</span><span>${escHtml(biz.address)}</span></div>
+          <div class="biz-sidebar-row"><span class="biz-sidebar-icon">🧭</span><span style="color:var(--ocean);cursor:pointer;font-weight:600;" onclick="showToast('Opening directions...')">Get directions</span></div>
+          ${biz.website && biz.website !== '#' ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">🔗</span><span style="color:var(--ocean);">${escHtml(biz.website)}</span></div>` : ''}
+        </div>
+        <div class="biz-sidebar-card" style="text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:var(--text-dark);">${biz.rating}</div>
+          <div style="display:flex;justify-content:center;margin:4px 0 6px;">${buildStars(biz.rating)}</div>
+          <div style="font-size:12px;color:var(--text-light);">${biz.reviewCount} reviews · ${biz.recommendedBy} faves</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = '';
+  container.appendChild(wrap);
+}
+
+function switchBizTab(tabName) {
+  ['overview','recommendations','photos'].forEach(t => {
+    const el = document.getElementById(`bizTab-${t}`);
+    if (el) el.style.display = t === tabName ? 'block' : 'none';
+  });
+  document.querySelectorAll('.biz-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.toLowerCase().includes(tabName));
+  });
+}
+
+function toggleBizMoreMenu(bizId) {
+  const menu = document.getElementById(`bizMoreMenu-${bizId}`);
+  if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+async function toggleBizFave(bizId) {
+  const res = await fetch(`/api/businesses/${bizId}/fave`, { method: 'POST', credentials: 'include' });
+  if (!res.ok) return;
+  const data = await res.json();
+
+  // Update fave button
+  const btn = document.getElementById(`bizFaveBtn-${bizId}`);
+  if (btn) {
+    btn.textContent = data.faved ? '⭐ Faved' : '⭐ Fave';
+    btn.classList.toggle('faved', data.faved);
+  }
+
+  // Update progress bar & count
+  const threshold = data.faveThreshold || 30;
+  const count = data.currentYearFaves || 0;
+  const pct = Math.min(100, Math.round((count / threshold) * 100));
+  const countEl = document.getElementById(`bizFaveCount-${bizId}`);
+  const barEl = document.getElementById(`bizFaveBar-${bizId}`);
+  if (countEl) countEl.textContent = `${count} / ${threshold}`;
+  if (barEl) barEl.style.width = `${pct}%`;
+
+  // If threshold just hit, reload the whole page to show award badge
+  const currentYear = new Date().getFullYear();
+  if (data.faveYears && data.faveYears.includes(currentYear) && barEl) {
+    await renderBusinessPage(bizId, document.getElementById('sectionContent'));
+    return;
+  }
+
+  showToast(data.faved ? 'Added to your faves! ⭐' : 'Removed from faves.');
+}
+
+async function submitBizRec(bizId) {
+  const box = document.getElementById('bizRecBox');
+  const text = box?.value.trim();
+  if (!text) return;
+  const res = await fetch(`/api/businesses/${bizId}/recommend`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text })
+  });
+  if (res.ok) {
+    box.value = '';
+    await renderBusinessPage(bizId, document.getElementById('sectionContent'));
+    switchBizTab('recommendations');
+    showToast('Recommendation posted! ⭐');
+  }
+}
+
 function buildStars(rating) {
   let html = '';
   for (let i = 1; i <= 5; i++) {
@@ -1096,25 +1467,30 @@ function waveAtNeighbor(name) {
 
 // ─── Group Card ──────────────────────────────────────────────────
 function buildGroupCard(group) {
+  const banner = groupBannerGradient(group.id);
   const card = document.createElement('div');
   card.className = 'group-card';
-
+  const bannerStyle = group.coverPhoto
+    ? `background:url('${group.coverPhoto}') center/cover no-repeat;`
+    : `background:${banner};`;
   card.innerHTML = `
-    <div class="group-icon-wrap">${group.icon}</div>
-    <div class="group-body">
-      <div class="group-name">${escHtml(group.name)}</div>
-      <div class="group-members">
-        <i data-lucide="users" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px;"></i>
-        ${group.members} members
-      </div>
-      <div class="group-desc">${escHtml(group.description)}</div>
-      <div class="group-activity">Last active ${group.lastActivity}</div>
+    <div class="group-card-banner" style="${bannerStyle}">
+      <div class="group-card-icon">${group.icon}</div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:12px;">
-      ${group.joined ? `<button class="btn-join-group open-group-btn" onclick="openGroupModal('${group.id}')">Open Group</button>` : ''}
-      <button class="btn-join-group${group.joined ? ' joined' : ''}" id="group-btn-${group.id}" onclick="toggleGroup('${group.id}',this)" style="${group.joined ? 'flex:0 0 auto' : 'flex:1'}">
-        ${group.joined ? '✓ Joined' : 'Join Group'}
-      </button>
+    <div class="group-card-body">
+      <div class="group-card-name">${escHtml(group.name)}</div>
+      <div class="group-card-meta">
+        👥 ${group.members} members
+        ${group.privacy === 'private' ? '<span style="background:rgba(231,111,81,0.1);color:var(--coral);padding:1px 6px;border-radius:7px;font-weight:700;font-size:10px;">Private</span>' : ''}
+      </div>
+      <div class="group-card-desc">${escHtml(group.description)}</div>
+      <div class="group-card-actions">
+        ${group.joined
+          ? `<button class="btn-group-open" onclick="openGroupPage('${group.id}')">View Group →</button>`
+          : `<button class="btn-join-group" id="group-btn-${group.id}" onclick="toggleGroup('${group.id}',this)">Join Group</button>`}
+        ${group.joined ? `<button class="btn-join-group joined" id="group-btn-${group.id}" onclick="toggleGroup('${group.id}',this)" style="flex:0 0 auto;padding:8px 10px;">✓</button>` : ''}
+        ${group.isAdmin ? `<button onclick="deleteGroup('${group.id}',this)" title="Delete group" style="padding:7px 10px;background:none;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;font-size:14px;color:var(--coral);flex-shrink:0;">🗑️</button>` : ''}
+      </div>
     </div>
   `;
   return card;
@@ -1127,78 +1503,240 @@ async function toggleGroup(groupId, btn) {
     });
     if (!res.ok) throw new Error();
     const data = await res.json();
-    btn.textContent = data.joined ? '✓ Joined' : 'Join';
-    btn.className = `btn-join-group${data.joined ? ' joined' : ''}`;
-
-    // Update member count in card
-    const memberEl = btn.closest('.group-card').querySelector('.group-members');
-    if (memberEl) memberEl.innerHTML = `<i data-lucide="users" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px;"></i> ${data.members} members`;
-    lucide.createIcons();
-
+    // Refresh the whole groups list so card state is correct
     showToast(data.joined ? 'You joined the group! 🎉' : 'You left the group.');
+    await renderGroups(document.getElementById('sectionContent'));
   } catch {
     showToast('Could not update group membership.');
   }
 }
 
-async function openGroupModal(groupId) {
-  const modal = document.getElementById('eventDetailModal');
-  const body = document.getElementById('eventDetailBody');
-  const title = modal.querySelector('.modal-header h3');
-  if (title) title.textContent = 'Group';
-  body.innerHTML = '<div class="loading-spinner"></div>';
-  openModal('eventDetailModal');
+async function openGroupPage(groupId) {
+  currentGroupId = groupId;
+  const container = document.getElementById('sectionContent');
+  container.innerHTML = '<div class="loading-spinner" style="margin:60px auto;display:block;"></div>';
+  await renderGroupPage(groupId, container);
+}
 
+async function renderGroupPage(groupId, container) {
   const group = await fetchJSON(`/api/groups/${groupId}`);
-  if (!group) { body.innerHTML = '<p style="padding:20px;color:var(--coral)">Could not load group.</p>'; return; }
-
+  if (!group) {
+    container.innerHTML = '<p style="padding:30px;color:var(--coral);">Could not load group.</p>';
+    return;
+  }
   const posts = group.posts || [];
+  const bannerStyle = group.coverPhoto
+    ? `background:url('${group.coverPhoto}') center/cover no-repeat;`
+    : `background:${groupBannerGradient(group.id)};`;
 
-  body.innerHTML = `
-    <div style="padding:20px;">
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">
-        <div style="font-size:38px;line-height:1">${group.icon}</div>
-        <div>
-          <div style="font-size:17px;font-weight:800;color:var(--text-dark);line-height:1.2">${escHtml(group.name)}</div>
-          <div style="font-size:12px;color:var(--text-light);margin-top:3px;">
-            <i data-lucide="users" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px;"></i>
-            ${group.members} members · Last active ${group.lastActivity}
+  const wrap = document.createElement('div');
+  wrap.className = 'group-page';
+
+  // Back button
+  wrap.innerHTML = `
+    <button class="group-back-btn" onclick="navigate('groups')">← Back to Groups</button>
+
+    <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;">
+      <div class="group-page-banner" style="${bannerStyle}"></div>
+      <div class="group-page-header">
+        <div class="group-page-icon">${group.icon}</div>
+        <div class="group-page-info">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div class="group-page-name">${escHtml(group.name)}</div>
+            <div style="display:flex;gap:8px;flex-shrink:0;margin-top:4px;">
+              <button onclick="reportGroup('${group.id}')" style="padding:7px 13px;background:none;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text-mid);font-family:inherit;display:flex;align-items:center;gap:5px;">⚑ Report</button>
+              ${group.isAdmin ? `<button onclick="deleteGroup('${group.id}',null,true)" style="padding:7px 13px;background:none;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;color:var(--coral);font-family:inherit;">🗑️ Delete</button>` : ''}
+            </div>
+          </div>
+          <div class="group-page-meta">
+            <span>👥 ${group.members} members</span>
+            <span>${group.privacy === 'private' ? '🔒 Private' : '🌐 Public'}</span>
+          </div>
+          <div class="group-page-desc">${escHtml(group.description)}</div>
+          <div class="group-page-location">📍 Costa Blanca Villas · Farallón, Panama</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="group-compose-box" id="groupComposeBox">
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="width:38px;height:38px;border-radius:50%;background:${currentUser?.avatar || '#0077B6'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${currentUser?.initials || '?'}</div>
+        <div style="flex:1;">
+          <textarea id="groupPostBox" placeholder="Write something to ${escHtml(group.name)}…"></textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+            <button onclick="submitGroupPost('${group.id}')" style="padding:9px 22px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Post</button>
           </div>
         </div>
       </div>
+    </div>
 
-      <div style="background:var(--bg);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text-mid);line-height:1.6;margin-bottom:18px;">
-        ${escHtml(group.description)}
-      </div>
+    <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:12px;padding:0 2px;">${posts.length} Post${posts.length !== 1 ? 's' : ''}</div>
 
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div style="font-size:14px;font-weight:700;color:var(--text-dark);">Recent Activity</div>
-        <span style="font-size:11px;color:var(--text-light);background:var(--bg);padding:3px 10px;border-radius:10px;">${posts.length} posts</span>
-      </div>
-
+    <div id="groupPostsFeed">
       ${posts.length === 0
-        ? '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:13px;">No posts yet in this group.</div>'
+        ? `<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:40px;text-align:center;color:var(--text-light);font-size:14px;">No posts yet — be the first to share something!</div>`
         : posts.map(p => `
-          <div style="border-top:1px solid var(--border);padding:14px 0;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-              <div style="width:34px;height:34px;border-radius:50%;background:${p.author.avatar};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">${p.author.initials}</div>
-              <div>
-                <div style="font-size:13px;font-weight:700;color:var(--text-dark)">${escHtml(p.author.name)}</div>
-                <div style="font-size:11px;color:var(--text-light)">${p.time}</div>
+          <div class="group-post-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:40px;height:40px;border-radius:50%;background:${p.author.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${escHtml(p.author.initials)}</div>
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${escHtml(p.author.name)}</div>
+                  <div style="font-size:11.5px;color:var(--text-light);">${groupTimeAgo(p.createdAt)}</div>
+                </div>
               </div>
+              ${group.isAdmin ? `<button onclick="deleteGroupPost('${group.id}','${p.id}')" title="Delete post" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--coral);">🗑️</button>` : ''}
             </div>
-            <div style="font-size:13px;color:var(--text-mid);line-height:1.65;padding-left:44px">${escHtml(p.content)}</div>
-          </div>
-        `).join('')}
+            <div style="font-size:14px;color:var(--text-mid);line-height:1.65;">${escHtml(p.content)}</div>
+          </div>`).join('')}
+    </div>
+  `;
 
-      <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
-        <button class="btn-business-contact" style="width:100%;background:var(--ocean);" onclick="showToast('Post shared to the group! 🎉');closeModal('eventDetailModal')">
-          Post to This Group
-        </button>
+  container.innerHTML = '';
+  container.appendChild(wrap);
+}
+
+async function submitGroupPost(groupId) {
+  const box = document.getElementById('groupPostBox');
+  const content = box?.value.trim();
+  if (!content) return;
+  const res = await fetch(`/api/groups/${groupId}/posts`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content })
+  });
+  if (res.ok) {
+    box.value = '';
+    await renderGroupPage(groupId, document.getElementById('sectionContent'));
+    showToast('Posted to the group! 🎉');
+  }
+}
+
+async function deleteGroupPost(groupId, postId) {
+  if (!confirm('Delete this post?')) return;
+  const res = await fetch(`/api/groups/${groupId}/posts/${postId}`, { method: 'DELETE', credentials: 'include' });
+  if (res.ok) {
+    await renderGroupPage(groupId, document.getElementById('sectionContent'));
+    showToast('Post deleted.');
+  }
+}
+
+async function deleteGroup(groupId, cardEl, fromPage) {
+  if (!confirm('Delete this group? This cannot be undone.')) return;
+  const res = await fetch(`/api/groups/${groupId}`, { method: 'DELETE', credentials: 'include' });
+  if (res.ok) {
+    showToast('Group deleted.');
+    navigate('groups');
+  }
+}
+
+function reportGroup(groupId) {
+  const modal = document.getElementById('eventDetailModal');
+  const body = document.getElementById('eventDetailBody');
+  const title = modal.querySelector('.modal-header h3');
+  if (title) title.textContent = 'Report Group';
+  body.innerHTML = `
+    <div style="padding:22px;">
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:18px;line-height:1.6;">Help us keep Good Neighbors safe and respectful. Let us know why you're reporting this group.</p>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Reason *</label>
+        <select id="reportReason" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:white;color:var(--text-dark);">
+          <option value="">Select a reason...</option>
+          <option value="spam">Spam or misleading content</option>
+          <option value="harassment">Harassment or bullying</option>
+          <option value="hate">Hate speech or discrimination</option>
+          <option value="misinformation">Misinformation</option>
+          <option value="inappropriate">Inappropriate content</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div style="margin-bottom:18px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Additional details (optional)</label>
+        <textarea id="reportNote" placeholder="Tell us more about what's happening..." style="width:100%;min-height:80px;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;resize:none;outline:none;"></textarea>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeModal('eventDetailModal')" style="flex:1;padding:11px;background:var(--bg);color:var(--text-mid);border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+        <button onclick="submitGroupReport('${groupId}')" style="flex:1;padding:11px;background:var(--coral);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Submit Report</button>
       </div>
     </div>
   `;
-  if (window.lucide) lucide.createIcons();
+  openModal('eventDetailModal');
+}
+
+async function submitGroupReport(groupId) {
+  const reason = document.getElementById('reportReason')?.value;
+  if (!reason) { showToast('Please select a reason.'); return; }
+  const note = document.getElementById('reportNote')?.value.trim() || '';
+  const res = await fetch(`/api/groups/${groupId}/report`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason, note })
+  });
+  if (res.ok) {
+    closeModal('eventDetailModal');
+    showToast('Report submitted. Thank you for helping keep the community safe.');
+  }
+}
+
+function openCreateGroupModal() {
+  const modal = document.getElementById('eventDetailModal');
+  const body = document.getElementById('eventDetailBody');
+  const title = modal.querySelector('.modal-header h3');
+  if (title) title.textContent = 'Create Group';
+  body.innerHTML = `
+    <div style="padding:20px;">
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Group Name *</label>
+        <input id="cgName" type="text" placeholder="e.g. Golf Enthusiasts" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;" />
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Description</label>
+        <textarea id="cgDesc" placeholder="What is this group about?" style="width:100%;min-height:80px;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;resize:none;outline:none;"></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Icon</label>
+          <input id="cgIcon" type="text" value="👥" placeholder="Emoji" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:18px;font-family:inherit;outline:none;text-align:center;" />
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Privacy</label>
+          <select id="cgPrivacy" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:white;">
+            <option value="public">🌐 Public</option>
+            <option value="private">🔒 Private</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Cover Photo URL <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <input id="cgCover" type="url" placeholder="https://..." style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;" />
+        <div style="font-size:11px;color:var(--text-light);margin-top:4px;">Paste any image URL — it will appear as the group's cover photo.</div>
+      </div>
+      <button onclick="submitCreateGroup()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Create Group</button>
+    </div>
+  `;
+  openModal('eventDetailModal');
+}
+
+async function submitCreateGroup() {
+  const name = document.getElementById('cgName')?.value.trim();
+  if (!name) { showToast('Please enter a group name.'); return; }
+  const body = {
+    name,
+    description: document.getElementById('cgDesc')?.value.trim(),
+    icon: document.getElementById('cgIcon')?.value.trim() || '👥',
+    privacy: document.getElementById('cgPrivacy')?.value || 'public',
+    coverPhoto: document.getElementById('cgCover')?.value.trim() || ''
+  };
+  const res = await fetch('/api/groups', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (res.ok) {
+    closeModal('eventDetailModal');
+    showToast('Group created! 🎉');
+    navigate('groups');
+  }
 }
 
 // ─── Notification Card ───────────────────────────────────────────
@@ -1236,6 +1774,17 @@ function selectPostType(type, btnEl) {
   // Show/hide extra fields
   document.getElementById('priceField').style.display = ['for_sale', 'free'].includes(type) ? 'flex' : 'none';
   document.getElementById('pollOptions').style.display = type === 'poll' ? 'block' : 'none';
+  document.getElementById('safetyFields').style.display = type === 'safety' ? 'block' : 'none';
+
+  // Show official note only for HOA/admin
+  const officialNote = document.getElementById('officialAlertNote');
+  const highBtn = document.querySelector('.sev-high-btn');
+  if (type === 'safety') {
+    const isPrivileged = currentUser?.role === 'hoa' || currentUser?.role === 'admin';
+    if (officialNote) officialNote.style.display = isPrivileged ? 'block' : 'none';
+    if (highBtn) highBtn.style.display = isPrivileged ? 'inline-block' : 'none';
+    if (!isPrivileged) selectSeverity('medium', document.querySelector('[data-sev="medium"]'));
+  }
 
   updatePostBtn();
 }
@@ -1256,6 +1805,21 @@ function addPollOption() {
   row.className = 'poll-option-row';
   row.innerHTML = `<input type="text" class="poll-option-input" placeholder="Option ${count}" />`;
   container.insertBefore(row, container.lastElementChild);
+}
+
+function selectSeverity(sev, btnEl) {
+  selectedSeverity = sev;
+  document.querySelectorAll('.sev-btn').forEach(b => {
+    b.style.borderColor = 'var(--border)';
+    b.style.background = 'white';
+    b.style.color = 'var(--text-mid)';
+  });
+  if (btnEl) {
+    const colors = { low: '#2A9D8F', medium: '#F4A261', high: '#E76F51' };
+    btnEl.style.borderColor = colors[sev] || 'var(--ocean)';
+    btnEl.style.background = (colors[sev] || '#0077B6') + '18';
+    btnEl.style.color = colors[sev] || 'var(--ocean)';
+  }
 }
 
 // ─── Post Photo & Location ───────────────────────────────────────
@@ -1310,6 +1874,12 @@ async function submitPost() {
   if (postPhotoDataUrl) body.image = postPhotoDataUrl;
   if (postLocationValue) body.location = postLocationValue;
 
+  if (selectedPostType === 'safety') {
+    const alertType = document.getElementById('alertTypeSelect')?.value;
+    if (alertType) body.alertType = alertType;
+    body.severity = selectedSeverity;
+  }
+
   if (['for_sale', 'free'].includes(selectedPostType)) {
     const price = document.getElementById('postPrice').value;
     const condition = document.getElementById('postCondition').value;
@@ -1338,6 +1908,9 @@ async function submitPost() {
     document.getElementById('postContent').value = '';
     removePostPhoto();
     removePostLocation();
+    selectedSeverity = 'medium';
+    const safetyFields = document.getElementById('safetyFields');
+    if (safetyFields) safetyFields.style.display = 'none';
     showToast('Your post is live! 🌊');
 
     // Navigate to feed and show post
@@ -1348,6 +1921,15 @@ async function submitPost() {
     }
   } catch {
     showToast('Could not post. Please try again.');
+  }
+}
+
+async function resolveAlert(postId) {
+  const res = await fetch(`/api/posts/${postId}/resolve`, { method: 'POST', credentials: 'include' });
+  if (res.ok) {
+    showToast('Alert marked as resolved ✅');
+    if (currentSection === 'safety') navigate('safety');
+    else navigate('feed');
   }
 }
 
@@ -1394,8 +1976,8 @@ async function renderRealEstate(container) {
   `;
   container.appendChild(sponsor);
 
-  // Admin bar
-  if (currentUser?.username === 'admin') {
+  // Realtor / admin bar
+  if (currentUser?.role === 'realtor' || currentUser?.role === 'admin') {
     const adminBar = document.createElement('div');
     adminBar.className = 're-admin-bar';
     adminBar.innerHTML = `
@@ -1459,7 +2041,7 @@ function buildRealEstateCard(listing) {
     : `$${listing.price.toLocaleString()}`;
   const typeBadge = isRent ? 'For Rent' : 'For Sale';
   const typeCls = isRent ? 'for-rent' : 'for-sale';
-  const isAdmin = currentUser?.username === 'admin';
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'realtor';
 
   card.innerHTML = `
     <div class="re-card-img-wrap">
@@ -1600,6 +2182,66 @@ async function submitListing() {
   }
 }
 
+// ─── Golf ────────────────────────────────────────────────────────
+async function renderGolf(container) {
+  container.innerHTML = sectionHeaderHTML('golf');
+
+  container.innerHTML += `
+    <!-- Course profile card -->
+    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:18px;box-shadow:var(--shadow-sm);">
+      <div style="height:180px;background:linear-gradient(135deg,#2D6A4F,#52B788);position:relative;overflow:hidden;">
+        <img src="https://picsum.photos/seed/golf-course/900/300" alt="Golf Course" style="width:100%;height:100%;object-fit:cover;opacity:0.7;">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:20px;background:linear-gradient(to top,rgba(0,0,0,0.6),transparent);">
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Official Community Golf Club</div>
+          <div style="font-size:22px;font-weight:800;color:white;">Mantarraya Golf Club</div>
+          <div style="font-size:13px;color:rgba(255,255,255,0.85);">Royal Decameron Panama · Rio Hato, Coclé</div>
+        </div>
+      </div>
+      <div style="padding:20px 24px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Hours of Operation</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;">
+              <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-mid);">Tue – Fri</span><span style="font-weight:600;color:var(--text-dark);">8:00 AM – 4:00 PM</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-mid);">Saturday</span><span style="font-weight:600;color:var(--text-dark);">7:00 AM – 5:00 PM</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-mid);">Sun & Holidays</span><span style="font-weight:600;color:var(--text-dark);">7:00 AM – 3:00 PM</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-mid);">Monday</span><span style="font-weight:600;color:#E76F51;">Closed</span></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Green Fees</div>
+            <div style="font-size:28px;font-weight:800;color:#2D6A4F;">$64.20</div>
+            <div style="font-size:12px;color:var(--text-light);">per player · 18 holes</div>
+            <div style="font-size:12px;color:var(--text-light);margin-top:4px;">📞 +507 6379-3055</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <a href="https://www.golf-booking.com" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:#2D6A4F;color:white;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;">
+            ⛳ Book a Tee Time
+          </a>
+          <a href="tel:+50763793055" style="padding:13px 18px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-weight:600;color:var(--text-dark);text-decoration:none;display:flex;align-items:center;gap:6px;">
+            📞 Call
+          </a>
+        </div>
+        <div style="margin-top:12px;padding:10px 14px;background:#F0FFF4;border:1px solid #B7E4C7;border-radius:10px;font-size:12.5px;color:#2D6A4F;">
+          ⚠️ New hours from April 16: Tue–Fri 8AM–4PM · Sat 7AM–5PM · Sun & Holidays 7AM–3PM · Mon Closed
+        </div>
+      </div>
+    </div>
+
+    <!-- Tip to book -->
+    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:18px;box-shadow:var(--shadow-sm);">
+      <div style="font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">How to Book</div>
+      <div style="font-size:13.5px;color:var(--text-mid);line-height:1.65;">
+        Book tee times online through <strong>golf-booking.com</strong> — select your date, number of holes (9 or 18), and number of players. Available tee times are shown with green dots. You can also call the club directly at <a href="tel:+50763793055" style="color:var(--ocean);font-weight:600;">+507 6379-3055</a>.
+      </div>
+    </div>
+
+  `;
+
+  if (window.lucide) lucide.createIcons();
+}
+
 // ─── Section Headers ─────────────────────────────────────────────
 const sectionMeta = {
   feed: { title: 'Neighborhood Feed', desc: 'What\'s happening in Costa Blanca Villas right now', emoji: '<img src="/logo.png" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--border);">' },
@@ -1611,7 +2253,8 @@ const sectionMeta = {
   groups: { title: 'Groups', desc: 'Connect with neighbors who share your interests', emoji: '👥' },
   notifications: { title: 'Notifications', desc: 'Stay up to date on what matters', emoji: '🔔' },
   profile: { title: 'My Profile', desc: 'Your Costa Blanca Villas profile', emoji: '👤' },
-  realestate: { title: 'Real Estate', desc: 'Properties for sale & rent near Costa Blanca Villas', emoji: '🏡' }
+  realestate: { title: 'Real Estate', desc: 'Properties for sale & rent near Costa Blanca Villas', emoji: '🏡' },
+  golf: { title: 'Golf', desc: 'Mantarraya Golf Club · Book tee times & connect with golfers', emoji: '⛳' }
 };
 
 function sectionHeaderHTML(section) {

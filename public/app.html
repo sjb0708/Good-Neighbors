@@ -176,6 +176,10 @@
           <span>Real Estate</span>
           <span class="nav-badge" style="background:var(--seafoam)">8</span>
         </button>
+        <button class="nav-item" data-section="golf" onclick="navigate('golf')">
+          <i data-lucide="flag"></i>
+          <span>Golf</span>
+        </button>
       </nav>
 
       <!-- Emergency Contacts -->
@@ -282,34 +286,7 @@
           <i data-lucide="zap" style="width:16px;height:16px;color:#F4A261"></i>
           What's Happening
         </div>
-        <div class="happening-item">
-          <span class="happening-dot safety"></span>
-          <div class="happening-text">
-            <strong>Safety Alert</strong> — suspicious vehicle near north gate
-            <div class="happening-time">3 hours ago</div>
-          </div>
-        </div>
-        <div class="happening-item">
-          <span class="happening-dot event"></span>
-          <div class="happening-text">
-            <strong>Bingo Night</strong> at Costa Blanca Beach Club
-            <div class="happening-time">Friday 7 PM · 48 going</div>
-          </div>
-        </div>
-        <div class="happening-item">
-          <span class="happening-dot lost"></span>
-          <div class="happening-text">
-            <strong>Lost Cat</strong> — orange tabby near Villa #47
-            <div class="happening-time">Please share</div>
-          </div>
-        </div>
-        <div class="happening-item">
-          <span class="happening-dot recommend"></span>
-          <div class="happening-text">
-            <strong>Amar By La Playa</strong> getting rave reviews
-            <div class="happening-time">52 agrees</div>
-          </div>
-        </div>
+        <div id="happeningList"></div>
       </div>
 
       <div class="right-widget" id="upcomingEvent">
@@ -456,6 +433,33 @@
           <button class="add-poll-option" onclick="addPollOption()">
             <i data-lucide="plus-circle" style="width:14px;height:14px"></i> Add option
           </button>
+        </div>
+
+        <!-- Safety fields -->
+        <div id="safetyFields" style="display:none;margin-bottom:14px;">
+          <select id="alertTypeSelect" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;color:var(--text-dark);background:white;margin-bottom:10px;outline:none;">
+            <option value="">Select alert type...</option>
+            <option>Suspicious Activity</option>
+            <option>Lost Pet</option>
+            <option>Lost Pet Found</option>
+            <option>Stray Animals</option>
+            <option>Road Works</option>
+            <option>Planned Power Outage</option>
+            <option>Water Outage</option>
+            <option>Medical Emergency</option>
+            <option>Fire</option>
+            <option>Flooding</option>
+            <option>General Warning</option>
+            <option>Community Update</option>
+          </select>
+          <div id="severityRow" style="display:flex;gap:8px;">
+            <button type="button" class="sev-btn active" data-sev="low" onclick="selectSeverity('low',this)" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;background:white;color:var(--text-mid);">🟢 Low</button>
+            <button type="button" class="sev-btn" data-sev="medium" onclick="selectSeverity('medium',this)" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;background:white;color:var(--text-mid);">🟡 Medium</button>
+            <button type="button" class="sev-btn sev-high-btn" data-sev="high" onclick="selectSeverity('high',this)" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;background:white;color:var(--text-mid);">🔴 High</button>
+          </div>
+          <div id="officialAlertNote" style="display:none;margin-top:8px;padding:8px 12px;background:#FFF3CD;border:1px solid #FFCA28;border-radius:8px;font-size:12px;color:#856404;">
+            ⚡ Official alerts are pinned and sent to all neighbors + the Safety group
+          </div>
         </div>
 
         <!-- Actions row -->

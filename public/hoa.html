@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HOA Dashboard — Good Neighbors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ocean: #0077B6;
+      --ocean-dark: #005F92;
+      --ocean-light: #90E0EF;
+      --coral: #E76F51;
+      --seafoam: #2A9D8F;
+      --seafoam-dark: #1f7a6e;
+      --gold: #F4A261;
+      --text-dark: #1A2B3C;
+      --text-mid: #4A5568;
+      --text-light: #8896A5;
+      --border: #E8EDF2;
+      --bg: #F0F4F9;
+      --surface: #FFFFFF;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+      --topbar-h: 62px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text-dark);
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--topbar-h);
+      background: white;
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .topbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+    }
+
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+
+    .logo-wrap { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+
+    .logo-mark { width: 36px; height: 36px; border-radius: 9px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,119,182,0.25); }
+    .logo-mark img { width: 100%; height: 100%; object-fit: cover; }
+    .logo-name { font-size: 16px; font-weight: 800; color: var(--ocean); letter-spacing: -0.3px; }
+
+    .hoa-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(0,119,182,0.08);
+      border: 1px solid rgba(0,119,182,0.18);
+      border-radius: 20px;
+      padding: 4px 11px;
+      font-size: 11.5px; font-weight: 600;
+      color: var(--ocean);
+    }
+
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+    .hoa-name-topbar { font-size: 14px; font-weight: 700; color: var(--text-dark); }
+
+    .btn-logout {
+      padding: 7px 16px;
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+      color: var(--text-mid);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.18s;
+    }
+
+    .btn-logout:hover { border-color: var(--coral); color: var(--coral); }
+
+    /* ── LAYOUT ── */
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: calc(var(--topbar-h) + 28px) 24px 48px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 22px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card + .card { margin-top: 18px; }
+
+    .card-title {
+      font-size: 11.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.7px;
+      color: var(--text-light);
+      margin-bottom: 16px;
+    }
+
+    /* ── HOA PROFILE ── */
+    .hoa-profile-header {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .hoa-avatar {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      background: var(--ocean);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 800; color: white;
+      flex-shrink: 0;
+    }
+
+    .hoa-profile-name { font-size: 15px; font-weight: 800; color: var(--text-dark); line-height: 1.2; }
+    .hoa-profile-sub { font-size: 12px; color: var(--text-light); margin-top: 3px; }
+
+    .hoa-profile-bio { font-size: 13px; color: var(--text-mid); line-height: 1.55; margin-bottom: 12px; }
+
+    .hoa-detail {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 12.5px; color: var(--text-mid);
+      margin-bottom: 7px;
+    }
+
+    /* ── STATS ── */
+    .stats-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat-box {
+      background: rgba(0,119,182,0.05);
+      border: 1px solid rgba(0,119,182,0.1);
+      border-radius: 12px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+
+    .stat-num { font-size: 24px; font-weight: 800; color: var(--ocean); line-height: 1; }
+    .stat-label { font-size: 10.5px; font-weight: 600; color: var(--text-light); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+
+    /* ── TABS ── */
+    .main-tabs {
+      display: flex; gap: 4px;
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 20px;
+    }
+
+    .main-tab {
+      flex: 1;
+      padding: 9px 12px;
+      border: none; background: none;
+      border-radius: 9px;
+      font-size: 13px; font-weight: 600;
+      color: var(--text-mid);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.18s;
+    }
+
+    .main-tab.active {
+      background: white;
+      color: var(--ocean);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    /* ── COMPOSE TABS ── */
+    .compose-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+
+    .compose-tab {
+      padding: 7px 16px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      font-size: 13px; font-weight: 600;
+      color: var(--text-mid);
+      cursor: pointer;
+      background: white;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.18s;
+    }
+
+    .compose-tab.active { background: var(--ocean); border-color: var(--ocean); color: white; }
+    .compose-tab:hover:not(.active) { border-color: var(--ocean); color: var(--ocean); }
+
+    .compose-box {
+      width: 100%;
+      min-height: 110px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text-dark);
+      background: #fafcff;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.18s;
+    }
+
+    .compose-box:focus { border-color: var(--ocean); background: white; }
+
+    .compose-footer {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+    }
+
+    .compose-hint { font-size: 12px; color: var(--text-light); }
+
+    .btn-send {
+      padding: 10px 24px;
+      background: var(--ocean);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px; font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .btn-send:hover { background: var(--ocean-dark); transform: translateY(-1px); }
+    .btn-send:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* ── EVENT FORM ── */
+    .event-form { display: none; }
+    .event-form.show { display: block; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .form-row-full { margin-bottom: 12px; }
+
+    .field-label {
+      display: block;
+      font-size: 11.5px; font-weight: 700;
+      color: var(--text-mid);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 5px;
+    }
+
+    .field-input, .field-textarea, .field-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text-dark);
+      background: #fafcff;
+      outline: none;
+      transition: border-color 0.18s;
+    }
+
+    .field-textarea { min-height: 80px; resize: vertical; }
+    .field-input:focus, .field-textarea:focus, .field-select:focus { border-color: var(--ocean); background: white; }
+
+    /* ── POST ITEMS ── */
+    .post-item {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .post-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .post-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+
+    .post-type-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+
+    .badge-notice { background: rgba(42,157,143,0.1); color: var(--seafoam); }
+    .badge-maintenance { background: rgba(244,162,97,0.12); color: #d4874a; }
+    .badge-safety { background: rgba(231,111,81,0.1); color: var(--coral); }
+    .badge-general { background: rgba(0,119,182,0.1); color: var(--ocean); }
+
+    .post-time { font-size: 12px; color: var(--text-light); }
+    .post-content { font-size: 14px; color: var(--text-dark); line-height: 1.55; }
+    .post-stats { display: flex; gap: 14px; margin-top: 10px; }
+    .post-stat { font-size: 12px; color: var(--text-light); display: flex; align-items: center; gap: 4px; }
+
+    /* ── EVENT ITEMS ── */
+    .event-item {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .event-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .event-title { font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
+
+    .event-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+
+    .event-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12px; color: var(--text-mid);
+    }
+
+    .event-rsvp { font-size: 12px; color: var(--seafoam); font-weight: 600; margin-top: 4px; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); }
+    .empty-state .empty-icon { font-size: 36px; margin-bottom: 10px; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── COMMUNITY BANNER ── */
+    .community-banner {
+      background: linear-gradient(135deg, var(--ocean), var(--seafoam));
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .banner-num { font-size: 28px; font-weight: 800; line-height: 1; }
+    .banner-label { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+    .banner-sub { font-size: 13px; opacity: 0.9; margin-top: 8px; }
+    .banner-icon { font-size: 40px; opacity: 0.7; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #1a2b3c;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 14px; font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      z-index: 999;
+      white-space: nowrap;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* panel show/hide */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    @media (max-width: 860px) {
+      .page { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="topbar-left">
+        <a class="logo-wrap" href="/">
+          <div class="logo-mark"><img src="/logo.png" alt="Good Neighbors"></div>
+          <span class="logo-name">Good Neighbors</span>
+        </a>
+        <div class="hoa-badge">🏛️ HOA Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <div id="google_translate_element" style="display:none;"></div>
+        <button id="langToggleBtn" onclick="toggleLanguage()" style="background:none;border:1.5px solid #E8EDF2;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;color:#4A5568;font-family:'Inter',sans-serif;">🌐 ES</button>
+        <span class="hoa-name-topbar" id="topbarHoaName"></span>
+        <button class="btn-logout" onclick="logout()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <!-- LEFT SIDEBAR -->
+    <div>
+
+      <!-- HOA Profile -->
+      <div class="card">
+        <div class="hoa-profile-header">
+          <div class="hoa-avatar">🏛️</div>
+          <div>
+            <div class="hoa-profile-name" id="hoaName">Loading...</div>
+            <div class="hoa-profile-sub">Homeowners Association</div>
+          </div>
+        </div>
+        <div class="hoa-profile-bio" id="hoaBio"></div>
+        <div class="hoa-detail">📍 <span id="hoaAddress"></span></div>
+      </div>
+
+      <!-- Stats -->
+      <div class="card">
+        <div class="card-title">Community Overview</div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-num" id="statResidents">—</div>
+            <div class="stat-label">Residents</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statEvents">—</div>
+            <div class="stat-label">Upcoming Events</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statGroups">—</div>
+            <div class="stat-label">Groups</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statPosts">—</div>
+            <div class="stat-label">HOA Posts</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <div class="card-title">Quick Actions</div>
+        <button onclick="switchPanel('communicate')" style="width:100%;margin-bottom:8px;padding:10px;background:rgba(0,119,182,0.06);border:1.5px solid rgba(0,119,182,0.15);border-radius:10px;font-size:13px;font-weight:600;color:var(--ocean);cursor:pointer;font-family:'Inter',sans-serif;text-align:left;">📢 Send Community Notice</button>
+        <button onclick="switchPanel('events')" style="width:100%;margin-bottom:8px;padding:10px;background:rgba(0,119,182,0.06);border:1.5px solid rgba(0,119,182,0.15);border-radius:10px;font-size:13px;font-weight:600;color:var(--ocean);cursor:pointer;font-family:'Inter',sans-serif;text-align:left;">📅 Schedule New Event</button>
+        <button onclick="switchPanel('history')" style="width:100%;padding:10px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;color:var(--text-mid);cursor:pointer;font-family:'Inter',sans-serif;text-align:left;">📋 View Post History</button>
+      </div>
+
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div>
+
+      <div class="community-banner">
+        <div>
+          <div class="banner-num" id="bannerResidents">—</div>
+          <div class="banner-label">residents in Costa Blanca Villas</div>
+          <div class="banner-sub">Official HOA communications reach everyone instantly.</div>
+        </div>
+        <div class="banner-icon">🏘️</div>
+      </div>
+
+      <!-- Tab nav -->
+      <div class="main-tabs">
+        <button class="main-tab active" id="tab-communicate" onclick="switchPanel('communicate')">📢 Communicate</button>
+        <button class="main-tab" id="tab-events" onclick="switchPanel('events')">📅 Events</button>
+        <button class="main-tab" id="tab-history" onclick="switchPanel('history')">📋 History</button>
+      </div>
+
+      <!-- COMMUNICATE PANEL -->
+      <div class="panel active card" id="panel-communicate">
+        <div class="card-title">Send to Community</div>
+        <div class="compose-tabs">
+          <button class="compose-tab active" onclick="switchPostType('general', this)">📋 General Notice</button>
+          <button class="compose-tab" onclick="switchPostType('maintenance', this)">🔧 Maintenance</button>
+          <button class="compose-tab" onclick="switchPostType('safety', this)">⚠️ Safety Alert</button>
+        </div>
+        <textarea id="composeBox" class="compose-box" placeholder="Write an official notice to all residents..."></textarea>
+        <div class="compose-footer">
+          <span class="compose-hint">Sent as an official HOA notice · reaches all <strong id="hintCount">—</strong> residents</span>
+          <button class="btn-send" id="sendBtn" onclick="sendPost()">Post Notice</button>
+        </div>
+      </div>
+
+      <!-- EVENTS PANEL -->
+      <div class="panel card" id="panel-events">
+        <div class="card-title">Community Events</div>
+        <div class="compose-tabs" style="margin-bottom:20px;">
+          <button class="compose-tab active" id="evtTab-list" onclick="switchEvtTab('list')">📋 Upcoming Events</button>
+          <button class="compose-tab" id="evtTab-new" onclick="switchEvtTab('new')">＋ Schedule Event</button>
+        </div>
+
+        <!-- Event list -->
+        <div id="evtListPanel">
+          <div id="eventsList"></div>
+        </div>
+
+        <!-- New event form -->
+        <div class="event-form" id="evtNewPanel">
+          <div class="form-row">
+            <div>
+              <label class="field-label">Event Title</label>
+              <input class="field-input" id="evtTitle" placeholder="e.g. HOA Monthly Meeting" />
+            </div>
+            <div>
+              <label class="field-label">Category</label>
+              <select class="field-select" id="evtCategory">
+                <option value="Community">Community</option>
+                <option value="Health & Fitness">Health & Fitness</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Social">Social</option>
+                <option value="Kids & Family">Kids & Family</option>
+                <option value="Safety">Safety</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row-full">
+            <label class="field-label">Description</label>
+            <textarea class="field-textarea" id="evtDesc" placeholder="Describe the event..."></textarea>
+          </div>
+          <div class="form-row">
+            <div>
+              <label class="field-label">Date</label>
+              <input class="field-input" id="evtDate" type="date" />
+            </div>
+            <div>
+              <label class="field-label">Location</label>
+              <input class="field-input" id="evtLocation" placeholder="e.g. Community Clubhouse" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div>
+              <label class="field-label">Start Time</label>
+              <input class="field-input" id="evtTime" type="time" />
+            </div>
+            <div>
+              <label class="field-label">End Time</label>
+              <input class="field-input" id="evtEndTime" type="time" />
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+            <button onclick="switchEvtTab('list')" style="padding:10px 20px;background:none;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;color:var(--text-mid);cursor:pointer;font-family:'Inter',sans-serif;">Cancel</button>
+            <button onclick="createEvent()" class="btn-send">Create Event</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORY PANEL -->
+      <div class="panel card" id="panel-history">
+        <div class="card-title">Sent Notices</div>
+        <div id="historyList"><div class="empty-state"><div class="empty-icon">📭</div><p>No notices sent yet.</p></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let hoaData = null;
+    let currentPostType = 'general';
+    let allEvents = [];
+
+    async function init() {
+      const res = await fetch('/api/hoa/me', { credentials: 'include' });
+      if (!res.ok) { window.location.href = '/'; return; }
+      hoaData = await res.json();
+      renderProfile();
+      renderStats();
+      await loadEvents();
+      await loadHistory();
+    }
+
+    function renderProfile() {
+      document.getElementById('topbarHoaName').textContent = hoaData.name;
+      document.getElementById('hoaName').textContent = hoaData.name;
+      document.getElementById('hoaBio').textContent = hoaData.bio;
+      document.getElementById('hoaAddress').textContent = hoaData.address;
+    }
+
+    function renderStats() {
+      document.getElementById('statResidents').textContent = hoaData.totalResidents;
+      document.getElementById('statEvents').textContent = hoaData.upcomingEvents;
+      document.getElementById('statGroups').textContent = hoaData.totalGroups;
+      document.getElementById('statPosts').textContent = hoaData.hoaPostsCount;
+      document.getElementById('bannerResidents').textContent = hoaData.totalResidents;
+      document.getElementById('hintCount').textContent = hoaData.totalResidents;
+    }
+
+    async function loadEvents() {
+      const res = await fetch('/api/events', { credentials: 'include' });
+      allEvents = await res.json();
+      renderEvents();
+    }
+
+    function renderEvents() {
+      const list = document.getElementById('eventsList');
+      const upcoming = allEvents.filter(e => new Date(e.date) >= new Date(new Date().toDateString()));
+      if (!upcoming.length) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><p>No upcoming events. Schedule one!</p></div>';
+        return;
+      }
+      list.innerHTML = upcoming.map(e => `
+        <div class="event-item">
+          <div class="event-title">${e.title} ${e.isHoaEvent ? '<span style="font-size:10px;background:rgba(0,119,182,0.1);color:var(--ocean);padding:2px 7px;border-radius:10px;font-weight:700;margin-left:4px;">HOA</span>' : ''}</div>
+          <div style="font-size:13px;color:var(--text-mid);line-height:1.45;margin-top:3px;">${e.description ? e.description.slice(0,120) + (e.description.length > 120 ? '...' : '') : ''}</div>
+          <div class="event-meta">
+            <span class="event-chip">📅 ${e.date}</span>
+            <span class="event-chip">🕐 ${e.time}${e.endTime ? ' – ' + e.endTime : ''}</span>
+            <span class="event-chip">📍 ${e.location}</span>
+          </div>
+          <div class="event-rsvp">✅ ${e.rsvp.going} going · 🤔 ${e.rsvp.maybe} maybe</div>
+        </div>
+      `).join('');
+    }
+
+    async function loadHistory() {
+      const res = await fetch('/api/hoa/posts', { credentials: 'include' });
+      const posts = await res.json();
+      renderHistory(posts);
+    }
+
+    function renderHistory(posts) {
+      const list = document.getElementById('historyList');
+      if (!posts.length) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No notices sent yet. Send your first one above!</p></div>';
+        return;
+      }
+      const badgeClass = { general: 'badge-general', maintenance: 'badge-maintenance', safety: 'badge-safety' };
+      const badgeLabel = { general: '📋 General', maintenance: '🔧 Maintenance', safety: '⚠️ Safety' };
+      list.innerHTML = posts.map(p => `
+        <div class="post-item">
+          <div class="post-meta">
+            <span class="post-type-badge ${badgeClass[p.type] || 'badge-general'}">${badgeLabel[p.type] || p.type}</span>
+            <span class="post-time">${timeAgo(p.createdAt)}</span>
+          </div>
+          <div class="post-content">${p.content}</div>
+          <div class="post-stats">
+            <span class="post-stat">👍 ${Object.values(p.reactions).reduce((a,b)=>a+b,0)} reactions</span>
+            <span class="post-stat">💬 ${p.commentCount} comments</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function switchPanel(name) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(`panel-${name}`).classList.add('active');
+      const tab = document.getElementById(`tab-${name}`);
+      if (tab) tab.classList.add('active');
+    }
+
+    function switchPostType(type, btn) {
+      currentPostType = type;
+      document.querySelectorAll('.compose-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      const placeholders = {
+        general: 'Write an official notice to all residents...',
+        maintenance: 'Describe upcoming maintenance work, affected areas, and timing...',
+        safety: 'Describe the safety concern or alert for residents...'
+      };
+      document.getElementById('composeBox').placeholder = placeholders[type];
+    }
+
+    function switchEvtTab(tab) {
+      document.getElementById('evtListPanel').style.display = tab === 'list' ? 'block' : 'none';
+      document.getElementById('evtNewPanel').style.display = tab === 'new' ? 'block' : 'none';
+      document.getElementById('evtTab-list').classList.toggle('active', tab === 'list');
+      document.getElementById('evtTab-new').classList.toggle('active', tab === 'new');
+    }
+
+    async function sendPost() {
+      const content = document.getElementById('composeBox').value.trim();
+      if (!content) { showToast('Please write a message first.'); return; }
+      const btn = document.getElementById('sendBtn');
+      btn.disabled = true; btn.textContent = 'Posting...';
+
+      const res = await fetch('/api/hoa/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postType: currentPostType, content }),
+        credentials: 'include'
+      });
+
+      if (res.ok) {
+        document.getElementById('composeBox').value = '';
+        hoaData.hoaPostsCount++;
+        document.getElementById('statPosts').textContent = hoaData.hoaPostsCount;
+        await loadHistory();
+        showToast('✅ Notice posted to the community!');
+      } else {
+        showToast('Something went wrong. Try again.');
+      }
+
+      btn.disabled = false; btn.textContent = 'Post Notice';
+    }
+
+    async function createEvent() {
+      const title = document.getElementById('evtTitle').value.trim();
+      const date = document.getElementById('evtDate').value;
+      if (!title || !date) { showToast('Title and date are required.'); return; }
+
+      const timeVal = document.getElementById('evtTime').value;
+      const fmt12 = t => { if (!t) return 'TBD'; const [h,m] = t.split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; return `${h%12||12}:${String(m).padStart(2,'0')} ${ap}`; };
+
+      const body = {
+        title,
+        description: document.getElementById('evtDesc').value.trim(),
+        location: document.getElementById('evtLocation').value.trim() || 'Costa Blanca Villas Clubhouse',
+        date,
+        time: fmt12(timeVal),
+        endTime: fmt12(document.getElementById('evtEndTime').value),
+        category: document.getElementById('evtCategory').value
+      };
+
+      const res = await fetch('/api/hoa/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        credentials: 'include'
+      });
+
+      if (res.ok) {
+        const ev = await res.json();
+        allEvents.unshift(ev);
+        hoaData.upcomingEvents++;
+        document.getElementById('statEvents').textContent = hoaData.upcomingEvents;
+        switchEvtTab('list');
+        renderEvents();
+        // clear form
+        ['evtTitle','evtDesc','evtLocation','evtTime','evtEndTime'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('evtDate').value = '';
+        showToast('✅ Event created!');
+      } else {
+        showToast('Something went wrong. Try again.');
+      }
+    }
+
+    function timeAgo(iso) {
+      const diff = Date.now() - new Date(iso);
+      const m = Math.floor(diff / 60000);
+      if (m < 1) return 'just now';
+      if (m < 60) return `${m}m ago`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h}h ago`;
+      return `${Math.floor(h/24)}d ago`;
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({ pageLanguage: 'en', includedLanguages: 'en,es', autoDisplay: false }, 'google_translate_element');
+    }
+
+    function toggleLanguage() {
+      const sel = document.querySelector('.goog-te-combo');
+      if (!sel) return;
+      sel.value = sel.value === 'es' ? 'en' : 'es';
+      sel.dispatchEvent(new Event('change'));
+      const btn = document.getElementById('langToggleBtn');
+      if (btn) btn.textContent = sel.value === 'es' ? '🌐 EN' : '🌐 ES';
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      window.location.href = '/';
+    }
+
+    init();
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+</body>
+</html>

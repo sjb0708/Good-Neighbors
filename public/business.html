@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Business Dashboard — Good Neighbors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ocean: #0077B6;
+      --ocean-dark: #005F92;
+      --ocean-light: #90E0EF;
+      --coral: #E76F51;
+      --seafoam: #2A9D8F;
+      --gold: #F4A261;
+      --text-dark: #1A2B3C;
+      --text-mid: #4A5568;
+      --text-light: #8896A5;
+      --border: #E8EDF2;
+      --bg: #F0F4F9;
+      --surface: #FFFFFF;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+      --topbar-h: 62px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text-dark);
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--topbar-h);
+      background: white;
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .topbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+    }
+
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+
+    .logo-wrap {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-mark {
+      width: 36px; height: 36px;
+      border-radius: 9px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,119,182,0.25);
+    }
+
+    .logo-mark img { width: 100%; height: 100%; object-fit: cover; }
+
+    .logo-name {
+      font-size: 16px; font-weight: 800;
+      color: var(--ocean); letter-spacing: -0.3px;
+    }
+
+    .biz-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(0,119,182,0.08);
+      border: 1px solid rgba(0,119,182,0.18);
+      border-radius: 20px;
+      padding: 4px 11px;
+      font-size: 11.5px; font-weight: 600;
+      color: var(--ocean);
+    }
+
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+    .biz-name-topbar {
+      font-size: 14px; font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .btn-logout {
+      padding: 7px 16px;
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+      color: var(--text-mid);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.18s;
+    }
+
+    .btn-logout:hover { border-color: var(--coral); color: var(--coral); }
+
+    /* ── LAYOUT ── */
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: calc(var(--topbar-h) + 28px) 24px 48px;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 22px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card + .card { margin-top: 18px; }
+
+    .card-title {
+      font-size: 13px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.6px;
+      color: var(--text-light);
+      margin-bottom: 16px;
+    }
+
+    /* ── BUSINESS PROFILE CARD ── */
+    .biz-profile-header {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .biz-avatar {
+      width: 54px; height: 54px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800; color: white;
+      flex-shrink: 0;
+    }
+
+    .biz-profile-name {
+      font-size: 16px; font-weight: 800;
+      color: var(--text-dark); line-height: 1.2;
+    }
+
+    .biz-profile-cat {
+      font-size: 12px; color: var(--text-light);
+      margin-top: 3px;
+    }
+
+    .biz-profile-desc {
+      font-size: 13px; color: var(--text-mid);
+      line-height: 1.55; margin-bottom: 14px;
+    }
+
+    .biz-detail {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 12.5px; color: var(--text-mid);
+      margin-bottom: 8px;
+    }
+
+    .biz-detail-icon { font-size: 14px; margin-top: 0px; flex-shrink: 0; }
+
+    /* ── STATS ── */
+    .stats-grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat-box {
+      background: rgba(0,119,182,0.05);
+      border: 1px solid rgba(0,119,182,0.1);
+      border-radius: 12px;
+      padding: 14px 10px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-size: 22px; font-weight: 800;
+      color: var(--ocean); line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 10.5px; font-weight: 600;
+      color: var(--text-light); margin-top: 4px;
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+
+    /* ── RATINGS ── */
+    .rating-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .rating-big {
+      font-size: 36px; font-weight: 800;
+      color: var(--text-dark); line-height: 1;
+    }
+
+    .rating-stars { font-size: 16px; }
+
+    .rating-count { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+
+    /* ── REVIEWS ── */
+    .review-item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .review-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .review-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 5px;
+    }
+
+    .review-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: white;
+    }
+
+    .review-author { font-size: 13px; font-weight: 600; }
+    .review-date { font-size: 11px; color: var(--text-light); margin-left: auto; }
+    .review-stars { font-size: 11px; color: #f4a261; }
+    .review-text { font-size: 13px; color: var(--text-mid); line-height: 1.5; }
+
+    /* ── COMPOSE ── */
+    .compose-tabs {
+      display: flex; gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .compose-tab {
+      padding: 8px 18px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      font-size: 13px; font-weight: 600;
+      color: var(--text-mid);
+      cursor: pointer;
+      background: white;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.18s;
+    }
+
+    .compose-tab.active {
+      background: var(--ocean);
+      border-color: var(--ocean);
+      color: white;
+    }
+
+    .compose-tab:hover:not(.active) {
+      border-color: var(--ocean);
+      color: var(--ocean);
+    }
+
+    .compose-box {
+      width: 100%;
+      min-height: 110px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text-dark);
+      background: #fafcff;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.18s;
+    }
+
+    .compose-box:focus { border-color: var(--ocean); background: white; }
+
+    .promo-fields {
+      display: none;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .promo-fields.show { display: flex; }
+
+    .promo-input {
+      flex: 1;
+      padding: 10px 13px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text-dark);
+      background: #fafcff;
+      outline: none;
+      transition: border-color 0.18s;
+    }
+
+    .promo-input:focus { border-color: var(--ocean); }
+
+    .compose-footer {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+    }
+
+    .compose-hint {
+      font-size: 12px; color: var(--text-light);
+    }
+
+    .btn-send {
+      padding: 10px 24px;
+      background: var(--ocean);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px; font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .btn-send:hover { background: var(--ocean-dark, #005F92); transform: translateY(-1px); }
+    .btn-send:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* ── SENT POSTS ── */
+    .post-item {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .post-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .post-meta {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .post-type-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+
+    .badge-announcement { background: rgba(0,119,182,0.1); color: var(--ocean); }
+    .badge-promotion { background: rgba(231,111,81,0.1); color: var(--coral); }
+
+    .post-time { font-size: 12px; color: var(--text-light); }
+
+    .post-offer-title {
+      font-size: 13px; font-weight: 700;
+      color: var(--coral);
+      margin-bottom: 4px;
+    }
+
+    .post-offer-expiry {
+      font-size: 11.5px; color: var(--text-light);
+      margin-bottom: 6px;
+    }
+
+    .post-content {
+      font-size: 14px; color: var(--text-dark);
+      line-height: 1.55;
+    }
+
+    .post-stats {
+      display: flex; gap: 14px;
+      margin-top: 10px;
+    }
+
+    .post-stat {
+      font-size: 12px; color: var(--text-light);
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-light);
+    }
+
+    .empty-state .empty-icon { font-size: 36px; margin-bottom: 10px; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── REACH BANNER ── */
+    .reach-banner {
+      background: linear-gradient(135deg, var(--ocean), var(--seafoam));
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .reach-text { font-size: 13px; opacity: 0.9; }
+    .reach-num { font-size: 28px; font-weight: 800; line-height: 1; }
+    .reach-label { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+    .reach-icon { font-size: 40px; opacity: 0.7; }
+
+    /* success toast */
+    .toast {
+      position: fixed;
+      bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #1a2b3c;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 14px; font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      z-index: 999;
+      white-space: nowrap;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── EDIT PROFILE BUTTON ── */
+    .btn-edit {
+      width: 100%;
+      margin-top: 14px;
+      padding: 9px;
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 13px; font-weight: 600;
+      color: var(--text-mid);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.18s;
+    }
+
+    .btn-edit:hover { border-color: var(--ocean); color: var(--ocean); background: rgba(0,119,182,0.04); }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: white;
+      border-radius: 20px;
+      padding: 32px;
+      width: min(520px, 100%);
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+      animation: modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.94) translateY(16px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 22px;
+    }
+
+    .modal-title { font-size: 18px; font-weight: 800; color: var(--text-dark); }
+
+    .btn-close {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: none; background: var(--bg);
+      font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-mid);
+      transition: background 0.15s;
+    }
+
+    .btn-close:hover { background: var(--border); }
+
+    .field-group { margin-bottom: 16px; }
+
+    .field-label {
+      display: block;
+      font-size: 12px; font-weight: 700;
+      color: var(--text-mid);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .field-input, .field-textarea {
+      width: 100%;
+      padding: 11px 13px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text-dark);
+      background: #fafcff;
+      outline: none;
+      transition: border-color 0.18s;
+    }
+
+    .field-textarea { min-height: 90px; resize: vertical; }
+    .field-input:focus, .field-textarea:focus { border-color: var(--ocean); background: white; }
+
+    .modal-footer {
+      display: flex; gap: 10px; justify-content: flex-end;
+      margin-top: 22px;
+    }
+
+    .btn-cancel {
+      padding: 10px 20px;
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px; font-weight: 600;
+      color: var(--text-mid);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+    }
+
+    .btn-cancel:hover { border-color: var(--coral); color: var(--coral); }
+
+    .btn-save {
+      padding: 10px 24px;
+      background: var(--ocean);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px; font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .btn-save:hover { background: var(--ocean-dark, #005f92); }
+
+    /* ── REVIEW REPLY ── */
+    .review-reply-area {
+      margin-top: 8px;
+      padding-top: 8px;
+    }
+
+    .owner-reply-box {
+      background: rgba(0,119,182,0.05);
+      border-left: 3px solid var(--ocean);
+      border-radius: 0 8px 8px 0;
+      padding: 10px 13px;
+      margin-top: 8px;
+    }
+
+    .owner-reply-label {
+      font-size: 11px; font-weight: 700;
+      color: var(--ocean);
+      text-transform: uppercase; letter-spacing: 0.4px;
+      margin-bottom: 4px;
+    }
+
+    .owner-reply-text { font-size: 13px; color: var(--text-mid); line-height: 1.5; }
+
+    .btn-reply-toggle {
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11.5px; font-weight: 600;
+      color: var(--ocean);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+      margin-top: 8px;
+    }
+
+    .btn-reply-toggle:hover { background: rgba(0,119,182,0.06); border-color: var(--ocean); }
+
+    .reply-compose {
+      display: none;
+      margin-top: 10px;
+      gap: 8px;
+    }
+
+    .reply-compose.open { display: flex; flex-direction: column; }
+
+    .reply-textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text-dark);
+      background: #fafcff;
+      resize: none;
+      outline: none;
+      min-height: 72px;
+      transition: border-color 0.18s;
+    }
+
+    .reply-textarea:focus { border-color: var(--ocean); background: white; }
+
+    .reply-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    .btn-reply-cancel {
+      padding: 7px 14px;
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px; font-weight: 600;
+      color: var(--text-mid);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .btn-reply-submit {
+      padding: 7px 16px;
+      background: var(--ocean);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px; font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+
+    @media (max-width: 860px) {
+      .page { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="topbar-left">
+        <a class="logo-wrap" href="/">
+          <div class="logo-mark"><img src="/logo.png" alt="Good Neighbors"></div>
+          <span class="logo-name">Good Neighbors</span>
+        </a>
+        <div class="biz-badge">🏪 Business Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <span class="biz-name-topbar" id="topbarBizName"></span>
+        <div id="google_translate_element" style="display:none;"></div>
+        <button id="langToggleBtn" onclick="toggleLanguage()" style="background:none;border:1.5px solid #E8EDF2;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;color:#4A5568;font-family:'Inter',sans-serif;white-space:nowrap;">🌐 ES</button>
+        <button class="btn-logout" onclick="logout()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <!-- LEFT SIDEBAR -->
+    <div>
+
+      <!-- Business Profile -->
+      <div class="card">
+        <div class="biz-profile-header">
+          <div class="biz-avatar" id="bizAvatar"></div>
+          <div>
+            <div class="biz-profile-name" id="bizName">Loading...</div>
+            <div class="biz-profile-cat" id="bizCategory"></div>
+          </div>
+        </div>
+        <div class="biz-profile-desc" id="bizDesc"></div>
+        <div class="biz-detail"><span class="biz-detail-icon">📍</span><span id="bizAddress"></span></div>
+        <div class="biz-detail"><span class="biz-detail-icon">🕐</span><span id="bizHours"></span></div>
+        <div class="biz-detail"><span class="biz-detail-icon">📞</span><span id="bizPhone"></span></div>
+        <button class="btn-edit" onclick="openEditModal()">✏️ Edit Profile</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="card">
+        <div class="card-title">Your Stats</div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-num" id="statNeighbors">—</div>
+            <div class="stat-label">Neighbors</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statPosts">—</div>
+            <div class="stat-label">Posts Sent</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statReach">—</div>
+            <div class="stat-label">Total Reach</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Neighborhood Fave -->
+      <div class="card" id="faveCard">
+        <div class="card-title">Neighborhood Fave</div>
+        <div id="faveAwards" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;"></div>
+        <div id="faveProgressWrap">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:12.5px;font-weight:600;color:var(--text-mid);">Progress toward <span id="faveYear">2026</span> Award</span>
+            <span style="font-size:13px;font-weight:700;color:var(--ocean);" id="faveCountLabel">— / 30</span>
+          </div>
+          <div style="background:var(--border);border-radius:20px;height:8px;overflow:hidden;margin-bottom:8px;">
+            <div id="faveProgressBar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,#0077B6,#00B4D8);transition:width 0.4s ease;width:0%;"></div>
+          </div>
+          <div style="font-size:12px;color:var(--text-light);" id="faveHint">Loading...</div>
+        </div>
+        <div id="faveWonBadge" style="display:none;align-items:center;gap:8px;padding:12px 14px;background:#FFFBEA;border:1.5px solid #F6C90E;border-radius:10px;font-size:13px;font-weight:600;color:#7A5B00;">
+          🏆 <span id="faveWonText">Neighborhood Fave Award earned!</span>
+        </div>
+      </div>
+
+      <!-- Rating & Reviews -->
+      <div class="card">
+        <div class="card-title">Neighbor Reviews</div>
+        <div class="rating-row">
+          <div class="rating-big" id="bizRating">—</div>
+          <div>
+            <div class="rating-stars" id="bizStars"></div>
+            <div class="rating-count" id="bizReviewCount"></div>
+          </div>
+        </div>
+        <div id="reviewsList"></div>
+      </div>
+
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div>
+
+      <!-- Reach banner -->
+      <div class="reach-banner">
+        <div>
+          <div class="reach-num" id="bannerNeighbors">—</div>
+          <div class="reach-label">neighbors in Costa Blanca Villas</div>
+          <div class="reach-text" style="margin-top:8px;">Your messages go directly into their community feed.</div>
+        </div>
+        <div class="reach-icon">🏘️</div>
+      </div>
+
+      <!-- Compose -->
+      <div class="card">
+        <div class="card-title">Send to Neighbors</div>
+        <div class="compose-tabs">
+          <button class="compose-tab active" onclick="switchTab('announcement', this)">📢 Announcement</button>
+          <button class="compose-tab" onclick="switchTab('promotion', this)">🎉 Promotion</button>
+        </div>
+        <textarea id="composeBox" class="compose-box" placeholder="Write a message to your neighbors..."></textarea>
+        <div class="promo-fields" id="promoFields">
+          <input class="promo-input" id="offerTitle" placeholder="Offer title  e.g. 20% off ceviche this weekend" />
+          <input class="promo-input" id="offerExpiry" placeholder="Expires  e.g. Sun Apr 13" />
+        </div>
+        <div class="compose-footer">
+          <span class="compose-hint" id="composeHint">Reaches all <strong id="hintCount">—</strong> neighbors in the feed</span>
+          <button class="btn-send" id="sendBtn" onclick="sendPost()">Send to Neighborhood</button>
+        </div>
+      </div>
+
+      <!-- Sent posts -->
+      <div class="card" style="margin-top:18px;">
+        <div class="card-title">Sent Messages</div>
+        <div id="postsList"><div class="empty-state"><div class="empty-icon">📭</div><p>No messages sent yet.</p></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Edit Profile Modal -->
+  <div class="modal-overlay" id="editModal" onclick="closeEditModal(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Edit Business Profile</div>
+        <button class="btn-close" onclick="closeEditModal()">×</button>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Business Name</label>
+        <input class="field-input" id="editName" type="text" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Description</label>
+        <textarea class="field-textarea" id="editDesc"></textarea>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Address</label>
+        <input class="field-input" id="editAddress" type="text" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Hours</label>
+        <input class="field-input" id="editHours" type="text" placeholder="e.g. Mon-Sun 10:00 AM - 9:00 PM" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Phone</label>
+        <input class="field-input" id="editPhone" type="text" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Tags (comma separated)</label>
+        <input class="field-input" id="editTags" type="text" placeholder="e.g. Seafood, Ceviche, Ocean View" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+        <button class="btn-save" onclick="saveProfile()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let bizData = null;
+    let currentTab = 'announcement';
+
+    async function init() {
+      const res = await fetch('/api/business/me', { credentials: 'include' });
+      if (!res.ok) { window.location.href = '/'; return; }
+      bizData = await res.json();
+      renderProfile();
+      renderStats();
+      renderReviews();
+      await loadPosts();
+    }
+
+    function renderProfile() {
+      document.getElementById('topbarBizName').textContent = bizData.name;
+      document.getElementById('bizName').textContent = bizData.name;
+      document.getElementById('bizCategory').textContent = bizData.category;
+      document.getElementById('bizDesc').textContent = bizData.description;
+      document.getElementById('bizAddress').textContent = bizData.address;
+      document.getElementById('bizHours').textContent = bizData.hours;
+      document.getElementById('bizPhone').textContent = bizData.phone;
+
+      const av = document.getElementById('bizAvatar');
+      av.style.background = '#0077B6';
+      av.textContent = bizData.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    }
+
+    function renderStats() {
+      document.getElementById('statNeighbors').textContent = bizData.neighborhoodSize;
+      document.getElementById('statPosts').textContent = bizData.postsCount;
+      document.getElementById('statReach').textContent = bizData.totalReach;
+      document.getElementById('bannerNeighbors').textContent = bizData.neighborhoodSize;
+      document.getElementById('hintCount').textContent = bizData.neighborhoodSize;
+      renderFaveCard();
+    }
+
+    function renderFaveCard() {
+      const trophySVG = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4a2 2 0 0 1-2-2V5h4"/><path d="M18 9h2a2 2 0 0 0 2-2V5h-4"/><path d="M12 17v4"/><path d="M8 21h8"/><path d="M6 5h12v4a6 6 0 0 1-12 0V5Z"/></svg>`;
+      const faveYears = bizData.faveYears || [];
+      const currentYearFaves = bizData.currentYearFaves || 0;
+      const faveThreshold = bizData.faveThreshold || 30;
+      const currentYear = new Date().getFullYear();
+      const alreadyWon = faveYears.includes(currentYear);
+      const pct = Math.min(100, Math.round((currentYearFaves / faveThreshold) * 100));
+
+      // Trophy badges for past years
+      const awardsEl = document.getElementById('faveAwards');
+      if (faveYears.length) {
+        awardsEl.innerHTML = faveYears.map(y => `
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 12px;background:#FFFBEA;border:1.5px solid #F6C90E;border-radius:10px;">
+            <span style="color:#B8860B;">${trophySVG}</span>
+            <span style="font-size:11px;font-weight:700;color:#7A5B00;">${y}</span>
+          </div>`).join('');
+        awardsEl.style.display = 'flex';
+      } else {
+        awardsEl.style.display = 'none';
+      }
+
+      document.getElementById('faveYear').textContent = currentYear;
+
+      if (alreadyWon) {
+        document.getElementById('faveProgressWrap').style.display = 'none';
+        const badge = document.getElementById('faveWonBadge');
+        badge.style.display = 'flex';
+        document.getElementById('faveWonText').textContent = `${currentYear} Neighborhood Fave Award earned!`;
+      } else {
+        document.getElementById('faveProgressWrap').style.display = 'block';
+        document.getElementById('faveWonBadge').style.display = 'none';
+        document.getElementById('faveCountLabel').textContent = `${currentYearFaves} / ${faveThreshold}`;
+        document.getElementById('faveProgressBar').style.width = `${pct}%`;
+        const remaining = faveThreshold - currentYearFaves;
+        document.getElementById('faveHint').textContent = `${remaining} more fave${remaining !== 1 ? 's' : ''} needed for the ${currentYear} award`;
+      }
+    }
+
+    function renderReviews() {
+      const stars = rating => '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
+      document.getElementById('bizRating').textContent = bizData.rating.toFixed(1);
+      document.getElementById('bizStars').textContent = stars(bizData.rating);
+      document.getElementById('bizReviewCount').textContent = `${bizData.reviewCount} neighbor reviews`;
+
+      const list = document.getElementById('reviewsList');
+      list.innerHTML = bizData.reviews.slice(0, 4).map((r, idx) => `
+        <div class="review-item">
+          <div class="review-header">
+            <div class="review-avatar" style="background:${r.avatar}">${r.initials}</div>
+            <span class="review-author">${r.author}</span>
+            <span class="review-date">${r.date}</span>
+          </div>
+          <div class="review-stars">${stars(r.rating)}</div>
+          <div class="review-text">${r.text}</div>
+          <div class="review-reply-area">
+            ${r.ownerReply ? `
+              <div class="owner-reply-box">
+                <div class="owner-reply-label">Your Response</div>
+                <div class="owner-reply-text">${r.ownerReply.text}</div>
+              </div>
+            ` : `
+              <button class="btn-reply-toggle" onclick="toggleReply(${idx})">💬 Reply to review</button>
+              <div class="reply-compose" id="replyCompose${idx}">
+                <textarea class="reply-textarea" id="replyText${idx}" placeholder="Write a public response to this review..."></textarea>
+                <div class="reply-actions">
+                  <button class="btn-reply-cancel" onclick="toggleReply(${idx})">Cancel</button>
+                  <button class="btn-reply-submit" onclick="submitReply(${idx})">Post Response</button>
+                </div>
+              </div>
+            `}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleReply(idx) {
+      const el = document.getElementById(`replyCompose${idx}`);
+      el.classList.toggle('open');
+      if (el.classList.contains('open')) document.getElementById(`replyText${idx}`).focus();
+    }
+
+    async function submitReply(idx) {
+      const text = document.getElementById(`replyText${idx}`).value.trim();
+      if (!text) return;
+      const res = await fetch(`/api/business/reviews/${idx}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply: text }),
+        credentials: 'include'
+      });
+      if (res.ok) {
+        bizData.reviews[idx].ownerReply = { text, date: 'Just now' };
+        renderReviews();
+        showToast('✅ Response posted!');
+      }
+    }
+
+    function openEditModal() {
+      document.getElementById('editName').value = bizData.name;
+      document.getElementById('editDesc').value = bizData.description;
+      document.getElementById('editAddress').value = bizData.address;
+      document.getElementById('editHours').value = bizData.hours;
+      document.getElementById('editPhone').value = bizData.phone;
+      document.getElementById('editTags').value = (bizData.tags || []).join(', ');
+      document.getElementById('editModal').classList.add('open');
+    }
+
+    function closeEditModal(e) {
+      if (e && e.target !== document.getElementById('editModal')) return;
+      document.getElementById('editModal').classList.remove('open');
+    }
+
+    async function saveProfile() {
+      const body = {
+        name: document.getElementById('editName').value.trim(),
+        description: document.getElementById('editDesc').value.trim(),
+        address: document.getElementById('editAddress').value.trim(),
+        hours: document.getElementById('editHours').value.trim(),
+        phone: document.getElementById('editPhone').value.trim(),
+        tags: document.getElementById('editTags').value.trim()
+      };
+      const res = await fetch('/api/business/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        bizData = { ...bizData, ...updated };
+        renderProfile();
+        document.getElementById('editModal').classList.remove('open');
+        showToast('✅ Profile updated!');
+      }
+    }
+
+    async function loadPosts() {
+      const res = await fetch('/api/business/posts', { credentials: 'include' });
+      const posts = await res.json();
+      const list = document.getElementById('postsList');
+      if (!posts.length) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No messages sent yet. Send your first announcement above!</p></div>';
+        return;
+      }
+      list.innerHTML = posts.map(p => `
+        <div class="post-item">
+          <div class="post-meta">
+            <span class="post-type-badge ${p.type === 'promotion' ? 'badge-promotion' : 'badge-announcement'}">
+              ${p.type === 'promotion' ? '🎉 Promotion' : '📢 Announcement'}
+            </span>
+            <span class="post-time">${timeAgo(p.createdAt)}</span>
+          </div>
+          ${p.offerTitle ? `<div class="post-offer-title">🏷️ ${p.offerTitle}</div>` : ''}
+          ${p.offerExpiry ? `<div class="post-offer-expiry">Expires: ${p.offerExpiry}</div>` : ''}
+          <div class="post-content">${p.content}</div>
+          <div class="post-stats">
+            <span class="post-stat">👍 ${Object.values(p.reactions).reduce((a,b)=>a+b,0)} reactions</span>
+            <span class="post-stat">💬 ${p.commentCount} comments</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function switchTab(tab, btn) {
+      currentTab = tab;
+      document.querySelectorAll('.compose-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      const promoFields = document.getElementById('promoFields');
+      const placeholder = tab === 'promotion'
+        ? 'Tell neighbors about your special offer or event...'
+        : 'Share news, updates, or announcements with the neighborhood...';
+      document.getElementById('composeBox').placeholder = placeholder;
+      if (tab === 'promotion') promoFields.classList.add('show');
+      else promoFields.classList.remove('show');
+    }
+
+    async function sendPost() {
+      const content = document.getElementById('composeBox').value.trim();
+      if (!content) { showToast('Please write a message first.'); return; }
+      const btn = document.getElementById('sendBtn');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+
+      const body = {
+        postType: currentTab,
+        content,
+        offerTitle: document.getElementById('offerTitle')?.value.trim() || '',
+        offerExpiry: document.getElementById('offerExpiry')?.value.trim() || ''
+      };
+
+      const res = await fetch('/api/business/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        credentials: 'include'
+      });
+
+      if (res.ok) {
+        document.getElementById('composeBox').value = '';
+        if (document.getElementById('offerTitle')) document.getElementById('offerTitle').value = '';
+        if (document.getElementById('offerExpiry')) document.getElementById('offerExpiry').value = '';
+        bizData.postsCount++;
+        document.getElementById('statPosts').textContent = bizData.postsCount;
+        await loadPosts();
+        showToast('✅ Sent to the neighborhood!');
+      } else {
+        showToast('Something went wrong. Try again.');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Send to Neighborhood';
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function timeAgo(iso) {
+      const diff = Date.now() - new Date(iso);
+      const m = Math.floor(diff / 60000);
+      if (m < 1) return 'just now';
+      if (m < 60) return `${m}m ago`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h}h ago`;
+      return `${Math.floor(h/24)}d ago`;
+    }
+
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({ pageLanguage: 'en', includedLanguages: 'en,es', autoDisplay: false }, 'google_translate_element');
+    }
+
+    function toggleLanguage() {
+      const sel = document.querySelector('.goog-te-combo');
+      if (!sel) return;
+      sel.value = sel.value === 'es' ? 'en' : 'es';
+      sel.dispatchEvent(new Event('change'));
+      const btn = document.getElementById('langToggleBtn');
+      if (btn) btn.textContent = sel.value === 'es' ? '🌐 EN' : '🌐 ES';
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      window.location.href = '/';
+    }
+
+    init();
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+</body>
+</html>

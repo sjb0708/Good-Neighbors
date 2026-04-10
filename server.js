@@ -19,24 +19,43 @@ const uploadBanner = multer({ storage: multer.memoryStorage(), limits: { fileSiz
 const users = {
   sarah: {
     id: 'u1', username: 'sarah', password: 'beach123',
-    name: 'Sarah Bailey', avatar: '#0077B6', initials: 'SB',
-    address: 'Villa 270, Costa Blanca Villas', verified: true, yearsInNeighborhood: 3,
-    bio: 'American expat loving life in Farallon! Beach mornings, fresh ceviche, and spectacular Pacific sunsets.',
+    role: 'business', businessId: 'b1',
+    name: 'Amar By La Playa Farallón', avatar: '#0077B6', initials: 'AM',
+    address: 'Playa Farallón, Farallón, Coclé', verified: true,
+    bio: 'Peruvian-Panamanian fusion with stunning Pacific views. Famous for our leche de tigre ceviche, grilled fresh catch, and creative cocktails.',
     posts: 27, neighbors: 94, points: 438
   },
   mike: {
     id: 'u2', username: 'mike', password: 'beach123',
+    role: 'neighbor',
     name: 'Mike Hart', avatar: '#F4A261', initials: 'MH',
     address: 'Villa 94, Costa Blanca Villas', verified: true, yearsInNeighborhood: 6,
     bio: 'Retired from the US, best decision ever. Love the golf, the beach, and the community.',
     posts: 45, neighbors: 127, points: 712
   },
   admin: {
-    id: 'u10', username: 'admin', password: 'admin123',
+    id: 'u10', username: 'admin', password: 'Paintball$1',
+    role: 'admin',
     name: 'Steve Potts', avatar: '#6D6875', initials: 'SP',
     address: 'Villa 135, Costa Blanca Villas', verified: true, yearsInNeighborhood: 4,
     bio: 'HOA board member. Here to help keep our community great!',
     posts: 18, neighbors: 142, points: 534
+  },
+  hoa: {
+    id: 'u11', username: 'hoa', password: 'hoa123',
+    role: 'hoa',
+    name: 'Costa Blanca Villas HOA', avatar: '#2A9D8F', initials: 'CV',
+    address: 'Costa Blanca Villas, Farallón, Coclé', verified: true,
+    bio: 'Official HOA account for Costa Blanca Villas. Managing community governance, maintenance, and resident communications.',
+    posts: 12, members: 198, points: 0
+  },
+  uncover: {
+    id: 'u12', username: 'uncover', password: 'Paintball$1',
+    role: 'realtor',
+    name: 'Uncover Panama Real Estate', avatar: '#1D3557', initials: 'UP',
+    address: 'Costa Blanca · Bijao · Vistamar · Farallón', verified: true,
+    bio: 'Official real estate partner for Costa Blanca Villas. Specializing in luxury villa sales and vacation rentals in Farallón, Panama.',
+    posts: 0, neighbors: 0, points: 0
   }
 };
 
@@ -419,7 +438,8 @@ let businesses = [
     rating: 4.8,
     reviewCount: 287,
     recommendedBy: 94,
-    website: '#',
+    website: 'amarbylaplayapanama.com',
+    photos: ['https://picsum.photos/seed/amar1/420/260','https://picsum.photos/seed/amar2/420/260','https://picsum.photos/seed/amar3/420/260'],
     tags: ['Peruvian', 'Seafood', 'Ceviche', 'Ocean View', 'Cocktails']
   },
   {
@@ -433,7 +453,8 @@ let businesses = [
     rating: 4.6,
     reviewCount: 341,
     recommendedBy: 112,
-    website: '#',
+    website: 'lafogatapanama.com',
+    photos: ['https://picsum.photos/seed/fogata1/420/260','https://picsum.photos/seed/fogata2/420/260','https://picsum.photos/seed/fogata3/420/260'],
     tags: ['Caribbean', 'Seafood', 'Family Friendly', 'Live Music', 'Groups']
   },
   {
@@ -447,7 +468,8 @@ let businesses = [
     rating: 4.5,
     reviewCount: 198,
     recommendedBy: 76,
-    website: '#',
+    website: 'xokopanama.com',
+    photos: ['https://picsum.photos/seed/xoko1/420/260','https://picsum.photos/seed/xoko2/420/260'],
     tags: ['Seafood', 'Local Cuisine', 'Grilled Fish', 'Casual', 'Budget Friendly']
   },
   {
@@ -461,7 +483,8 @@ let businesses = [
     rating: 3.8,
     reviewCount: 163,
     recommendedBy: 58,
-    website: '#',
+    website: 'nicosbeachfarallon.com',
+    photos: ['https://picsum.photos/seed/nicos1/420/260','https://picsum.photos/seed/nicos2/420/260'],
     tags: ['Bar', 'Beachfront', 'Cocktails', 'Sunset Views', 'Casual']
   },
   {
@@ -475,7 +498,8 @@ let businesses = [
     rating: 4.1,
     reviewCount: 214,
     recommendedBy: 67,
-    website: '#',
+    website: 'pipasbeach.com',
+    photos: ['https://picsum.photos/seed/pipas1/420/260','https://picsum.photos/seed/pipas2/420/260'],
     tags: ['Seafood', 'Beachfront', 'Lunch', 'Ceviche', 'Casual']
   },
   {
@@ -489,7 +513,8 @@ let businesses = [
     rating: 4.0,
     reviewCount: 178,
     recommendedBy: 51,
-    website: '#',
+    website: 'kilianrestaurant.com',
+    photos: ['https://picsum.photos/seed/kilian1/420/260','https://picsum.photos/seed/kilian2/420/260'],
     tags: ['Seafood', 'International', 'Upscale', 'Date Night', 'Wine']
   },
   {
@@ -503,7 +528,8 @@ let businesses = [
     rating: 4.3,
     reviewCount: 124,
     recommendedBy: 43,
-    website: '#',
+    website: 'budget.com.pa',
+    photos: ['https://picsum.photos/seed/budget1/420/260','https://picsum.photos/seed/budget2/420/260'],
     tags: ['Car Rental', 'Day Trips', 'Airport Drop-off', 'SUVs Available']
   },
   {
@@ -517,7 +543,8 @@ let businesses = [
     rating: 4.4,
     reviewCount: 89,
     recommendedBy: 61,
-    website: '#',
+    website: 'fondalatortuga.com',
+    photos: ['https://picsum.photos/seed/tortuga1/420/260','https://picsum.photos/seed/tortuga2/420/260'],
     tags: ['Panamanian', 'Local', 'Breakfast', 'Lunch', 'Budget Friendly', 'Authentic']
   }
 ];
@@ -536,13 +563,15 @@ let marketplaceItems = [
 ];
 
 let groups = [
-  { id: 'g1', name: 'Costa Blanca Villas Owners', members: 198, description: 'Official group for villa owners and long-term residents. HOA updates, maintenance announcements, and community decisions. This is the primary community channel.', icon: '🏡', category: 'Community', joined: true, lastActivity: '1 hour ago' },
-  { id: 'g2', name: 'Expats in Farallón & Coclé', members: 341, description: 'For expats living or vacationing in the Farallón/Decameron area. Tips on visas, banking, doctors, Spanish lessons, and making the most of life in Panama!', icon: '🌎', category: 'Expat Life', joined: true, lastActivity: '30 minutes ago' },
-  { id: 'g3', name: 'Playa Farallón Beach Lovers', members: 287, description: 'Share sunrise photos, surf conditions, tide schedules, turtle nesting updates, and organize beach days. The ocean is our backyard!', icon: '🌊', category: 'Environment', joined: false, lastActivity: '2 hours ago' },
-  { id: 'g4', name: 'Lost & Found Pets — Costa Blanca', members: 156, description: 'Help reunite lost pets in and around Costa Blanca Villas and Farallón. Fast response from this group has reunited 23 pets since it started!', icon: '🐾', category: 'Pets', joined: false, lastActivity: '45 minutes ago' },
-  { id: 'g5', name: 'Farallón Foodie Club', members: 203, description: 'Restaurant reviews, market days, local recipe swaps, and group dinners at spots near the community. From La Fogata to Fonda la Tortuga!', icon: '🍽️', category: 'Food & Drink', joined: true, lastActivity: '3 hours ago' },
-  { id: 'g6', name: 'Safety & Security Watch', members: 224, description: 'Eyes and ears for a safe community. Report suspicious activity, share security tips, coordinate with the on-site security team, and keep Costa Blanca Villas safe.', icon: '🔒', category: 'Safety', joined: false, lastActivity: '4 hours ago' }
+  { id: 'g1', name: 'Costa Blanca Villas Owners', members: 198, description: 'Official group for villa owners and long-term residents. HOA updates, maintenance announcements, and community decisions. This is the primary community channel.', icon: '🏡', category: 'Community', joined: true, lastActivity: '1 hour ago', createdBy: 'admin', privacy: 'public', membersList: ['mike', 'admin'], coverPhoto: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=900&h=220&fit=crop&auto=format' },
+  { id: 'g2', name: 'Expats in Farallón & Coclé', members: 341, description: 'For expats living or vacationing in the Farallón/Decameron area. Tips on visas, banking, doctors, Spanish lessons, and making the most of life in Panama!', icon: '🌎', category: 'Expat Life', joined: true, lastActivity: '30 minutes ago', createdBy: 'mike', privacy: 'public', membersList: ['mike', 'admin'], coverPhoto: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&h=220&fit=crop&auto=format' },
+  { id: 'g3', name: 'Playa Farallón Beach Lovers', members: 287, description: 'Share sunrise photos, surf conditions, tide schedules, turtle nesting updates, and organize beach days. The ocean is our backyard!', icon: '🌊', category: 'Environment', joined: false, lastActivity: '2 hours ago', createdBy: 'mike', privacy: 'public', membersList: [], coverPhoto: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&h=220&fit=crop&auto=format' },
+  { id: 'g4', name: 'Lost & Found Pets — Costa Blanca', members: 156, description: 'Help reunite lost pets in and around Costa Blanca Villas and Farallón. Fast response from this group has reunited 23 pets since it started!', icon: '🐾', category: 'Pets', joined: false, lastActivity: '45 minutes ago', createdBy: 'mike', privacy: 'public', membersList: [], coverPhoto: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=900&h=220&fit=crop&auto=format' },
+  { id: 'g5', name: 'Farallón Foodie Club', members: 203, description: 'Restaurant reviews, market days, local recipe swaps, and group dinners at spots near the community. From La Fogata to Fonda la Tortuga!', icon: '🍽️', category: 'Food & Drink', joined: true, lastActivity: '3 hours ago', createdBy: 'mike', privacy: 'public', membersList: ['mike'], coverPhoto: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=900&h=220&fit=crop&auto=format' },
+  { id: 'g6', name: 'Safety & Security Watch', members: 224, description: 'Eyes and ears for a safe community. Report suspicious activity, share security tips, coordinate with the on-site security team, and keep Costa Blanca Villas safe.', icon: '🔒', category: 'Safety', joined: false, lastActivity: '4 hours ago', createdBy: 'admin', privacy: 'public', membersList: [], coverPhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&h=220&fit=crop&auto=format' }
 ];
+
+let groupReports = [];
 
 let notifications = [
   { id: 'n1', type: 'reaction', read: false, message: 'Mike Hart reacted 👍 to your post about the housekeeper', time: new Date(Date.now() - 30 * 60000).toISOString(), avatar: '#F4A261', initials: 'MH' },
@@ -626,8 +655,24 @@ app.get('/api/posts', (req, res) => {
 app.post('/api/posts', (req, res) => {
   const user = getUser(req);
   if (!user) return res.status(401).json({ error: 'Not authenticated' });
-  const { type, content, price, condition, category, pollOptions, image, location } = req.body;
+  const { type, content, price, condition, category, pollOptions, image, location, alertType, severity } = req.body;
   const authorData = allUsers.find(u => u.username === user.username) || allUsers[0];
+  const u = users[user.username];
+  const role = u ? u.role : 'neighbor';
+
+  // Safety severity/official logic
+  let resolvedSeverity = severity || 'medium';
+  let isOfficial = false;
+  if (type === 'safety') {
+    if (role === 'hoa' || role === 'admin') {
+      isOfficial = true;
+      resolvedSeverity = severity || 'high';
+    } else {
+      isOfficial = false;
+      if (resolvedSeverity === 'high') resolvedSeverity = 'medium';
+    }
+  }
+
   const newPost = {
     id: 'p' + Date.now(),
     type: type || 'general',
@@ -643,10 +688,41 @@ app.post('/api/posts', (req, res) => {
     ...(category && { category }),
     ...(pollOptions && { pollOptions: pollOptions.map((text, i) => ({ id: `po${i}`, text, votes: 0 })), userVote: null }),
     ...(image && { image }),
-    ...(location && { location })
+    ...(location && { location }),
+    ...(type === 'safety' && alertType && { alertType }),
+    ...(type === 'safety' && { severity: resolvedSeverity, isOfficial })
   };
   posts.unshift(newPost);
+
+  // Auto-cross-post to Safety & Security Watch (g6) if severity is 'high'
+  if (type === 'safety' && resolvedSeverity === 'high') {
+    const g6Group = groups.find(g => g.id === 'g6');
+    if (g6Group) {
+      const crossPost = {
+        id: 'gp' + Date.now(),
+        author: authorData,
+        content: `[Safety Alert] ${content}`,
+        createdAt: new Date().toISOString()
+      };
+      if (!dynamicGroupPosts['g6']) dynamicGroupPosts['g6'] = [];
+      dynamicGroupPosts['g6'].unshift(crossPost);
+      g6Group.lastActivity = 'just now';
+    }
+  }
+
   res.json(newPost);
+});
+
+app.post('/api/posts/:id/resolve', (req, res) => {
+  const user = getUser(req);
+  const u = user ? users[user.username] : null;
+  if (!u || (u.role !== 'admin' && u.role !== 'hoa')) return res.status(403).json({ error: 'Admin/HOA only' });
+  const post = posts.find(p => p.id === req.params.id);
+  if (!post) return res.status(404).json({ error: 'Not found' });
+  post.severity = 'resolved';
+  post.resolvedBy = u.name;
+  post.resolvedAt = new Date().toISOString();
+  res.json(post);
 });
 
 app.post('/api/posts/:id/react', (req, res) => {
@@ -788,35 +864,237 @@ const groupPosts = {
   ]
 };
 
+// ─── Dynamic Group Posts ──────────────────────────────────────────────────────
+let dynamicGroupPosts = {
+  g1: [
+    { id: 'gp1a', author: allUsers[3], content: 'Reminder: HOA dues for Q2 are due April 1st. Pay via the admin office or bank transfer. Details in the pinned document.', createdAt: new Date(Date.now() - 2 * 3600000).toISOString() },
+    { id: 'gp1b', author: allUsers[5], content: 'The north gate camera was upgraded this week. New model covers a wider angle. Security team says response time is now under 3 minutes.', createdAt: new Date(Date.now() - 86400000).toISOString() }
+  ],
+  g2: [
+    { id: 'gp2a', author: allUsers[1], content: 'Quick tip: Banco General in Penonomé now has a dedicated expat assistance window on Tuesday afternoons. No more hour-long waits!', createdAt: new Date(Date.now() - 4 * 3600000).toISOString() },
+    { id: 'gp2b', author: allUsers[6], content: 'Anyone know a good English-speaking dentist near Farallón? My usual one in Panama City is getting too far for regular visits.', createdAt: new Date(Date.now() - 6 * 3600000).toISOString() }
+  ],
+  g3: [
+    { id: 'gp3a', author: allUsers[7], content: '🐢 Turtle nesting season is almost here! Volunteers needed for night patrols in April-May. Amazing experience. Sign up at the community board.', createdAt: new Date(Date.now() - 3600000).toISOString() }
+  ],
+  g5: [
+    { id: 'gp5a', author: allUsers[3], content: '⭐ New discovery: There\'s a small market in Farallón village on Sunday mornings with incredible fresh produce and homemade cheese.', createdAt: new Date(Date.now() - 2 * 3600000).toISOString() }
+  ]
+};
+
+// ─── Neighborhood Fave System ────────────────────────────────────────────────
+const FAVE_THRESHOLD = 30; // faves in a calendar year to earn the award
+
+// Seed historical faveYears into businesses
+const faveYearsMap = {
+  b1: [2022, 2023, 2024, 2025],
+  b2: [2022, 2023, 2024, 2025],
+  b3: [2023, 2024, 2025],
+  b4: [2024, 2025],
+  b5: [2024, 2025],
+  b6: [2025],
+  b7: [2025],
+  b8: [2023, 2024, 2025],
+};
+businesses.forEach(b => { b.faveYears = faveYearsMap[b.id] || []; });
+
+// bizFaves[bizId][year] = Set of usernames
+// Pre-seed 2026 progress so the progress bar shows realistic numbers
+const bizFaves = {
+  b1: { 2026: new Set(['n1','n2','n3','n4','n5','n6','n7','n8','n9','n10','n11','n12','n13','n14','n15','n16','n17','n18','n19','n20','n21','n22']) },
+  b2: { 2026: new Set(['n1','n2','n3','n4','n5','n6','n7','n8','n9','n10','n11','n12','n13','n14','n15','n16','n17','n18','n19','n20','n21','n22','n23','n24','n25','n26','n27','n28']) },
+  b3: { 2026: new Set(['n1','n2','n3','n4','n5','n6','n7','n8','n9','n10','n11','n12','n13','n14','n15']) },
+  b4: { 2026: new Set(['n1','n2','n3','n4','n5','n6','n7','n8']) },
+  b5: { 2026: new Set(['n1','n2','n3','n4','n5','n6','n7','n8','n9','n10','n11','n12']) },
+  b6: { 2026: new Set(['n1','n2','n3','n4','n5']) },
+  b7: { 2026: new Set(['n1','n2','n3']) },
+  b8: { 2026: new Set(['n1','n2','n3','n4','n5','n6','n7','n8','n9','n10','n11','n12','n13','n14','n15','n16','n17','n18']) },
+};
+
+function getBizFaveData(bizId, username) {
+  const year = new Date().getFullYear();
+  if (!bizFaves[bizId]) bizFaves[bizId] = {};
+  if (!bizFaves[bizId][year]) bizFaves[bizId][year] = new Set();
+  const yearSet = bizFaves[bizId][year];
+  return {
+    currentYearFaves: yearSet.size,
+    faveThreshold: FAVE_THRESHOLD,
+    userHasFaved: username ? yearSet.has(username) : false,
+  };
+}
+
 // Businesses
-app.get('/api/businesses', (req, res) => res.json(businesses));
+app.get('/api/businesses', (req, res) => {
+  const user = getUser(req);
+  res.json(businesses.map(b => {
+    const fd = getBizFaveData(b.id, user?.username);
+    return { ...b, ...fd };
+  }));
+});
 
 app.get('/api/businesses/:id', (req, res) => {
+  const user = getUser(req);
   const biz = businesses.find(b => b.id === req.params.id);
   if (!biz) return res.status(404).json({ error: 'Not found' });
   const reviews = businessReviews[req.params.id] || [];
-  res.json({ ...biz, reviews });
+  const fd = getBizFaveData(req.params.id, user?.username);
+  res.json({ ...biz, reviews, ...fd });
+});
+
+app.post('/api/businesses/:id/fave', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const bizId = req.params.id;
+  const biz = businesses.find(b => b.id === bizId);
+  if (!biz) return res.status(404).json({ error: 'Not found' });
+  const year = new Date().getFullYear();
+  if (!bizFaves[bizId]) bizFaves[bizId] = {};
+  if (!bizFaves[bizId][year]) bizFaves[bizId][year] = new Set();
+  const yearSet = bizFaves[bizId][year];
+  let faved;
+  if (yearSet.has(user.username)) {
+    yearSet.delete(user.username);
+    faved = false;
+  } else {
+    yearSet.add(user.username);
+    faved = true;
+    // Auto-award if threshold crossed for the first time this year
+    if (yearSet.size >= FAVE_THRESHOLD && !biz.faveYears.includes(year)) {
+      biz.faveYears = [...biz.faveYears, year].sort();
+    }
+  }
+  res.json({ faved, currentYearFaves: yearSet.size, faveThreshold: FAVE_THRESHOLD, faveYears: biz.faveYears });
+});
+
+app.post('/api/businesses/:id/recommend', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const bizId = req.params.id;
+  const biz = businesses.find(b => b.id === bizId);
+  if (!biz) return res.status(404).json({ error: 'Not found' });
+  const { text } = req.body;
+  if (!text || !text.trim()) return res.status(400).json({ error: 'Text required' });
+  const userData = users[user.username];
+  if (!businessReviews[bizId]) businessReviews[bizId] = [];
+  const newReview = {
+    author: userData ? userData.name : user.username,
+    avatar: userData ? userData.avatar : '#0077B6',
+    initials: userData ? userData.initials : user.username.slice(0, 2).toUpperCase(),
+    rating: 5,
+    text: text.trim(),
+    date: 'just now'
+  };
+  businessReviews[bizId].unshift(newReview);
+  res.json({ ok: true });
 });
 
 app.get('/api/groups/:id', (req, res) => {
+  const user = getUser(req);
   const group = groups.find(g => g.id === req.params.id);
   if (!group) return res.status(404).json({ error: 'Not found' });
-  const posts = groupPosts[req.params.id] || [];
-  res.json({ ...group, posts });
+  const posts = (dynamicGroupPosts[req.params.id] || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const isAdmin = user && users[user.username]?.role === 'admin';
+  const isCreator = user && group.createdBy === user.username;
+  res.json({ ...group, posts, isAdmin, isCreator });
 });
 
 // Neighbors
 app.get('/api/neighbors', (req, res) => res.json(allUsers));
 
 // Groups
-app.get('/api/groups', (req, res) => res.json(groups));
+app.get('/api/groups', (req, res) => {
+  const user = getUser(req);
+  const isAdmin = user && users[user.username]?.role === 'admin';
+  res.json(groups.map(g => ({ ...g, isCreator: user && g.createdBy === user.username, isAdmin })));
+});
+
+// Create group
+app.post('/api/groups', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const { name, description, icon, category, privacy, coverPhoto } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name required' });
+  const newGroup = {
+    id: 'g' + Date.now(),
+    name, description: description || '',
+    icon: icon || '👥',
+    category: category || 'Community',
+    privacy: privacy || 'public',
+    coverPhoto: coverPhoto || '',
+    members: 1,
+    joined: true,
+    lastActivity: 'just now',
+    createdBy: user.username,
+    membersList: [user.username]
+  };
+  groups.push(newGroup);
+  dynamicGroupPosts[newGroup.id] = [];
+  res.json(newGroup);
+});
+
+// Report a group
+app.post('/api/groups/:id/report', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const group = groups.find(g => g.id === req.params.id);
+  if (!group) return res.status(404).json({ error: 'Not found' });
+  const { reason, note } = req.body;
+  groupReports.push({ groupId: req.params.id, groupName: group.name, reporter: user.username, reason: reason || 'Other', note: note || '', createdAt: new Date().toISOString() });
+  res.json({ ok: true });
+});
+
+// Delete group — admin only
+app.delete('/api/groups/:id', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const idx = groups.findIndex(g => g.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  groups.splice(idx, 1);
+  delete dynamicGroupPosts[req.params.id];
+  res.json({ ok: true });
+});
 
 app.post('/api/groups/:id/join', (req, res) => {
+  const user = getUser(req);
   const group = groups.find(g => g.id === req.params.id);
   if (!group) return res.status(404).json({ error: 'Group not found' });
   group.joined = !group.joined;
   group.members += group.joined ? 1 : -1;
+  if (user) {
+    if (group.joined) { if (!group.membersList.includes(user.username)) group.membersList.push(user.username); }
+    else { group.membersList = group.membersList.filter(u => u !== user.username); }
+  }
   res.json({ joined: group.joined, members: group.members });
+});
+
+// Post inside a group
+app.post('/api/groups/:id/posts', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const group = groups.find(g => g.id === req.params.id);
+  if (!group) return res.status(404).json({ error: 'Group not found' });
+  const { content } = req.body;
+  if (!content) return res.status(400).json({ error: 'Content required' });
+  const authorData = allUsers.find(u => u.username === user.username) || allUsers[0];
+  const post = { id: 'gp' + Date.now(), author: authorData, content, createdAt: new Date().toISOString() };
+  if (!dynamicGroupPosts[req.params.id]) dynamicGroupPosts[req.params.id] = [];
+  dynamicGroupPosts[req.params.id].unshift(post);
+  group.lastActivity = 'just now';
+  res.json(post);
+});
+
+// Delete a group post — admin only
+app.delete('/api/groups/:id/posts/:postId', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const gPosts = dynamicGroupPosts[req.params.id];
+  if (!gPosts) return res.status(404).json({ error: 'Not found' });
+  const idx = gPosts.findIndex(p => p.id === req.params.postId);
+  if (idx === -1) return res.status(404).json({ error: 'Post not found' });
+  gPosts.splice(idx, 1);
+  res.json({ ok: true });
 });
 
 // Notifications
@@ -994,7 +1272,8 @@ app.get('/api/realestate', (req, res) => {
 
 app.post('/api/realestate', (req, res) => {
   const user = getUser(req);
-  if (!user || user.username !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const u = user ? users[user.username] : null;
+  if (!u || (u.role !== 'admin' && u.role !== 'realtor')) return res.status(403).json({ error: 'Realtor or admin only' });
   const { title, type, price, priceUnit, bedrooms, bathrooms, sqft, description, location, features, agentName, agentPhone } = req.body;
   if (!title || !type || !price) return res.status(400).json({ error: 'Required fields missing' });
   const seed = 're' + Date.now();
@@ -1014,17 +1293,183 @@ app.post('/api/realestate', (req, res) => {
 
 app.delete('/api/realestate/:id', (req, res) => {
   const user = getUser(req);
-  if (!user || user.username !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const u = user ? users[user.username] : null;
+  if (!u || (u.role !== 'admin' && u.role !== 'realtor')) return res.status(403).json({ error: 'Realtor or admin only' });
   const idx = realEstateListings.findIndex(l => l.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
   realEstateListings.splice(idx, 1);
   res.json({ ok: true });
 });
 
+// ─── Business API ─────────────────────────────────────────────────────────────
+
+// Get business profile + stats for logged-in business user
+app.get('/api/business/me', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
+  const biz = businesses.find(b => b.id === u.businessId);
+  if (!biz) return res.status(404).json({ error: 'Business not found' });
+  const reviews = businessReviews[u.businessId] || [];
+  const bizPosts = posts.filter(p => p.businessId === u.businessId);
+  const totalReach = bizPosts.reduce((sum, p) => sum + Object.values(p.reactions).reduce((a, b) => a + b, 0) + p.commentCount, 0);
+  const fd = getBizFaveData(u.businessId, user.username);
+  res.json({ ...biz, reviews, postsCount: bizPosts.length, totalReach, neighborhoodSize: allUsers.length, ...fd });
+});
+
+// Business post — announcement or promotion — goes into neighbor feed badged
+app.post('/api/business/post', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
+  const biz = businesses.find(b => b.id === u.businessId);
+  if (!biz) return res.status(404).json({ error: 'Business not found' });
+  const { postType, content, offerTitle, offerExpiry, image } = req.body;
+  if (!content) return res.status(400).json({ error: 'Content required' });
+  const newPost = {
+    id: 'bp' + Date.now(),
+    type: postType === 'promotion' ? 'promotion' : 'announcement',
+    section: 'feed',
+    isBusinessPost: true,
+    businessId: u.businessId,
+    author: {
+      id: u.id, name: biz.name, avatar: u.avatar, initials: u.initials,
+      verified: true, address: biz.address, username: user.username, isBusiness: true
+    },
+    content,
+    ...(offerTitle && { offerTitle }),
+    ...(offerExpiry && { offerExpiry }),
+    ...(image && { image }),
+    createdAt: new Date().toISOString(),
+    reactions: { like: 0, insightful: 0, agree: 0, haha: 0, wow: 0, sad: 0 },
+    commentCount: 0,
+    userReaction: null
+  };
+  posts.unshift(newPost);
+  res.json(newPost);
+});
+
+// Update business profile
+app.put('/api/business/profile', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
+  const biz = businesses.find(b => b.id === u.businessId);
+  if (!biz) return res.status(404).json({ error: 'Business not found' });
+  const { name, description, hours, phone, address, tags } = req.body;
+  if (name) biz.name = name;
+  if (description) biz.description = description;
+  if (hours) biz.hours = hours;
+  if (phone) biz.phone = phone;
+  if (address) biz.address = address;
+  if (tags) biz.tags = Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim()).filter(Boolean);
+  // Keep user display name in sync
+  if (name) u.name = name;
+  res.json(biz);
+});
+
+// Reply to a review
+app.post('/api/business/reviews/:idx/reply', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
+  const reviews = businessReviews[u.businessId];
+  if (!reviews) return res.status(404).json({ error: 'No reviews found' });
+  const idx = parseInt(req.params.idx);
+  if (isNaN(idx) || !reviews[idx]) return res.status(404).json({ error: 'Review not found' });
+  const { reply } = req.body;
+  if (!reply) return res.status(400).json({ error: 'Reply text required' });
+  reviews[idx].ownerReply = { text: reply, date: 'Just now' };
+  res.json(reviews[idx]);
+});
+
+// Get all posts sent by this business
+app.get('/api/business/posts', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
+  const bizPosts = posts.filter(p => p.businessId === u.businessId)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json(bizPosts);
+});
+
 // ─── Serve HTML ───────────────────────────────────────────────────────────────
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/app', (req, res) => res.sendFile(path.join(__dirname, 'public', 'app.html')));
 app.get('/app.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'app.html')));
+app.get('/business', (req, res) => res.sendFile(path.join(__dirname, 'public', 'business.html')));
+app.get('/hoa', (req, res) => res.sendFile(path.join(__dirname, 'public', 'hoa.html')));
+
+// ─── HOA API ──────────────────────────────────────────────────────────────────
+
+app.get('/api/hoa/me', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u.role !== 'hoa') return res.status(403).json({ error: 'Not an HOA account' });
+  const { password, ...safe } = u;
+  const hoaPosts = posts.filter(p => p.isHoaPost);
+  const upcomingEvents = events.filter(e => new Date(e.date) >= new Date()).length;
+  res.json({ ...safe, hoaPostsCount: hoaPosts.length, upcomingEvents, totalResidents: allUsers.length, totalGroups: groups.length });
+});
+
+// HOA official post — goes to feed with HOA badge
+app.post('/api/hoa/post', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u.role !== 'hoa') return res.status(403).json({ error: 'Not an HOA account' });
+  const { postType, content, image } = req.body;
+  if (!content) return res.status(400).json({ error: 'Content required' });
+  const hoaAuthor = { id: u.id, name: u.name, avatar: u.avatar, initials: u.initials, verified: true, address: u.address, username: 'hoa', isHoa: true };
+  const newPost = {
+    id: 'hp' + Date.now(),
+    type: postType || 'general',
+    section: 'feed',
+    isHoaPost: true,
+    author: hoaAuthor,
+    content,
+    ...(image && { image }),
+    createdAt: new Date().toISOString(),
+    reactions: { like: 0, insightful: 0, agree: 0, haha: 0, wow: 0, sad: 0 },
+    commentCount: 0,
+    userReaction: null
+  };
+  posts.unshift(newPost);
+  res.json(newPost);
+});
+
+app.get('/api/hoa/posts', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u.role !== 'hoa') return res.status(403).json({ error: 'Not an HOA account' });
+  res.json(posts.filter(p => p.isHoaPost).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+});
+
+// HOA create event
+app.post('/api/hoa/events', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u.role !== 'hoa') return res.status(403).json({ error: 'Not an HOA account' });
+  const { title, description, location, date, time, endTime, category } = req.body;
+  if (!title || !date) return res.status(400).json({ error: 'Title and date required' });
+  const hoaHost = { id: u.id, name: u.name, avatar: u.avatar, initials: u.initials, verified: true, address: u.address, username: 'hoa' };
+  const newEvent = {
+    id: 'he' + Date.now(), title, description: description || '', host: hoaHost,
+    location: location || 'Costa Blanca Villas', date, time: time || 'TBD',
+    endTime: endTime || '', category: category || 'Community',
+    rsvp: { going: 0, maybe: 0, cantGo: 0 }, userRsvp: null, goingAvatars: [], isHoaEvent: true
+  };
+  events.unshift(newEvent);
+  res.json(newEvent);
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Good Neighbors running on http://localhost:${PORT}`));

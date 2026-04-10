@@ -10,144 +10,84 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --ocean: #0077B6;
-      --ocean-dark: #005F92;
-      --ocean-light: #90E0EF;
-      --sand: #F5CBA7;
-      --sand-light: #FFF9F0;
-      --coral: #E76F51;
-      --seafoam: #2A9D8F;
-      --sky: #CAF0F8;
-      --navy: #03045E;
-    }
-
     body {
       font-family: 'Inter', sans-serif;
       min-height: 100vh;
-      overflow-y: auto;
-      background: linear-gradient(160deg,
-        #0d2b4e 0%,
-        #0a4a7c 25%,
-        #0077B6 50%,
-        #E07850 70%,
-        #F5CBA7 85%,
-        #FFF9F0 100%
-      );
       display: flex;
       align-items: center;
       justify-content: center;
       position: relative;
-      padding: 20px 16px;
-    }
-
-    /* Animated sky particles */
-    .stars {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: 50%;
-      pointer-events: none;
-      overflow: hidden;
-    }
-    .star {
-      position: absolute;
-      width: 2px;
-      height: 2px;
-      background: white;
-      border-radius: 50%;
-      opacity: 0;
-      animation: twinkle var(--d, 3s) ease-in-out infinite var(--delay, 0s);
-    }
-
-    @keyframes twinkle {
-      0%, 100% { opacity: 0; }
-      50% { opacity: var(--opacity, 0.8); }
-    }
-
-    /* Wave at bottom */
-    .wave-container {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 160px;
-      pointer-events: none;
       overflow: hidden;
     }
 
-    .wave {
-      position: absolute;
-      bottom: 0;
-      width: 200%;
-      height: 100%;
+    /* Full-screen beach background */
+    .bg-photo {
+      position: fixed;
+      inset: 0;
+      background-image: url('/images/login-bg.webp');
+      background-size: cover;
+      background-position: center 40%;
+      z-index: 0;
     }
 
-    .wave-1 {
-      fill: rgba(144, 224, 239, 0.35);
-      animation: wave-move 8s ease-in-out infinite;
+    /* Dark gradient overlay — heavier at top, lighter at bottom so beach shows */
+    .bg-overlay {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(3, 4, 94, 0.55) 0%,
+        rgba(0, 60, 120, 0.40) 40%,
+        rgba(0, 30, 60, 0.50) 100%
+      );
+      z-index: 1;
     }
 
-    .wave-2 {
-      fill: rgba(0, 119, 182, 0.25);
-      animation: wave-move 12s ease-in-out infinite reverse;
-      bottom: -10px;
-    }
-
-    .wave-3 {
-      fill: rgba(0, 119, 182, 0.4);
-      animation: wave-move 6s ease-in-out infinite 2s;
-      bottom: -20px;
-    }
-
-    @keyframes wave-move {
-      0%, 100% { transform: translateX(0); }
-      50% { transform: translateX(-25%); }
+    /* Centered layout */
+    .page {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      width: 100%;
+      padding: 24px 16px;
     }
 
     /* Login card */
-    .login-wrapper {
-      position: relative;
-      z-index: 10;
-      animation: floatIn 1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    .login-card {
+      background: rgba(255, 255, 255, 0.97);
+      backdrop-filter: blur(24px);
+      border-radius: 24px;
+      padding: 44px 48px;
+      width: min(420px, 100%);
+      box-shadow:
+        0 32px 80px rgba(0, 0, 0, 0.35),
+        0 8px 24px rgba(0, 0, 0, 0.15);
+      animation: cardIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     }
 
-    @keyframes floatIn {
-      from { opacity: 0; transform: translateY(40px) scale(0.95); }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(32px) scale(0.96); }
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    .login-card {
-      background: rgba(255, 255, 255, 0.96);
-      backdrop-filter: blur(20px);
-      border-radius: 28px;
-      padding: 48px 52px;
-      width: min(440px, 100%);
-      box-shadow:
-        0 24px 80px rgba(0, 60, 120, 0.25),
-        0 8px 24px rgba(0, 60, 120, 0.1),
-        inset 0 1px 0 rgba(255,255,255,0.9);
-      animation: float-card 6s ease-in-out infinite 1s;
-    }
-
-    @keyframes float-card {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-8px); }
-    }
-
+    /* Logo area */
     .logo-area {
       text-align: center;
-      margin-bottom: 32px;
+      margin-bottom: 28px;
     }
 
     .logo-icon {
-      width: 96px;
-      height: 96px;
-      border-radius: 24px;
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 16px;
-      box-shadow: 0 8px 24px rgba(0, 119, 182, 0.35);
+      margin-bottom: 14px;
+      box-shadow: 0 6px 20px rgba(0, 119, 182, 0.3);
       overflow: hidden;
     }
 
@@ -155,134 +95,102 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      border-radius: 24px;
+      border-radius: 20px;
     }
 
-    .logo-title {
-      font-size: 28px;
+    .logo-headline {
+      font-size: 22px;
       font-weight: 800;
-      background: linear-gradient(135deg, #0077B6, #2A9D8F);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      letter-spacing: -0.5px;
-      line-height: 1;
-      margin-bottom: 8px;
-      display: none;
+      color: #0d1b2a;
+      letter-spacing: -0.4px;
+      margin-bottom: 6px;
     }
 
     .logo-tagline {
-      font-size: 14px;
-      color: #6B7A8D;
+      font-size: 13.5px;
+      color: #5a7184;
       font-weight: 400;
-      letter-spacing: 0.2px;
     }
 
     .neighborhood-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      background: linear-gradient(135deg, rgba(0,119,182,0.08), rgba(42,157,143,0.08));
-      border: 1px solid rgba(0,119,182,0.15);
+      gap: 5px;
+      background: rgba(0, 119, 182, 0.08);
+      border: 1px solid rgba(0, 119, 182, 0.18);
       border-radius: 20px;
-      padding: 6px 14px;
-      margin-top: 12px;
-      font-size: 12px;
+      padding: 5px 12px;
+      margin-top: 10px;
+      font-size: 11.5px;
       font-weight: 600;
       color: #0077B6;
     }
 
-    .neighborhood-badge::before {
-      content: '📍';
-      font-size: 12px;
-    }
-
-    .form-group {
-      margin-bottom: 18px;
-    }
+    /* Form */
+    .form-group { margin-bottom: 16px; }
 
     label {
       display: block;
       font-size: 13px;
       font-weight: 600;
-      color: #374151;
-      margin-bottom: 7px;
-      letter-spacing: 0.2px;
+      color: #2d3748;
+      margin-bottom: 6px;
     }
 
     input {
       width: 100%;
-      padding: 13px 16px;
-      border: 1.5px solid #E5EBF2;
-      border-radius: 12px;
+      padding: 12px 15px;
+      border: 1.5px solid #dde4ed;
+      border-radius: 11px;
       font-size: 15px;
       font-family: 'Inter', sans-serif;
-      color: #1A2B3C;
-      background: #FAFCFF;
-      transition: all 0.2s ease;
+      color: #1a2b3c;
+      background: #f8fafc;
+      transition: all 0.2s;
       outline: none;
     }
 
     input:focus {
       border-color: #0077B6;
       background: white;
-      box-shadow: 0 0 0 4px rgba(0, 119, 182, 0.1);
+      box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.12);
     }
 
-    input::placeholder {
-      color: #9AA5B4;
-    }
+    input::placeholder { color: #a0aec0; }
 
     .btn-login {
       width: 100%;
-      padding: 14px;
-      background: linear-gradient(135deg, #0077B6, #005F92);
+      padding: 13px;
+      background: #0077B6;
       color: white;
       border: none;
-      border-radius: 12px;
+      border-radius: 11px;
       font-size: 15px;
       font-weight: 700;
       font-family: 'Inter', sans-serif;
       cursor: pointer;
-      transition: all 0.2s ease;
-      margin-top: 8px;
-      letter-spacing: 0.3px;
-      box-shadow: 0 4px 16px rgba(0, 119, 182, 0.35);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .btn-login::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
-      opacity: 0;
-      transition: opacity 0.2s;
+      transition: all 0.18s;
+      margin-top: 6px;
+      letter-spacing: 0.1px;
     }
 
     .btn-login:hover {
+      background: #005f92;
       transform: translateY(-1px);
-      box-shadow: 0 6px 24px rgba(0, 119, 182, 0.45);
+      box-shadow: 0 6px 20px rgba(0, 119, 182, 0.4);
     }
 
-    .btn-login:hover::after { opacity: 1; }
+    .btn-login:active { transform: translateY(0); }
 
-    .btn-login:active {
-      transform: translateY(0);
-    }
+    .btn-login.loading { opacity: 0.75; cursor: not-allowed; }
 
-    .btn-login.loading {
-      opacity: 0.8;
-      cursor: not-allowed;
-    }
-
+    /* Divider */
     .divider {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin: 20px 0;
-      color: #9AA5B4;
+      gap: 10px;
+      margin: 20px 0 16px;
+      color: #a0aec0;
       font-size: 12px;
       font-weight: 500;
     }
@@ -291,65 +199,44 @@
       content: '';
       flex: 1;
       height: 1px;
-      background: #E5EBF2;
+      background: #e8edf2;
     }
 
-    .demo-credentials {
-      background: linear-gradient(135deg, rgba(42,157,143,0.06), rgba(0,119,182,0.06));
-      border: 1px solid rgba(42,157,143,0.2);
-      border-radius: 12px;
-      padding: 14px 16px;
-    }
-
-    .demo-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: #2A9D8F;
-      margin-bottom: 8px;
-    }
-
-    .demo-cred {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 4px;
-    }
-
-    .demo-cred:last-child { margin-bottom: 0; }
-
-    .demo-cred span {
+    /* Error */
+    .error-msg {
+      background: rgba(231, 111, 81, 0.09);
+      border: 1px solid rgba(231, 111, 81, 0.28);
+      border-radius: 10px;
+      padding: 10px 13px;
       font-size: 13px;
-      color: #4A5568;
+      color: #c0392b;
+      margin-bottom: 14px;
+      display: none;
     }
 
-    .demo-cred strong {
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-size: 13px;
-      color: #0077B6;
-      background: rgba(0,119,182,0.08);
-      padding: 2px 8px;
-      border-radius: 6px;
-    }
+    .error-msg.show { display: block; }
 
+    /* Quick login */
     .quick-login {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
-      margin-top: 10px;
+    }
+    .quick-login .ql-full {
+      grid-column: 1 / -1;
     }
 
     .quick-login-btn {
       flex: 1;
-      padding: 8px;
+      padding: 9px 6px;
       background: white;
-      border: 1.5px solid #E5EBF2;
+      border: 1.5px solid #dde4ed;
       border-radius: 10px;
       font-size: 12px;
       font-weight: 600;
-      color: #374151;
+      color: #2d3748;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.18s;
       font-family: 'Inter', sans-serif;
       display: flex;
       align-items: center;
@@ -360,13 +247,34 @@
     .quick-login-btn:hover {
       border-color: #0077B6;
       color: #0077B6;
-      background: rgba(0,119,182,0.04);
+      background: rgba(0, 119, 182, 0.04);
       transform: translateY(-1px);
     }
 
+    .ql-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.2;
+    }
+
+    .ql-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: inherit;
+    }
+
+    .ql-role {
+      font-size: 10px;
+      font-weight: 500;
+      color: #a0aec0;
+    }
+
+    .quick-login-btn:hover .ql-role { color: #5a9fc7; }
+
     .avatar-dot {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       display: inline-flex;
       align-items: center;
@@ -377,24 +285,12 @@
       flex-shrink: 0;
     }
 
-    .error-msg {
-      background: rgba(231, 111, 81, 0.1);
-      border: 1px solid rgba(231, 111, 81, 0.3);
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-size: 13px;
-      color: #E76F51;
-      margin-bottom: 16px;
-      display: none;
-    }
-
-    .error-msg.show { display: block; }
-
+    /* Footer */
     .footer-text {
       text-align: center;
-      margin-top: 24px;
-      font-size: 12px;
-      color: #9AA5B4;
+      margin-top: 20px;
+      font-size: 11.5px;
+      color: #a0aec0;
     }
 
     .footer-text a {
@@ -403,62 +299,38 @@
       font-weight: 500;
     }
 
+    /* Location credit bottom-left */
+    .photo-credit {
+      position: fixed;
+      bottom: 16px;
+      left: 20px;
+      z-index: 10;
+      font-size: 11px;
+      color: rgba(255,255,255,0.55);
+      font-family: 'Inter', sans-serif;
+    }
+
     @media (max-width: 480px) {
       .login-card { padding: 32px 24px; border-radius: 20px; }
-      .logo-icon { width: 72px; height: 72px; }
-      .float-card { animation: none; }
-    }
-
-    /* Seagulls */
-    .seagull {
-      position: fixed;
-      font-size: 20px;
-      opacity: 0.6;
-      animation: fly var(--fly-d, 20s) linear infinite var(--fly-delay, 0s);
-      top: var(--fly-top, 15%);
-    }
-
-    @keyframes fly {
-      from { transform: translateX(-100px) scaleX(1); left: -5%; }
-      49% { transform: translateX(0) scaleX(1); }
-      50% { transform: translateX(0) scaleX(-1); }
-      to { transform: translateX(100px) scaleX(-1); left: 105%; }
+      .logo-icon { width: 64px; height: 64px; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Animated stars -->
-  <div class="stars" id="stars"></div>
+  <div class="bg-photo"></div>
+  <div class="bg-overlay"></div>
 
-  <!-- Seagulls -->
-  <div class="seagull" style="--fly-top:8%; --fly-d:22s; --fly-delay:0s;">🕊️</div>
-  <div class="seagull" style="--fly-top:14%; --fly-d:18s; --fly-delay:4s; font-size:14px;">🕊️</div>
-  <div class="seagull" style="--fly-top:6%; --fly-d:26s; --fly-delay:10s;">🕊️</div>
-
-  <!-- Wave -->
-  <div class="wave-container">
-    <svg class="wave wave-1" viewBox="0 0 1440 160" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0,80 C180,20 360,140 540,80 C720,20 900,140 1080,80 C1260,20 1380,120 1440,90 L1440,160 L0,160 Z"/>
-    </svg>
-    <svg class="wave wave-2" viewBox="0 0 1440 160" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0,100 C200,40 400,160 600,100 C800,40 1000,160 1200,100 C1300,70 1380,120 1440,110 L1440,160 L0,160 Z"/>
-    </svg>
-    <svg class="wave wave-3" viewBox="0 0 1440 160" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0,120 C240,60 480,160 720,120 C960,80 1200,160 1440,130 L1440,160 L0,160 Z"/>
-    </svg>
-  </div>
-
-  <!-- Login Card -->
-  <div class="login-wrapper">
+  <div class="page">
     <div class="login-card">
+
       <div class="logo-area">
         <div class="logo-icon">
           <img src="/logo.png" alt="Good Neighbors">
         </div>
-        <div class="logo-title">Good Neighbors</div>
-        <div class="logo-tagline">Your neighborhood, connected</div>
-        <div class="neighborhood-badge">Costa Blanca Villas, Farallón, Panama</div>
+        <div class="logo-headline">Good Neighbors</div>
+        <div class="logo-tagline">Your community, connected</div>
+        <div class="neighborhood-badge">📍 Costa Blanca Villas · Farallón, Panama</div>
       </div>
 
       <div class="error-msg" id="errorMsg">Invalid username or password. Please try again.</div>
@@ -472,82 +344,31 @@
           <label for="password">Password</label>
           <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" required />
         </div>
-        <button type="submit" class="btn-login" id="loginBtn">
-          Sign In to Good Neighbors
-        </button>
+        <button type="submit" class="btn-login" id="loginBtn">Sign In</button>
       </form>
 
-      <div class="divider">Demo accounts</div>
+      <div class="divider">or continue as</div>
 
-      <div class="demo-credentials">
-        <div class="demo-label">🏖️ Quick access</div>
-        <div class="demo-cred">
-          <span>Sarah Bailey</span>
-          <strong>sarah / beach123</strong>
-        </div>
-        <div class="demo-cred">
-          <span>Mike Hart</span>
-          <strong>mike / beach123</strong>
-        </div>
-        <div class="quick-login">
-          <button class="quick-login-btn" onclick="quickLogin('sarah','beach123')">
-            <span class="avatar-dot" style="background:#0077B6">SB</span>
-            Sarah
-          </button>
-          <button class="quick-login-btn" onclick="quickLogin('mike','beach123')">
-            <span class="avatar-dot" style="background:#F4A261">MH</span>
-            Mike
-          </button>
-          <button class="quick-login-btn" onclick="quickLogin('admin','admin123')">
-            <span class="avatar-dot" style="background:#6D6875">SP</span>
-            Steve
-          </button>
-        </div>
-      </div>
-
-      <div id="gte_login" style="display:none;"></div>
-      <div style="text-align:center;margin-top:16px;">
-        <button id="loginLangBtn" onclick="toggleLang()" style="background:none;border:1.5px solid #E5EBF2;border-radius:20px;padding:6px 16px;font-size:13px;font-weight:700;cursor:pointer;color:#374151;font-family:'Inter',sans-serif;">🌐 Español</button>
+      <div class="quick-login" style="grid-template-columns:1fr;">
+        <button class="quick-login-btn" onclick="quickLogin('mike','beach123')">
+          <span class="avatar-dot" style="background:#F4A261">MH</span>
+          <span class="ql-inner">
+            <span class="ql-name">Mike Hart</span>
+            <span class="ql-role">Demo Neighbor</span>
+          </span>
+        </button>
       </div>
 
       <div class="footer-text">
         By signing in you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
       </div>
+
     </div>
   </div>
 
-  <script>
-    function googleTranslateElementInit() {
-      new google.translate.TranslateElement({ pageLanguage: 'en', includedLanguages: 'en,es', autoDisplay: false }, 'gte_login');
-    }
-    function toggleLang() {
-      const sel = document.querySelector('.goog-te-combo');
-      if (!sel) return;
-      sel.value = sel.value === 'es' ? 'en' : 'es';
-      sel.dispatchEvent(new Event('change'));
-      const btn = document.getElementById('loginLangBtn');
-      if (btn) btn.textContent = sel.value === 'es' ? '🌐 EN' : '🌐 ES';
-    }
-  </script>
-  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  <script>
-    // Stars
-    const starsContainer = document.getElementById('stars');
-    for (let i = 0; i < 60; i++) {
-      const star = document.createElement('div');
-      star.className = 'star';
-      star.style.cssText = `
-        left: ${Math.random() * 100}%;
-        top: ${Math.random() * 100}%;
-        --d: ${2 + Math.random() * 4}s;
-        --delay: ${Math.random() * 4}s;
-        --opacity: ${0.4 + Math.random() * 0.6};
-        width: ${1 + Math.random() * 2}px;
-        height: ${1 + Math.random() * 2}px;
-      `;
-      starsContainer.appendChild(star);
-    }
+  <div class="photo-credit">Isla Farallón, Coclé, Panama</div>
 
+  <script>
     async function handleLogin(e) {
       e.preventDefault();
       const username = document.getElementById('username').value.trim();
@@ -569,18 +390,22 @@
         });
 
         if (res.ok) {
-          btn.textContent = 'Welcome back! 🌊';
-          setTimeout(() => { window.location.href = '/app'; }, 600);
+          const data = await res.json();
+          btn.textContent = 'Welcome! 🌊';
+          setTimeout(() => {
+            const routes = { business: '/business', hoa: '/hoa' };
+            window.location.href = routes[data.role] || '/app';
+          }, 600);
         } else {
           err.classList.add('show');
-          btn.textContent = 'Sign In to Good Neighbors';
+          btn.textContent = 'Sign In';
           btn.classList.remove('loading');
           btn.disabled = false;
         }
       } catch (ex) {
         err.textContent = 'Connection error. Please try again.';
         err.classList.add('show');
-        btn.textContent = 'Sign In to Good Neighbors';
+        btn.textContent = 'Sign In';
         btn.classList.remove('loading');
         btn.disabled = false;
       }
@@ -592,9 +417,9 @@
       document.getElementById('loginForm').requestSubmit();
     }
 
-    // Check if already logged in
     fetch('/api/auth/me', { credentials: 'include' })
-      .then(r => { if (r.ok) window.location.href = '/app'; })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) { const routes = { business: '/business', hoa: '/hoa' }; window.location.href = routes[data.role] || '/app'; } })
       .catch(() => {});
   </script>
 </body>
