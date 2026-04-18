@@ -1099,6 +1099,22 @@ app.post('/api/admin/create-account', (req, res) => {
 });
 
 // Admin: list managed accounts
+app.get('/api/admin/realtors', (req, res) => {
+  const user = getUser(req);
+  if (!user || users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const realtors = Object.values(users).filter(u => u.role === 'realtor');
+  res.json(realtors.map(u => ({
+    username: u.username,
+    password: u.password,
+    name: u.name,
+    avatar: u.avatar,
+    initials: u.initials,
+    address: u.address,
+    bio: u.bio,
+    listingCount: realEstateListings.filter(l => !l.postedBy || l.postedBy === u.username).length
+  })));
+});
+
 app.get('/api/admin/managed-accounts', (req, res) => {
   const user = getUser(req);
   if (!user) return res.status(401).json({ error: 'Not authenticated' });
@@ -2024,7 +2040,8 @@ app.post('/api/realestate', (req, res) => {
     features: Array.isArray(features) ? features : (features ? String(features).split(',').map(f => f.trim()).filter(Boolean) : []),
     agentName: agentName || 'Iris Vanessa Arcia de Marleau', agentPhone: agentPhone || '+507-6754-4842', agentEmail: 'info@uncoverpanamarealestate.com',
     image: `https://picsum.photos/seed/${seed}/600/380`,
-    listedAt: new Date().toISOString()
+    listedAt: new Date().toISOString(),
+    postedBy: user.username
   };
   realEstateListings.unshift(newListing);
   res.json(newListing);
