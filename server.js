@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const fs = require('fs');
 const multer = require('multer');
+const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -34,19 +35,19 @@ const users = {
     posts: 45, neighbors: 127, points: 712
   },
   admin: {
-    id: 'u10', username: 'admin', password: 'Paintball$1',
-    role: 'admin',
-    name: 'Steve Potts', avatar: '#6D6875', initials: 'SP',
-    address: 'Villa 135, Costa Blanca Villas', verified: true, yearsInNeighborhood: 4,
-    bio: 'HOA board member. Here to help keep our community great!',
+    id: 'u10', username: 'admin', email: 'costablancavillaspanama@gmail.com', password: 'Paintball$1',
+    role: 'admin', isOwner: true,
+    name: 'Costa Blanca Villas', avatar: '#2E7D32', initials: 'CB',
+    address: 'Costa Blanca Villas, Farallón', verified: true, yearsInNeighborhood: 4,
+    bio: 'Official community account for Costa Blanca Villas, Farallón, Coclé, Panamá.',
     posts: 18, neighbors: 142, points: 534
   },
-  hoa: {
-    id: 'u11', username: 'hoa', password: 'hoa123',
+  decameron: {
+    id: 'u11', username: 'decameron', password: 'Decameron$1',
     role: 'hoa',
-    name: 'Costa Blanca Villas HOA', avatar: '#2A9D8F', initials: 'CV',
-    address: 'Costa Blanca Villas, Farallón, Coclé', verified: true,
-    bio: 'Official HOA account for Costa Blanca Villas. Managing community governance, maintenance, and resident communications.',
+    name: 'Decameron', avatar: '#C0392B', initials: 'DC',
+    address: 'Decameron Royal Beach, Farallón, Coclé', verified: true,
+    bio: 'Official Decameron account for Costa Blanca Villas. Resort management, community communications, and resident services.',
     posts: 12, members: 198, points: 0
   },
   uncover: {
@@ -69,7 +70,8 @@ const allUsers = [
   { id: 'u7',  name: 'Daniel Giroux', avatar: '#A8DADC', initials: 'DG', verified: true, yearsInNeighborhood: 5,  address: 'Villa 102', username: 'daniel' },
   { id: 'u8',  name: 'Kerry Maurer',  avatar: '#457B9D', initials: 'KM', verified: true, yearsInNeighborhood: 11, address: 'Villa 323', username: 'kerry'  },
   { id: 'u9',  name: 'Dennis Moore',  avatar: '#E63946', initials: 'DM', verified: true, yearsInNeighborhood: 7,  address: 'Villa 324', username: 'dennis' },
-  { id: 'u10', name: 'Steve Potts',   avatar: '#6D6875', initials: 'SP', verified: true, yearsInNeighborhood: 4,  address: 'Villa 135', username: 'admin'  }
+  { id: 'u10', name: 'Costa Blanca Villas', avatar: '#2E7D32', initials: 'CB', verified: true, yearsInNeighborhood: 4, address: 'Costa Blanca Villas, Farallón', username: 'admin' },
+  { id: 'u11', name: 'Decameron', avatar: '#C0392B', initials: 'DC', verified: true, yearsInNeighborhood: 10, address: 'Decameron Royal Beach, Farallón', username: 'decameron' }
 ];
 
 // Del Mar Beach Club admin user (for official announcements)
@@ -549,6 +551,8 @@ let businesses = [
   }
 ];
 
+const pendingClaims = [];
+
 let marketplaceItems = [
   { id: 'm1', title: 'Outdoor Rattan Patio Set', price: 250, free: false, condition: 'Good condition', category: 'Furniture', seller: allUsers[5], description: '6-chair dining table + 2 loungers + side table. All-weather. Cushions included.', createdAt: new Date(Date.now() - 6 * 3600000).toISOString(), color: '#2A9D8F', image: '/images/furniture.png' },
   { id: 'm2', title: 'Club Car Golf Cart (4-seat)', price: 1800, free: false, condition: 'Great condition', category: 'Transportation', seller: allUsers[3], description: 'Electric, new batteries 8 months ago. Perfect for the community and beach access.', createdAt: new Date(Date.now() - 2.5 * 86400000).toISOString(), color: '#0077B6', image: '/images/golf-cart.png' },
@@ -616,6 +620,599 @@ function getUser(req) {
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 
+// ─── Reports ─────────────────────────────────────────────────────────────────
+const reports = [];
+
+app.post('/api/reports', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const { targetType, targetId, targetLabel, reason, note } = req.body;
+  if (!targetType || !targetId || !reason) return res.status(400).json({ error: 'Missing fields' });
+  const u = users[user.username];
+  reports.push({
+    id: 'r' + Date.now(),
+    targetType,   // 'post' | 'business' | 'group' | 'member'
+    targetId,
+    targetLabel: targetLabel || targetId,
+    reason,
+    note: note || '',
+    reportedBy: { id: u.id, name: u.name, username: user.username, initials: u.initials, avatar: u.avatar },
+    createdAt: new Date().toISOString(),
+    status: 'open'
+  });
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/reports', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  res.json(reports);
+});
+
+app.post('/api/admin/reports/:id/resolve', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  const r = reports.find(r => r.id === req.params.id);
+  if (!r) return res.status(404).json({ error: 'Not found' });
+  r.status = 'resolved';
+  r.resolvedBy = user.username;
+  r.resolvedAt = new Date().toISOString();
+  res.json({ ok: true });
+});
+
+app.post('/api/admin/reports/:id/dismiss', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  const r = reports.find(r => r.id === req.params.id);
+  if (!r) return res.status(404).json({ error: 'Not found' });
+  r.status = 'dismissed';
+  res.json({ ok: true });
+});
+
+// ─── Access Requests (landing page) ─────────────────────────────────────────
+const accessRequests = [];
+
+app.post('/api/request-access', (req, res) => {
+  const { nameVilla } = req.body;
+  if (!nameVilla || !nameVilla.trim()) return res.status(400).json({ error: 'Please provide your name and villa.' });
+  accessRequests.push({ id: 'ar' + Date.now(), nameVilla: nameVilla.trim(), submittedAt: new Date().toISOString(), status: 'new' });
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/access-requests', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  res.json(accessRequests);
+});
+
+app.post('/api/admin/access-requests/:id/dismiss', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  const r = accessRequests.find(r => r.id === req.params.id);
+  if (r) r.status = 'dismissed';
+  res.json({ ok: true });
+});
+
+// Admin: remove member (no ban)
+app.delete('/api/admin/users/:username', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  const target = req.params.username;
+  if (!users[target]) return res.status(404).json({ error: 'User not found' });
+  if (target === user.username) return res.status(400).json({ error: 'Cannot remove yourself' });
+  if (users[target]?.isOwner) return res.status(400).json({ error: 'Cannot remove the platform owner' });
+  delete users[target];
+  const idx = allUsers.findIndex(u => u.username === target);
+  if (idx !== -1) allUsers.splice(idx, 1);
+  res.json({ ok: true });
+});
+
+// ─── Admin Team Management (owner only) ─────────────────────────────────────
+app.get('/api/admin/team', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  if (!u?.isOwner) return res.status(403).json({ error: 'Owner only' });
+  const team = Object.values(users).filter(u => u.role === 'admin').map(({ password, ...safe }) => safe);
+  res.json(team);
+});
+
+app.post('/api/admin/team/promote/:username', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (!u?.isOwner) return res.status(403).json({ error: 'Only the owner can promote admins' });
+  const target = users[req.params.username];
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  if (target.role === 'admin') return res.status(400).json({ error: 'Already an admin' });
+  if (['hoa'].includes(target.role)) return res.status(400).json({ error: 'Cannot promote HOA accounts' });
+  target.role = 'admin';
+  target.isOwner = false;
+  const { password, ...safe } = target;
+  res.json({ ok: true, user: safe });
+});
+
+app.delete('/api/admin/team/:username', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (!u?.isOwner) return res.status(403).json({ error: 'Only the owner can remove admins' });
+  const target = users[req.params.username];
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  if (target.isOwner) return res.status(400).json({ error: 'Cannot remove the owner' });
+  if (target.role !== 'admin') return res.status(400).json({ error: 'User is not an admin' });
+  target.role = 'neighbor';
+  delete target.isOwner;
+  res.json({ ok: true });
+});
+
+// ─── Ban System ──────────────────────────────────────────────────────────────
+const bannedMembers = [];
+
+app.post('/api/admin/users/:username/ban', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+
+  const target = req.params.username;
+  const { reason } = req.body;
+  if (!users[target]) return res.status(404).json({ error: 'User not found' });
+  if (target === user.username) return res.status(400).json({ error: 'Cannot ban yourself' });
+  if (users[target]?.isOwner) return res.status(400).json({ error: 'Cannot ban the platform owner' });
+  if (['hoa'].includes(users[target]?.role)) return res.status(400).json({ error: 'Cannot ban HOA accounts' });
+
+  const u = users[target];
+  const ban = {
+    id: 'ban' + Date.now(),
+    username: u.username,
+    name: u.name,
+    address: u.address || '',
+    avatar: u.avatar,
+    initials: u.initials,
+    role: u.role,
+    reason: reason || 'Violation of Member Agreement',
+    bannedAt: new Date().toISOString(),
+    bannedBy: user.username
+  };
+  bannedMembers.push(ban);
+
+  // Remove from active users
+  delete users[target];
+  const idx = allUsers.findIndex(u => u.username === target);
+  if (idx !== -1) allUsers.splice(idx, 1);
+
+  res.json({ ok: true, ban });
+});
+
+app.post('/api/admin/banned/:id/unban', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  const ban = bannedMembers.find(b => b.id === req.params.id);
+  if (!ban) return res.status(404).json({ error: 'Ban not found' });
+  ban.status = 'lifted';
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/banned', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  res.json(bannedMembers.filter(b => b.status !== 'lifted'));
+});
+
+// ─── Security Alerts & HOA Contacts ─────────────────────────────────────────
+const hoaContacts = [];   // { id, name, email, addedAt }
+const securityAlerts = []; // { id, type, severity, title, message, sentTo, createdAt, createdBy }
+let decameronEmail = '';   // Decameron's notification email address
+
+// Email transporter — configured with admin Gmail credentials stored in env or settings
+let emailTransporter = null;
+let emailConfig = { user: '', pass: '', configured: false };
+
+// GET community safety posts (for admin Security Alerts view)
+app.get('/api/admin/community-safety', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  const safetyPosts = posts
+    .filter(p => p.type === 'safety')
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .map(p => ({
+      id: p.id, type: 'community_post',
+      title: p.alertType ? `${p.alertType} alert` : 'Safety Post',
+      message: p.content,
+      severity: p.severity || 'medium',
+      author: p.author?.name || 'Unknown',
+      createdAt: p.createdAt,
+      forwardedToDecameron: p.forwardedToDecameron || false
+    }));
+  // Also include safety-related reports
+  const safetyReports = reports
+    .filter(r => r.targetType === 'post' || r.reason?.toLowerCase().includes('safety') || r.reason?.toLowerCase().includes('threat'))
+    .map(r => ({
+      id: r.id, type: 'report',
+      title: `Report: ${r.targetLabel || r.targetType}`,
+      message: `Reason: ${r.reason}${r.note ? '\nNote: ' + r.note : ''}`,
+      severity: 'medium',
+      author: r.reportedBy || 'Anonymous',
+      createdAt: r.createdAt,
+      forwardedToDecameron: r.forwardedToDecameron || false
+    }));
+  res.json([...safetyPosts, ...safetyReports].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+});
+
+// SET Decameron email
+app.post('/api/admin/decameron-email', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (!users[user.username]?.isOwner) return res.status(403).json({ error: 'Owner only' });
+  const { email } = req.body;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Valid email required' });
+  decameronEmail = email;
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/decameron-email', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  res.json({ email: decameronEmail });
+});
+
+// FORWARD to Decameron
+app.post('/api/admin/forward-to-decameron', async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+
+  const { itemId, itemType, title, message, severity, author, createdAt } = req.body;
+  if (!decameronEmail) return res.status(400).json({ error: 'Decameron email not configured' });
+  if (!emailTransporter) return res.status(400).json({ error: 'Email not configured — add Gmail credentials in Security Alerts settings' });
+
+  const sevColors = { low: '#16a34a', medium: '#d97706', high: '#ea580c', urgent: '#dc2626' };
+  const sevLabels = { low: 'Low', medium: 'Medium', high: 'High', urgent: 'URGENT' };
+
+  try {
+    await emailTransporter.sendMail({
+      from: `"Costa Blanca Villas Admin" <${emailConfig.user}>`,
+      to: decameronEmail,
+      subject: `[Safety Alert] ${title} — Costa Blanca Villas`,
+      html: `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+          <div style="background:#1a3a5c;color:white;padding:20px;border-radius:8px 8px 0 0;">
+            <h2 style="margin:0;">🏘️ Costa Blanca Villas — Safety Alert</h2>
+            <p style="margin:4px 0 0;opacity:0.8;">Forwarded by community admin · Requires Decameron attention</p>
+          </div>
+          <div style="background:#fff3cd;border-left:4px solid ${sevColors[severity] || '#d97706'};padding:14px 20px;">
+            <strong>Severity:</strong> ${sevLabels[severity] || severity} &nbsp;·&nbsp; <strong>Reported by:</strong> ${author} &nbsp;·&nbsp; <strong>Time:</strong> ${new Date(createdAt).toLocaleString()}
+          </div>
+          <div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+            <h3 style="color:#1a3a5c;margin-top:0;">${title}</h3>
+            <p style="color:#333;line-height:1.6;white-space:pre-wrap;">${message}</p>
+            <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+            <p style="color:#888;font-size:12px;">Forwarded from Panamá Connect · Costa Blanca Villas, Farallón, Coclé, Panamá<br>Please respond through official Decameron channels or contact the community admin.</p>
+          </div>
+        </div>
+      `
+    });
+    // Mark as forwarded
+    const post = posts.find(p => p.id === itemId);
+    if (post) post.forwardedToDecameron = true;
+    const report = reports.find(r => r.id === itemId);
+    if (report) report.forwardedToDecameron = true;
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Email failed: ' + err.message });
+  }
+});
+
+function buildTransporter() {
+  if (!emailConfig.user || !emailConfig.pass) return null;
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: emailConfig.user, pass: emailConfig.pass }
+  });
+}
+
+// GET HOA contacts
+app.get('/api/admin/hoa-contacts', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  res.json(hoaContacts);
+});
+
+// ADD HOA contact
+app.post('/api/admin/hoa-contacts', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  const { name, email } = req.body;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Valid email required' });
+  if (hoaContacts.find(c => c.email.toLowerCase() === email.toLowerCase())) return res.status(409).json({ error: 'Email already in list' });
+  const contact = { id: 'hoa' + Date.now(), name: name || email, email, addedAt: new Date().toISOString() };
+  hoaContacts.push(contact);
+  res.json({ ok: true, contact });
+});
+
+// REMOVE HOA contact
+app.delete('/api/admin/hoa-contacts/:id', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  const idx = hoaContacts.findIndex(c => c.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  hoaContacts.splice(idx, 1);
+  res.json({ ok: true });
+});
+
+// SAVE email credentials (for sending alerts)
+app.post('/api/admin/email-config', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (!users[user.username]?.isOwner) return res.status(403).json({ error: 'Owner only' });
+  const { gmailUser, gmailAppPassword } = req.body;
+  if (!gmailUser || !gmailAppPassword) return res.status(400).json({ error: 'Gmail address and App Password required' });
+  emailConfig = { user: gmailUser, pass: gmailAppPassword, configured: true };
+  emailTransporter = buildTransporter();
+  res.json({ ok: true, configured: true });
+});
+
+app.get('/api/admin/email-config', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (!users[user.username]?.isOwner) return res.status(403).json({ error: 'Owner only' });
+  res.json({ configured: emailConfig.configured, user: emailConfig.user });
+});
+
+// GET security alerts
+app.get('/api/admin/security-alerts', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  res.json([...securityAlerts].reverse());
+});
+
+// CREATE & SEND security alert
+app.post('/api/admin/security-alerts', async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+
+  const { alertType, severity, title, message, postToFeed, emailHOA } = req.body;
+  if (!title || !message) return res.status(400).json({ error: 'Title and message required' });
+
+  const alert = {
+    id: 'alert' + Date.now(),
+    alertType: alertType || 'general',
+    severity: severity || 'medium',
+    title, message,
+    postToFeed: !!postToFeed,
+    emailHOA: !!emailHOA,
+    sentTo: emailHOA ? hoaContacts.map(c => c.email) : [],
+    emailStatus: 'not_sent',
+    createdAt: new Date().toISOString(),
+    createdBy: user.username
+  };
+
+  // Post to community feed if requested
+  if (postToFeed) {
+    const authorData = allUsers.find(u => u.username === user.username) || allUsers[0];
+    posts.push({
+      id: 'post' + Date.now(),
+      type: 'safety',
+      section: 'feed',
+      content: `**${title}**\n\n${message}`,
+      author: authorData,
+      isOfficial: true,
+      severity: alert.severity,
+      alertType: alert.alertType,
+      createdAt: new Date().toISOString(),
+      likes: 0, likedBy: [], comments: []
+    });
+  }
+
+  // Send email to HOA contacts if requested
+  if (emailHOA && hoaContacts.length > 0) {
+    if (!emailTransporter) {
+      alert.emailStatus = 'not_configured';
+    } else {
+      const severityLabels = { low: 'Low', medium: 'Medium', high: 'High', urgent: 'URGENT' };
+      const typeLabels = { security: 'Security Alert', noise: 'Noise Complaint', vandalism: 'Vandalism', emergency: 'Emergency', general: 'Community Notice' };
+      const emailAddresses = hoaContacts.map(c => c.email).join(', ');
+      try {
+        await emailTransporter.sendMail({
+          from: `"Costa Blanca Villas Admin" <${emailConfig.user}>`,
+          to: emailAddresses,
+          subject: `[${severityLabels[alert.severity] || 'Alert'}] ${title} — Costa Blanca Villas`,
+          html: `
+            <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+              <div style="background:#1a3a5c;color:white;padding:20px;border-radius:8px 8px 0 0;">
+                <h2 style="margin:0;">🏘️ Costa Blanca Villas</h2>
+                <p style="margin:4px 0 0;opacity:0.8;">Community Alert — ${typeLabels[alert.alertType] || 'Notice'}</p>
+              </div>
+              <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:16px 20px;">
+                <strong>Severity:</strong> ${severityLabels[alert.severity] || alert.severity}
+              </div>
+              <div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+                <h3 style="color:#1a3a5c;margin-top:0;">${title}</h3>
+                <p style="color:#333;line-height:1.6;">${message.replace(/\n/g, '<br>')}</p>
+                <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+                <p style="color:#888;font-size:12px;">Sent by Costa Blanca Villas community admin · Farallón, Coclé, Panamá<br>
+                Do not reply to this email. Log in to Panamá Connect to respond.</p>
+              </div>
+            </div>
+          `
+        });
+        alert.emailStatus = 'sent';
+      } catch (err) {
+        alert.emailStatus = 'failed';
+        alert.emailError = err.message;
+      }
+    }
+  }
+
+  securityAlerts.push(alert);
+  res.json({ ok: true, alert });
+});
+
+// ─── Admin: Create Managed Account (HOA / partner) ──────────────────────────
+app.post('/api/admin/create-account', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (!users[user.username]?.isOwner) return res.status(403).json({ error: 'Owner only' });
+
+  const { displayName, username, password, role, address, bio } = req.body;
+  if (!displayName || !username || !password || !role) return res.status(400).json({ error: 'Missing required fields' });
+  if (users[username] || pendingUsers.find(p => p.username === username)) return res.status(409).json({ error: 'Username already taken' });
+
+  const validRoles = ['hoa', 'business', 'realtor', 'neighbor'];
+  if (!validRoles.includes(role)) return res.status(400).json({ error: 'Invalid role' });
+
+  const initials = displayName.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const AVATAR_COLORS_MC = ['#0077B6','#2A9D8F','#E76F51','#6D6875','#264653','#457B9D','#C0392B','#1D3557'];
+  const avatar = AVATAR_COLORS_MC[Math.floor(Math.random() * AVATAR_COLORS_MC.length)];
+
+  const newUser = {
+    id: 'u' + Date.now(), username, password, role,
+    name: displayName, avatar, initials,
+    address: address || 'Costa Blanca Villas, Farallón',
+    verified: true,
+    bio: bio || `Official ${role} account.`,
+    posts: 0, neighbors: 0, points: 0,
+    yearsInNeighborhood: 0,
+    managedAccount: true
+  };
+
+  users[username] = newUser;
+  allUsers.push({ id: newUser.id, name: newUser.name, avatar: newUser.avatar, initials: newUser.initials, verified: true, yearsInNeighborhood: 0, address: newUser.address, username });
+
+  res.json({ ok: true, user: { username, displayName, role, password } });
+});
+
+// Admin: list managed accounts
+app.get('/api/admin/managed-accounts', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (!users[user.username]?.isOwner) return res.status(403).json({ error: 'Owner only' });
+  const managed = Object.values(users).filter(u => u.managedAccount || u.role === 'hoa');
+  res.json(managed.map(u => ({ username: u.username, name: u.name, role: u.role, avatar: u.avatar, initials: u.initials })));
+});
+
+// ─── Pending Registrations ───────────────────────────────────────────────────
+const pendingUsers = [];
+
+const AVATAR_COLORS = ['#0077B6','#F4A261','#E76F51','#2A9D8F','#E9C46A','#264653','#A8DADC','#457B9D','#E63946','#6D6875','#1D3557','#48CAE4'];
+
+app.post('/api/auth/register', (req, res) => {
+  const { fullName, username, password, role, address, businessName, businessCategory, bio } = req.body;
+
+  if (!fullName || !username || !password || !role || !address)
+    return res.status(400).json({ error: 'Missing required fields.' });
+
+  if (!/^[a-z0-9_]{3,20}$/.test(username))
+    return res.status(400).json({ error: 'Username must be 3–20 lowercase letters, numbers, or underscores.' });
+
+  if (users[username] || pendingUsers.find(p => p.username === username))
+    return res.status(409).json({ error: 'That username is already taken.' });
+
+  // Check if banned by username or address
+  const existingBan = bannedMembers.find(b =>
+    b.status !== 'lifted' && (
+      b.username === username ||
+      (address && b.address && b.address.toLowerCase() === address.trim().toLowerCase())
+    )
+  );
+  if (existingBan) return res.status(403).json({ error: 'This account is not eligible to register on Panamá Connect.' });
+
+  if (password.length < 6)
+    return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+
+  const validRoles = ['neighbor', 'business'];
+  if (!validRoles.includes(role))
+    return res.status(400).json({ error: 'Invalid account type.' });
+
+  const initials = fullName.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const avatar = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+
+  const pending = {
+    id: 'p' + Date.now(),
+    username, password, role,
+    name: role === 'business' ? (businessName || fullName) : fullName,
+    fullName, address,
+    businessName: businessName || null,
+    businessCategory: businessCategory || null,
+    bio: bio || '',
+    avatar, initials,
+    verified: false,
+    submittedAt: new Date().toISOString(),
+    status: 'pending'
+  };
+
+  pendingUsers.push(pending);
+  res.json({ ok: true, message: 'Application submitted! The HOA team will review and approve your account within 24 hours.' });
+});
+
+// Admin: get pending registrations
+app.get('/api/admin/pending', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  res.json(pendingUsers.filter(p => p.status === 'pending'));
+});
+
+// Admin: approve registration
+app.post('/api/admin/pending/:id/approve', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+
+  const idx = pendingUsers.findIndex(p => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+
+  const p = pendingUsers[idx];
+  p.status = 'approved';
+
+  const newUser = {
+    id: 'u' + Date.now(),
+    username: p.username, password: p.password, role: p.role,
+    name: p.name, avatar: p.avatar, initials: p.initials,
+    address: p.address, verified: true,
+    bio: p.bio || '',
+    posts: 0, neighbors: 0, points: 0,
+    yearsInNeighborhood: 0
+  };
+  if (p.role === 'business' && p.businessCategory) newUser.businessCategory = p.businessCategory;
+
+  users[p.username] = newUser;
+  allUsers.push({ id: newUser.id, name: newUser.name, avatar: newUser.avatar, initials: newUser.initials, verified: true, yearsInNeighborhood: 0, address: p.address, username: p.username });
+
+  res.json({ ok: true, user: newUser });
+});
+
+// Admin: reject registration
+app.post('/api/admin/pending/:id/reject', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+
+  const idx = pendingUsers.findIndex(p => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  pendingUsers[idx].status = 'rejected';
+  res.json({ ok: true });
+});
+
 // Auth
 app.get('/api/auth/me', (req, res) => {
   const user = getUser(req);
@@ -626,9 +1223,15 @@ app.get('/api/auth/me', (req, res) => {
 
 app.post('/api/auth/login', (req, res) => {
   const { username, password } = req.body;
-  const user = users[username];
+  // Allow login by username OR email
+  const user = users[username] || Object.values(users).find(u => u.email && u.email.toLowerCase() === username.toLowerCase());
   if (!user || user.password !== password) {
     return res.status(401).json({ error: 'Invalid credentials' });
+  }
+  // Check if banned
+  const ban = bannedMembers.find(b => b.username === user.username && b.status !== 'lifted');
+  if (ban) {
+    return res.status(403).json({ error: 'banned', reason: ban.reason });
   }
   res.cookie('user', user.username, { httpOnly: true, signed: true, maxAge: 7 * 24 * 3600 * 1000, sameSite: 'lax' });
   const { password: _, ...safeUser } = user;
@@ -640,12 +1243,79 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── Sponsored Posts ─────────────────────────────────────────────────────────
+const sponsoredPosts = [];
+
+app.get('/api/admin/sponsored-posts', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  res.json([...sponsoredPosts].reverse());
+});
+
+app.post('/api/admin/sponsored-posts', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+
+  const { businessName, businessUsername, content, linkUrl, linkLabel, image } = req.body;
+  if (!businessName || !content) return res.status(400).json({ error: 'Business name and content required' });
+
+  // Pull avatar/initials from existing user if businessUsername provided
+  const biz = businessUsername ? users[businessUsername] : null;
+  const sp = {
+    id: 'sp' + Date.now(),
+    type: 'sponsored',
+    businessName,
+    businessUsername: businessUsername || null,
+    avatar: biz?.avatar || '#0077B6',
+    initials: biz?.initials || businessName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2),
+    content,
+    linkUrl: linkUrl || null,
+    linkLabel: linkLabel || 'Learn More',
+    image: image || null,
+    active: true,
+    createdAt: new Date().toISOString(),
+    createdBy: user.username
+  };
+  sponsoredPosts.push(sp);
+  res.json({ ok: true, post: sp });
+});
+
+app.patch('/api/admin/sponsored-posts/:id/toggle', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  const sp = sponsoredPosts.find(s => s.id === req.params.id);
+  if (!sp) return res.status(404).json({ error: 'Not found' });
+  sp.active = !sp.active;
+  res.json({ ok: true, active: sp.active });
+});
+
+app.delete('/api/admin/sponsored-posts/:id', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  const idx = sponsoredPosts.findIndex(s => s.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  sponsoredPosts.splice(idx, 1);
+  res.json({ ok: true });
+});
+
 // Posts
 app.get('/api/posts', (req, res) => {
   const { section = 'feed' } = req.query;
   let filtered;
   if (section === 'feed') {
     filtered = posts.filter(p => p.section === 'feed' || !p.section);
+    const sorted = filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // Inject active sponsored posts at position 2 (after first 2 regular posts)
+    const active = sponsoredPosts.filter(s => s.active);
+    if (active.length) {
+      const insert = Math.min(2, sorted.length);
+      sorted.splice(insert, 0, ...active.map(s => ({ ...s, section: 'feed' })));
+    }
+    return res.json(sorted);
   } else {
     filtered = posts.filter(p => p.section === section || p.type === section);
   }
@@ -711,6 +1381,17 @@ app.post('/api/posts', (req, res) => {
   }
 
   res.json(newPost);
+});
+
+app.delete('/api/posts/:id', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const u = users[user.username];
+  if (u?.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
+  const idx = posts.findIndex(p => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Post not found' });
+  posts.splice(idx, 1);
+  res.json({ ok: true });
 });
 
 app.post('/api/posts/:id/resolve', (req, res) => {
@@ -995,7 +1676,10 @@ app.get('/api/groups/:id', (req, res) => {
   const posts = (dynamicGroupPosts[req.params.id] || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const isAdmin = user && users[user.username]?.role === 'admin';
   const isCreator = user && group.createdBy === user.username;
-  res.json({ ...group, posts, isAdmin, isCreator });
+  const joined = user ? group.membersList.includes(user.username) : false;
+  const pendingRequest = user ? !!(group.joinRequests || []).find(r => r.username === user.username) : false;
+  const joinRequests = (isCreator || isAdmin) ? (group.joinRequests || []) : undefined;
+  res.json({ ...group, posts, isAdmin, isCreator, joined, pendingRequest, joinRequests });
 });
 
 // Neighbors
@@ -1005,7 +1689,14 @@ app.get('/api/neighbors', (req, res) => res.json(allUsers));
 app.get('/api/groups', (req, res) => {
   const user = getUser(req);
   const isAdmin = user && users[user.username]?.role === 'admin';
-  res.json(groups.map(g => ({ ...g, isCreator: user && g.createdBy === user.username, isAdmin })));
+  res.json(groups.map(g => ({
+    ...g,
+    joined: user ? g.membersList.includes(user.username) : false,
+    pendingRequest: user ? !!(g.joinRequests || []).find(r => r.username === user.username) : false,
+    isCreator: user && g.createdBy === user.username,
+    isAdmin,
+    joinRequests: (user && (g.createdBy === user.username || isAdmin)) ? (g.joinRequests || []) : undefined
+  })));
 });
 
 // Create group
@@ -1057,15 +1748,63 @@ app.delete('/api/groups/:id', (req, res) => {
 
 app.post('/api/groups/:id/join', (req, res) => {
   const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
   const group = groups.find(g => g.id === req.params.id);
   if (!group) return res.status(404).json({ error: 'Group not found' });
-  group.joined = !group.joined;
-  group.members += group.joined ? 1 : -1;
-  if (user) {
-    if (group.joined) { if (!group.membersList.includes(user.username)) group.membersList.push(user.username); }
-    else { group.membersList = group.membersList.filter(u => u !== user.username); }
+
+  const alreadyMember = group.membersList.includes(user.username);
+
+  // Leave (always allowed)
+  if (alreadyMember) {
+    group.membersList = group.membersList.filter(u => u !== user.username);
+    group.members = Math.max(0, group.members - 1);
+    group.joined = false;
+    return res.json({ joined: false, members: group.members });
   }
-  res.json({ joined: group.joined, members: group.members });
+
+  // Private group — send join request instead
+  if (group.privacy === 'private') {
+    if (!group.joinRequests) group.joinRequests = [];
+    if (group.joinRequests.find(r => r.username === user.username)) {
+      return res.json({ requested: true });
+    }
+    const u = allUsers.find(a => a.username === user.username) || {};
+    group.joinRequests.push({ username: user.username, name: u.name || user.username, initials: u.initials || '??', avatar: u.avatar || '#0077B6', requestedAt: new Date().toISOString() });
+    return res.json({ requested: true });
+  }
+
+  // Public group — join immediately
+  group.membersList.push(user.username);
+  group.members += 1;
+  group.joined = true;
+  res.json({ joined: true, members: group.members });
+});
+
+app.post('/api/groups/:id/join-requests/:username/approve', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const group = groups.find(g => g.id === req.params.id);
+  if (!group) return res.status(404).json({ error: 'Not found' });
+  if (group.createdBy !== user.username && users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  const reqUsername = req.params.username;
+  if (!group.joinRequests) group.joinRequests = [];
+  group.joinRequests = group.joinRequests.filter(r => r.username !== reqUsername);
+  if (!group.membersList.includes(reqUsername)) {
+    group.membersList.push(reqUsername);
+    group.members += 1;
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/groups/:id/join-requests/:username/deny', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const group = groups.find(g => g.id === req.params.id);
+  if (!group) return res.status(404).json({ error: 'Not found' });
+  if (group.createdBy !== user.username && users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  if (!group.joinRequests) group.joinRequests = [];
+  group.joinRequests = group.joinRequests.filter(r => r.username !== req.params.username);
+  res.json({ ok: true });
 });
 
 // Post inside a group
@@ -1303,6 +2042,83 @@ app.delete('/api/realestate/:id', (req, res) => {
 
 // ─── Business API ─────────────────────────────────────────────────────────────
 
+// ─── Business Claim Flow ─────────────────────────────────────────────────────
+
+app.post('/api/business/claim', (req, res) => {
+  const { businessId, name, email, phone, role, message } = req.body;
+  if (!businessId || !name || !email) return res.status(400).json({ error: 'Name and email are required' });
+  const biz = businesses.find(b => b.id === businessId);
+  if (!biz) return res.status(404).json({ error: 'Business not found' });
+  if (biz.claimed) return res.status(409).json({ error: 'This business has already been claimed' });
+  if (pendingClaims.find(c => c.businessId === businessId && c.status === 'pending')) {
+    return res.status(409).json({ error: 'A claim for this business is already under review' });
+  }
+  pendingClaims.push({
+    id: 'cl' + Date.now(),
+    businessId, businessName: biz.name, businessCategory: biz.category,
+    name, email, phone: phone || '', role: role || 'Owner',
+    message: message || '',
+    status: 'pending',
+    submittedAt: new Date().toISOString()
+  });
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/claims', (req, res) => {
+  const user = getUser(req);
+  if (!user || users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  res.json(pendingClaims);
+});
+
+app.post('/api/admin/claims/:id/approve', (req, res) => {
+  const user = getUser(req);
+  if (!user || users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const claim = pendingClaims.find(c => c.id === req.params.id);
+  if (!claim) return res.status(404).json({ error: 'Claim not found' });
+  const biz = businesses.find(b => b.id === claim.businessId);
+  if (!biz) return res.status(404).json({ error: 'Business not found' });
+
+  // Generate username + temp password
+  const slug = claim.businessName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 16) || 'biz';
+  let username = slug;
+  let counter = 1;
+  while (users[username]) { username = slug + counter++; }
+  const password = Math.random().toString(36).slice(2, 7) + Math.random().toString(36).slice(2, 5);
+  const initials = claim.name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const COLORS = ['#0077B6','#2A9D8F','#E76F51','#264653','#457B9D','#C0392B','#1D3557'];
+  const avatar = COLORS[Math.floor(Math.random() * COLORS.length)];
+
+  const newUser = {
+    id: 'u' + Date.now(), username, password,
+    role: 'business', businessId: claim.businessId,
+    name: claim.businessName, avatar, initials,
+    address: biz.address || 'Farallón, Panama',
+    verified: true, bio: biz.description || '',
+    posts: 0, neighbors: 0, points: 0, yearsInNeighborhood: 0,
+    contactEmail: claim.email, contactPhone: claim.phone
+  };
+  users[username] = newUser;
+  allUsers.push({ id: newUser.id, name: newUser.name, avatar, initials, verified: true, yearsInNeighborhood: 0, address: newUser.address, username });
+
+  biz.claimed = true;
+  biz.claimedBy = username;
+  claim.status = 'approved';
+  claim.approvedAt = new Date().toISOString();
+  claim.generatedUsername = username;
+
+  res.json({ ok: true, credentials: { username, password, businessName: biz.name } });
+});
+
+app.post('/api/admin/claims/:id/deny', (req, res) => {
+  const user = getUser(req);
+  if (!user || users[user.username]?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const claim = pendingClaims.find(c => c.id === req.params.id);
+  if (!claim) return res.status(404).json({ error: 'Claim not found' });
+  claim.status = 'denied';
+  claim.deniedAt = new Date().toISOString();
+  res.json({ ok: true });
+});
+
 // Get business profile + stats for logged-in business user
 app.get('/api/business/me', (req, res) => {
   const user = getUser(req);
@@ -1399,7 +2215,9 @@ app.get('/api/business/posts', (req, res) => {
 });
 
 // ─── Serve HTML ───────────────────────────────────────────────────────────────
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
+app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('/app', (req, res) => res.sendFile(path.join(__dirname, 'public', 'app.html')));
 app.get('/app.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'app.html')));
 app.get('/business', (req, res) => res.sendFile(path.join(__dirname, 'public', 'business.html')));
@@ -1472,6 +2290,6 @@ app.post('/api/hoa/events', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Good Neighbors running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Panamá Connect running on http://localhost:${PORT}`));
 
 module.exports = app;

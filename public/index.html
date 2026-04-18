@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Good Neighbors — Costa Blanca Villas</title>
+  <title>Panamá Connect — Costa Blanca Villas</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -297,7 +297,126 @@
       color: #0077B6;
       text-decoration: none;
       font-weight: 500;
+      cursor: pointer;
     }
+
+    /* Terms / Privacy modal */
+    .legal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: fadeIn 0.18s ease;
+    }
+    .legal-overlay.open { display: flex; }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+    .legal-modal {
+      background: #fff;
+      border-radius: 20px;
+      width: min(640px, 100%);
+      max-height: 82vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.35);
+      animation: slideUp 0.22s cubic-bezier(0.34,1.4,0.64,1);
+    }
+    @keyframes slideUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+
+    .legal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 28px 16px;
+      border-bottom: 1px solid #edf0f4;
+      flex-shrink: 0;
+    }
+    .legal-header h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #0d1b2a;
+    }
+    .legal-close {
+      width: 32px; height: 32px;
+      border: none; background: #f0f3f7;
+      border-radius: 50%;
+      font-size: 18px; line-height: 1;
+      cursor: pointer; color: #5a7184;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .legal-close:hover { background: #e2e8f0; }
+
+    .legal-tabs {
+      display: flex;
+      gap: 0;
+      padding: 12px 28px 0;
+      border-bottom: 1px solid #edf0f4;
+      flex-shrink: 0;
+    }
+    .legal-tab {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #a0aec0;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+      background: none; border-top: none; border-left: none; border-right: none;
+      font-family: 'Inter', sans-serif;
+    }
+    .legal-tab.active { color: #0077B6; border-bottom-color: #0077B6; }
+
+    .legal-body {
+      overflow-y: auto;
+      padding: 24px 28px 28px;
+      flex: 1;
+      line-height: 1.7;
+      color: #374151;
+      font-size: 13.5px;
+    }
+    .legal-body h3 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0d1b2a;
+      margin: 20px 0 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .legal-body h3:first-child { margin-top: 0; }
+    .legal-body p { margin-bottom: 10px; }
+    .legal-body ul { padding-left: 18px; margin-bottom: 10px; }
+    .legal-body ul li { margin-bottom: 5px; }
+    .legal-date {
+      display: inline-block;
+      margin-bottom: 16px;
+      font-size: 12px;
+      color: #a0aec0;
+      font-weight: 500;
+    }
+    .legal-footer {
+      padding: 16px 28px;
+      border-top: 1px solid #edf0f4;
+      flex-shrink: 0;
+    }
+    .legal-accept {
+      width: 100%;
+      padding: 11px;
+      background: #0077B6;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .legal-accept:hover { background: #005f92; }
 
     /* Location credit bottom-left */
     .photo-credit {
@@ -314,6 +433,91 @@
       .login-card { padding: 32px 24px; border-radius: 20px; }
       .logo-icon { width: 64px; height: 64px; }
     }
+
+    /* ── Sign Up Link ── */
+    .signup-link {
+      text-align: center; margin-top: 14px;
+      font-size: 12.5px; color: #a0aec0;
+    }
+    .signup-link a { color: #0077B6; font-weight: 600; text-decoration: none; cursor: pointer; }
+    .signup-link a:hover { text-decoration: underline; }
+
+    /* ── Sign-up Overlay ── */
+    .signup-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6); z-index: 200;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .signup-overlay.open { display: flex; }
+
+    .signup-modal {
+      background: white; border-radius: 24px;
+      width: min(520px, 100%); max-height: 90vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+      animation: suIn 0.25s cubic-bezier(0.34,1.4,0.64,1);
+      overflow: hidden;
+    }
+    @keyframes suIn { from { opacity:0; transform:translateY(28px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+
+    .su-header {
+      padding: 24px 28px 0; flex-shrink: 0;
+      display: flex; align-items: flex-start; justify-content: space-between;
+    }
+    .su-header-text h2 { font-size: 20px; font-weight: 800; color: #0d1b2a; letter-spacing: -0.3px; }
+    .su-header-text p { font-size: 13px; color: #7a8fa0; margin-top: 3px; }
+    .su-close { width: 32px; height: 32px; border: none; background: #f0f3f7; border-radius: 50%; font-size: 16px; cursor: pointer; color: #5a7184; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; }
+    .su-close:hover { background: #e2e8f0; }
+
+    /* progress dots */
+    .su-steps { display: flex; align-items: center; gap: 6px; padding: 18px 28px 0; flex-shrink: 0; }
+    .su-step-dot { width: 8px; height: 8px; border-radius: 50%; background: #e2e8f0; transition: all 0.2s; }
+    .su-step-dot.active { background: #0077B6; width: 24px; border-radius: 4px; }
+    .su-step-dot.done { background: #2A9D8F; }
+
+    .su-body { overflow-y: auto; padding: 20px 28px 28px; flex: 1; }
+
+    /* Role cards */
+    .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+    .role-card {
+      border: 2px solid #e2e8f0; border-radius: 14px; padding: 18px 14px;
+      cursor: pointer; transition: all 0.15s; text-align: center;
+      background: white;
+    }
+    .role-card:hover { border-color: #0077B6; background: rgba(0,119,182,0.03); transform: translateY(-1px); }
+    .role-card.selected { border-color: #0077B6; background: rgba(0,119,182,0.06); }
+    .role-icon { font-size: 28px; margin-bottom: 8px; }
+    .role-name { font-size: 13.5px; font-weight: 700; color: #0d1b2a; }
+    .role-desc { font-size: 11.5px; color: #8a9db0; margin-top: 3px; line-height: 1.4; }
+
+    /* Form fields */
+    .su-field { margin-bottom: 14px; }
+    .su-field label { display: block; font-size: 12.5px; font-weight: 600; color: #2d3748; margin-bottom: 5px; }
+    .su-field input, .su-field select, .su-field textarea {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid #dde4ed; border-radius: 10px;
+      font-size: 14px; font-family: 'Inter', sans-serif; color: #1a2b3c;
+      background: #f8fafc; outline: none; transition: all 0.18s;
+    }
+    .su-field input:focus, .su-field select:focus, .su-field textarea:focus { border-color: #0077B6; background: white; box-shadow: 0 0 0 3px rgba(0,119,182,0.1); }
+    .su-field textarea { resize: none; height: 72px; }
+    .su-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .su-error { background: rgba(231,111,81,0.09); border: 1px solid rgba(231,111,81,0.28); border-radius: 10px; padding: 10px 13px; font-size: 12.5px; color: #c0392b; margin-bottom: 12px; display: none; }
+    .su-error.show { display: block; }
+
+    .su-footer { padding: 0 28px 24px; flex-shrink: 0; display: flex; gap: 10px; }
+    .su-btn-back { flex: 0 0 auto; padding: 12px 20px; background: #f0f3f7; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; color: #5a7184; transition: background 0.15s; }
+    .su-btn-back:hover { background: #e2e8f0; }
+    .su-btn-next { flex: 1; padding: 12px; background: #0077B6; color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.15s; }
+    .su-btn-next:hover { background: #005f92; }
+    .su-btn-next:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Success */
+    .su-success { text-align: center; padding: 20px 0 10px; }
+    .su-success-icon { font-size: 52px; margin-bottom: 16px; }
+    .su-success h3 { font-size: 20px; font-weight: 800; color: #0d1b2a; margin-bottom: 10px; }
+    .su-success p { font-size: 14px; color: #5a7184; line-height: 1.65; }
   </style>
 </head>
 <body>
@@ -326,9 +530,9 @@
 
       <div class="logo-area">
         <div class="logo-icon">
-          <img src="/logo.png" alt="Good Neighbors">
+          <img src="/logo.png" alt="Panamá Connect">
         </div>
-        <div class="logo-headline">Good Neighbors</div>
+        <div class="logo-headline">Panamá Connect</div>
         <div class="logo-tagline">Your community, connected</div>
         <div class="neighborhood-badge">📍 Costa Blanca Villas · Farallón, Panama</div>
       </div>
@@ -360,13 +564,541 @@
       </div>
 
       <div class="footer-text">
-        By signing in you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
+        By signing in you agree to our <a href="#" onclick="openLegal('tos');return false;">Member Agreement</a> and <a href="#" onclick="openLegal('privacy');return false;">Privacy Policy</a>
+      </div>
+
+      <div class="signup-link">
+        New to Costa Blanca Villas? <a onclick="openSignUp()">Request Access →</a>
       </div>
 
     </div>
   </div>
 
   <div class="photo-credit">Isla Farallón, Coclé, Panama</div>
+
+  <!-- Legal Modal -->
+  <div class="legal-overlay" id="legalOverlay" onclick="if(event.target===this)closeLegal()">
+    <div class="legal-modal">
+      <div class="legal-header">
+        <h2 id="legalTitle">Terms of Service</h2>
+        <button class="legal-close" onclick="closeLegal()">✕</button>
+      </div>
+      <div class="legal-tabs">
+        <button class="legal-tab active" id="tabTos" onclick="switchLegalTab('tos')">Member Agreement</button>
+        <button class="legal-tab" id="tabPrivacy" onclick="switchLegalTab('privacy')">Privacy Policy</button>
+      </div>
+      <div class="legal-body" id="legalBody"></div>
+      <div class="legal-footer">
+        <button class="legal-accept" onclick="closeLegal()">I Understand</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sign-Up Modal -->
+  <div class="signup-overlay" id="signupOverlay" onclick="if(event.target===this)closeSignUp()">
+    <div class="signup-modal">
+      <div class="su-header">
+        <div class="su-header-text">
+          <h2 id="suTitle">Join Panamá Connect</h2>
+          <p id="suSubtitle">Select your account type to get started</p>
+        </div>
+        <button class="su-close" onclick="closeSignUp()">✕</button>
+      </div>
+      <div class="su-steps" id="suSteps">
+        <div class="su-step-dot active" id="dot0"></div>
+        <div class="su-step-dot" id="dot1"></div>
+        <div class="su-step-dot" id="dot2"></div>
+      </div>
+      <div class="su-body" id="suBody"></div>
+      <div class="su-footer" id="suFooter">
+        <button class="su-btn-back" id="suBack" onclick="suPrev()" style="display:none">← Back</button>
+        <button class="su-btn-next" id="suNext" onclick="suNext()">Continue →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Sign Up State ──
+    let suStep = 0;
+    let suRole = null;
+    const suStepCount = 3;
+
+    const ROLE_OPTIONS = [
+      { id: 'neighbor', icon: '🏡', name: 'Resident / Neighbor', desc: 'Owner or renter living in Costa Blanca Villas' },
+      { id: 'business', icon: '🏪', name: 'Local Business', desc: 'Restaurant, contractor, or service serving the community' },
+    ];
+
+    const BIZ_CATEGORIES = ['Restaurant & Dining','Real Estate','Home Services','Health & Wellness','Retail & Shopping','Transportation','Sports & Recreation','Professional Services','Other'];
+
+    function openSignUp() {
+      suStep = 0; suRole = null;
+      document.getElementById('suSteps').style.display = '';
+      document.getElementById('suFooter').style.display = '';
+      renderSuStep();
+      document.getElementById('signupOverlay').classList.add('open');
+    }
+    function closeSignUp() {
+      document.getElementById('signupOverlay').classList.remove('open');
+    }
+
+    function updateSuDots() {
+      for (let i = 0; i < suStepCount; i++) {
+        const d = document.getElementById('dot' + i);
+        d.className = 'su-step-dot' + (i < suStep ? ' done' : i === suStep ? ' active' : '');
+      }
+    }
+
+    function renderSuStep() {
+      updateSuDots();
+      const body = document.getElementById('suBody');
+      const back = document.getElementById('suBack');
+      const next = document.getElementById('suNext');
+      const footer = document.getElementById('suFooter');
+
+      back.style.display = suStep > 0 ? 'block' : 'none';
+      footer.style.display = 'flex';
+
+      if (suStep === 0) {
+        document.getElementById('suTitle').textContent = 'Join Panamá Connect';
+        document.getElementById('suSubtitle').textContent = 'Select your account type to get started';
+        next.textContent = 'Continue →';
+        body.innerHTML = `
+          <div class="role-grid">
+            ${ROLE_OPTIONS.map(r => `
+              <div class="role-card ${suRole===r.id?'selected':''}" onclick="selectRole('${r.id}')" id="role-${r.id}">
+                <div class="role-icon">${r.icon}</div>
+                <div class="role-name">${r.name}</div>
+                <div class="role-desc">${r.desc}</div>
+              </div>
+            `).join('')}
+          </div>
+          <p style="font-size:11.5px;color:#a0aec0;margin-top:14px;line-height:1.5;">Realtor and HOA accounts are by invitation only. All applications are reviewed and approved by the community admin.</p>
+        `;
+      } else if (suStep === 1) {
+        const isBiz = suRole === 'business' || suRole === 'realtor';
+        document.getElementById('suTitle').textContent = suRole === 'business' ? 'Business Details' : suRole === 'realtor' ? 'Realtor Details' : 'Your Details';
+        document.getElementById('suSubtitle').textContent = 'Tell us about yourself';
+        next.textContent = 'Continue →';
+        body.innerHTML = `
+          <div class="su-error" id="suErr"></div>
+          ${isBiz ? `
+          <div class="su-field">
+            <label>${suRole==='business'?'Business Name':'Agency / Company Name'} *</label>
+            <input id="bizName" type="text" placeholder="${suRole==='business'?'e.g. Amar By La Playa':'e.g. Uncover Panama Real Estate'}" />
+          </div>
+          ${suRole==='business'?'<div class="su-field"><label>Category *</label><select id="bizCat"><option value="">Select a category…</option>'+BIZ_CATEGORIES.map(c=>'<option>'+c+'</option>').join('')+'</select></div>':''}
+          <div class="su-field"><label>Your Full Name *</label><input id="fullName" type="text" placeholder="Your personal name" /></div>
+          ` : `
+          <div class="su-field"><label>Full Name *</label><input id="fullName" type="text" placeholder="e.g. Mike Hart" /></div>
+          `}
+          <div class="su-field">
+            <label>${isBiz?'Business Address *':'Villa / Unit Address *'}</label>
+            <input id="address" type="text" placeholder="${isBiz?'Street address or area':'e.g. Villa 94, Costa Blanca Villas'}" />
+          </div>
+          <div class="su-field">
+            <label>Short Bio <span style="color:#a0aec0;font-weight:400">(optional)</span></label>
+            <textarea id="bio" placeholder="Tell the community a little about yourself…"></textarea>
+          </div>
+        `;
+      } else if (suStep === 2) {
+        document.getElementById('suTitle').textContent = 'Create Your Login';
+        document.getElementById('suSubtitle').textContent = 'Choose a username and password';
+        next.textContent = 'Submit Application';
+        body.innerHTML = `
+          <div class="su-error" id="suErr"></div>
+          <div class="su-field">
+            <label>Username *</label>
+            <input id="username" type="text" placeholder="e.g. mikeh94" autocomplete="off" />
+            <div style="font-size:11px;color:#a0aec0;margin-top:4px;">3–20 characters, lowercase letters, numbers, underscores only</div>
+          </div>
+          <div class="su-field-row">
+            <div class="su-field" style="margin-bottom:0">
+              <label>Password *</label>
+              <input id="password" type="password" placeholder="Min. 6 characters" />
+            </div>
+            <div class="su-field" style="margin-bottom:0">
+              <label>Confirm Password *</label>
+              <input id="confirmPw" type="password" placeholder="Repeat password" />
+            </div>
+          </div>
+          <div style="background:rgba(0,119,182,0.06);border-radius:10px;padding:14px;margin-top:16px;font-size:12.5px;color:#4a6378;line-height:1.6;">
+            <strong style="color:#0077B6;">What happens next?</strong><br>
+            Your application will be reviewed by the Costa Blanca Villas HOA team. You'll be notified within 24 hours once your account is approved. By submitting, you agree to our Member Agreement and Privacy Policy.
+          </div>
+        `;
+      } else if (suStep === 3) {
+        // Success
+        document.getElementById('suSteps').style.display = 'none';
+        footer.style.display = 'none';
+        document.getElementById('suTitle').textContent = '';
+        document.getElementById('suSubtitle').textContent = '';
+        body.innerHTML = `
+          <div class="su-success">
+            <div class="su-success-icon">🎉</div>
+            <h3>Application Submitted!</h3>
+            <p>Thanks for joining the waitlist. The HOA team will review your application and get back to you within <strong>24 hours</strong>.<br><br>Once approved, you'll receive your login credentials and can sign in right here.</p>
+            <button class="su-btn-next" style="margin-top:24px;width:100%" onclick="closeSignUp()">Got It</button>
+          </div>
+        `;
+      }
+    }
+
+    function selectRole(id) {
+      suRole = id;
+      document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+      document.getElementById('role-' + id)?.classList.add('selected');
+    }
+
+    function showSuErr(msg) {
+      const el = document.getElementById('suErr');
+      if (el) { el.textContent = msg; el.classList.add('show'); }
+    }
+
+    function suPrev() {
+      if (suStep > 0) { suStep--; renderSuStep(); }
+    }
+
+    async function suNext() {
+      const err = document.getElementById('suErr');
+      if (err) err.classList.remove('show');
+
+      if (suStep === 0) {
+        if (!suRole) { alert('Please select an account type.'); return; }
+        suStep++; renderSuStep();
+      } else if (suStep === 1) {
+        const isBiz = suRole === 'business' || suRole === 'realtor';
+        const fullName = document.getElementById('fullName')?.value.trim();
+        const address = document.getElementById('address')?.value.trim();
+        if (!fullName) { showSuErr('Please enter your name.'); return; }
+        if (!address) { showSuErr('Please enter your address.'); return; }
+        if (isBiz && suRole === 'business') {
+          const biz = document.getElementById('bizName')?.value.trim();
+          const cat = document.getElementById('bizCat')?.value;
+          if (!biz) { showSuErr('Please enter your business name.'); return; }
+          if (!cat) { showSuErr('Please select a business category.'); return; }
+        }
+        if (isBiz && suRole === 'realtor') {
+          const biz = document.getElementById('bizName')?.value.trim();
+          if (!biz) { showSuErr('Please enter your agency name.'); return; }
+        }
+        suStep++; renderSuStep();
+      } else if (suStep === 2) {
+        const username = document.getElementById('username')?.value.trim();
+        const password = document.getElementById('password')?.value;
+        const confirm = document.getElementById('confirmPw')?.value;
+        if (!username) { showSuErr('Please choose a username.'); return; }
+        if (!/^[a-z0-9_]{3,20}$/.test(username)) { showSuErr('Username must be 3–20 lowercase letters, numbers, or underscores.'); return; }
+        if (!password || password.length < 6) { showSuErr('Password must be at least 6 characters.'); return; }
+        if (password !== confirm) { showSuErr('Passwords do not match.'); return; }
+
+        const next = document.getElementById('suNext');
+        next.textContent = 'Submitting…'; next.disabled = true;
+
+        try {
+          const payload = {
+            fullName: document.getElementById('fullName')?.value.trim(),
+            username, password, role: suRole,
+            address: document.getElementById('address')?.value.trim(),
+            bio: document.getElementById('bio')?.value.trim() || '',
+            businessName: document.getElementById('bizName')?.value.trim() || null,
+            businessCategory: document.getElementById('bizCat')?.value || null,
+          };
+          const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (!res.ok) { showSuErr(data.error || 'Something went wrong.'); next.textContent = 'Submit Application'; next.disabled = false; return; }
+          suStep++; renderSuStep();
+        } catch {
+          showSuErr('Connection error. Please try again.');
+          next.textContent = 'Submit Application'; next.disabled = false;
+        }
+      }
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSignUp(); closeLegal(); } });
+  </script>
+
+  <script>
+    const TOS_CONTENT = `
+      <span class="legal-date">Effective Date: April 1, 2026 &nbsp;·&nbsp; Costa Blanca Villas, Farallón, Coclé, República de Panamá</span>
+
+      <p style="background:rgba(0,119,182,0.06);border-left:3px solid #0077B6;padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:4px;font-size:13px;">
+        <strong>Welcome to Panamá Connect.</strong> This Member Agreement ("Agreement") is a binding legal contract between you and the Costa Blanca Villas community platform. By creating an account or accessing this platform in any way, you agree to be bound by this Agreement in full. If you do not agree, do not use the platform.
+      </p>
+
+      <h3>1. Who We Are</h3>
+      <p>Panamá Connect is a private, closed neighborhood platform operated by and for the residents, property owners, renters, and approved businesses of <strong>Costa Blanca Villas</strong>, Farallón, Coclé, Panamá. The platform is administered by the Costa Blanca Villas HOA and designated community administrators. It is not a public service, not a commercial social network, and not affiliated with any governmental body.</p>
+      <p>The platform exists to help neighbors connect, share information, stay safe, and build community — nothing more.</p>
+
+      <h3>2. Membership Eligibility</h3>
+      <p>Membership is restricted to the following categories of individuals, all of whom must be associated with Costa Blanca Villas or the immediate Farallón community:</p>
+      <ul>
+        <li><strong>Property owners</strong> — individuals who own a villa, lot, or unit within Costa Blanca Villas</li>
+        <li><strong>Renters and long-term guests</strong> — individuals currently renting or occupying a unit with owner authorization</li>
+        <li><strong>HOA members and board representatives</strong> — acting in their official community capacity</li>
+        <li><strong>Approved local businesses</strong> — businesses serving the community, approved by an administrator</li>
+        <li><strong>Authorized realtors</strong> — real estate professionals specifically approved by the HOA</li>
+      </ul>
+      <p>You must be at least <strong>18 years of age</strong> to hold an account. Membership is a privilege, not a right, and may be revoked at any time per Section 10 of this Agreement.</p>
+
+      <h3>3. Your Account</h3>
+      <p><strong>One account per person.</strong> You may not create multiple accounts, share your account with another person, or use someone else's account. Accounts are personal and non-transferable.</p>
+      <p><strong>Accurate information.</strong> You agree to provide your real name and accurate property information. The use of aliases, fake names, or false addresses to obtain or maintain membership is grounds for immediate removal.</p>
+      <p><strong>Account security.</strong> You are solely responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account. Notify an administrator immediately if you suspect unauthorized access.</p>
+      <p><strong>No ban evasion.</strong> If your account has been suspended or removed, you are strictly prohibited from accessing the platform through any means — including creating a new account under a different name, using another member's account, accessing the platform through a third party, or facilitating a proxy to act on your behalf. Any attempt to circumvent a suspension or removal will be treated as a material breach of this Agreement and may be referred to the HOA board and, where applicable, relevant authorities.</p>
+
+      <h3>4. Community Guidelines — What We Expect</h3>
+      <p>Panamá Connect is built on mutual respect. Every member agrees to uphold the following standards in all interactions on the platform:</p>
+      <ul>
+        <li>Treat all neighbors with courtesy and dignity, regardless of nationality, language, background, or tenure in the community</li>
+        <li>Post honestly — share only what you reasonably believe to be true, especially in safety and security matters</li>
+        <li>Keep discussions relevant to the community — this platform is for Costa Blanca Villas and surrounding Farallón matters</li>
+        <li>Respect privacy — do not post personal information about other residents (addresses, phone numbers, photos) without their consent</li>
+        <li>Engage constructively — disagreements are fine; personal attacks, harassment, or sustained hostility are not</li>
+      </ul>
+
+      <h3>5. Prohibited Conduct</h3>
+      <p>The following conduct is strictly prohibited and may result in immediate account removal:</p>
+      <ul>
+        <li>Harassment, intimidation, threats, or targeted abuse of any member</li>
+        <li>Posting false, fabricated, or deliberately misleading safety alerts or security reports</li>
+        <li>Discriminatory content targeting any person based on race, nationality, religion, gender, age, or disability</li>
+        <li>Explicit, obscene, or sexually suggestive content of any kind</li>
+        <li>Unauthorized commercial advertising, multi-level marketing, or unsolicited solicitation</li>
+        <li>Impersonating another resident, business, or community official</li>
+        <li>Sharing another member's private contact information without their express consent</li>
+        <li>Posting content that violates the laws of the República de Panamá</li>
+        <li>Attempting to circumvent platform security, access controls, or administrative functions</li>
+        <li>Using the platform to organize or facilitate activity that disrupts community peace or HOA governance</li>
+      </ul>
+
+      <h3>6. Content You Post</h3>
+      <p><strong>You own your content.</strong> You retain all ownership rights to posts, photos, and other content you contribute to the platform.</p>
+      <p><strong>License to display.</strong> By posting content, you grant Panamá Connect a perpetual, non-exclusive, royalty-free license to display and distribute that content to verified community members within this platform. This license survives account suspension or removal to the extent necessary to maintain community record integrity, resolve disputes, or comply with legal obligations. We do not sell or commercially exploit your content.</p>
+      <p><strong>You are responsible.</strong> You are solely responsible for everything you post. Panamá Connect does not pre-screen content and is not liable for member-submitted posts, safety reports, recommendations, listings, or any other user-generated content.</p>
+      <p><strong>Content removal.</strong> Administrators reserve the right to remove any content that violates this Agreement or that, in their sole judgment, is not in the best interest of the community — without prior notice and without obligation to explain. The administrator's judgment on what constitutes a violation or community harm is final.</p>
+
+      <h3>7. Safety Alerts & Security Reports</h3>
+      <p>The community takes safety communications seriously. When posting safety or security content:</p>
+      <ul>
+        <li>Post only what you have personally witnessed or have reliable, first-hand information about</li>
+        <li>Do not post speculation, rumor, or unverified secondhand accounts as fact</li>
+        <li>For urgent security matters, contact community security directly at <strong>Extension 101</strong> — do not rely on this platform as your primary emergency channel</li>
+        <li>For life-threatening emergencies, call <strong>911</strong> immediately</li>
+      </ul>
+      <p>Members who post false or exaggerated safety alerts that cause community alarm may be removed from the platform and may bear personal liability for resulting harm.</p>
+
+      <h3>8. Marketplace, Listings & Recommendations</h3>
+      <p>The platform may be used to buy, sell, give away, or recommend goods, services, and local businesses. In all such cases:</p>
+      <ul>
+        <li>Panamá Connect is a <strong>communications facilitator only</strong> — we are not a party to any transaction, agreement, or exchange between members</li>
+        <li>All transactions are solely between the buyer and seller; the platform provides no warranty, guarantee, or protection for any exchange</li>
+        <li>Recommendations and reviews reflect the personal opinions of individual members — the platform does not endorse or verify them</li>
+        <li>Members transact entirely at their own risk. The platform, its administrators, and the HOA bear no liability for any loss, dispute, injury, or dissatisfaction arising from member transactions</li>
+      </ul>
+
+      <h3>9. Business & Realtor Accounts</h3>
+      <p>Approved business and realtor accounts are granted access as a community service, not as a right. Business members agree to:</p>
+      <ul>
+        <li>Represent their business honestly and accurately</li>
+        <li>Post only content that is relevant and genuinely useful to community members</li>
+        <li>Refrain from excessive promotional posting, pricing manipulation, or misleading advertising</li>
+        <li>Comply with all applicable Panamanian commercial and consumer protection laws</li>
+      </ul>
+      <p>Business access may be revoked at any time, with or without cause, at the sole discretion of platform administrators.</p>
+
+      <h3>10. Account Suspension, Removal & Permanent Exclusion</h3>
+      <p>Platform administrators and the HOA board hold full and unilateral authority over all membership decisions on this platform. <strong>Any account may be suspended, restricted, or permanently removed at any time, at the sole and absolute discretion of the administrators, with or without prior notice, with or without cause, and without any obligation to provide a reason, explanation, or warning.</strong></p>
+      <p>Factors that may contribute to removal include, but are not limited to: violation of this Agreement, conduct detrimental to the community, disputes that cannot be resolved constructively, loss of residential or business eligibility, or any other circumstance the administrators determine — in their exclusive and unreviewable judgment — to be contrary to the best interest of the community.</p>
+      <p><strong>Permanent exclusion.</strong> A removal decision may, at the administrator's discretion, constitute a permanent ban from the platform. Permanently excluded members are prohibited from re-applying for membership, registering a new account, or accessing the platform in any capacity — directly, indirectly, or through a third party — for any reason, at any future time, regardless of any change in their residency status or circumstances.</p>
+      <p><strong>No right of appeal.</strong> All removal and exclusion decisions are final. There is no internal appeals process on this platform. Membership is a privilege, not a right, and no removed member is entitled to reinstatement. The HOA board's judgment on all membership matters is conclusive and not subject to review by any internal body.</p>
+      <p><strong>Waiver of claims arising from removal.</strong> By accepting this Agreement, you expressly and irrevocably waive any and all claims, demands, or causes of action — whether in contract, tort, equity, or otherwise — against Panamá Connect, the Costa Blanca Villas HOA, its board members, administrators, or agents arising from or related to any decision to suspend, restrict, remove, or permanently exclude your account. This waiver applies regardless of the reason for removal, including where no reason is given.</p>
+      <p>Panamá Connect reserves the right to retain, anonymize, or delete a removed member's content at its sole discretion.</p>
+
+      <h3>11. Platform Availability & Changes</h3>
+      <p>Panamá Connect is provided as a community convenience on a best-effort basis. We make no guarantee of continuous availability, uptime, or data preservation. The platform may be modified, suspended, or discontinued at any time without notice. The HOA bears no liability for any loss — of data, access, or otherwise — arising from platform changes or outages.</p>
+
+      <h3>12. Disclaimer of Warranties</h3>
+      <p>THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY PANAMANIAN LAW, PANAMÁ CONNECT, THE COSTA BLANCA VILLAS HOA, AND ITS ADMINISTRATORS EXPRESSLY DISCLAIM ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, ACCURACY OF CONTENT, AND NON-INFRINGEMENT.</p>
+      <p>We do not warrant that: (a) the platform will be uninterrupted or error-free; (b) any content posted by members is accurate, complete, or reliable; (c) any defects will be corrected; or (d) the platform is free of harmful components.</p>
+
+      <h3>13. Limitation of Liability</h3>
+      <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, PANAMÁ CONNECT, THE COSTA BLANCA VILLAS HOA, AND ITS ADMINISTRATORS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO: LOSS OF DATA, LOSS OF PROPERTY, LOSS OF ACCESS, LOSS OF COMMUNITY STANDING, PERSONAL INJURY, REPUTATIONAL HARM, OR ANY OTHER LOSS ARISING FROM: (A) YOUR USE OF OR INABILITY TO USE THE PLATFORM; (B) CONTENT POSTED BY OTHER MEMBERS; (C) TRANSACTIONS BETWEEN MEMBERS; OR (D) ANY DECISION TO SUSPEND, RESTRICT, REMOVE, OR PERMANENTLY EXCLUDE YOUR ACCOUNT — REGARDLESS OF WHETHER SUCH DAMAGES WERE FORESEEABLE AND REGARDLESS OF THE THEORY OF LIABILITY.</p>
+      <p>In no event shall the total aggregate liability of the platform to any member for any and all claims exceed the amount, if any, paid by that member to access the platform in the twelve (12) months preceding the claim. As this platform is provided free of charge, that amount is zero (B/. 0.00).</p>
+
+      <h3>13a. No Class Actions</h3>
+      <p>TO THE FULLEST EXTENT PERMITTED BY LAW, YOU AGREE THAT ANY DISPUTE WITH THE PLATFORM SHALL BE BROUGHT SOLELY IN YOUR INDIVIDUAL CAPACITY AND NOT AS A PLAINTIFF OR CLASS MEMBER IN ANY PURPORTED CLASS ACTION, COLLECTIVE PROCEEDING, OR REPRESENTATIVE ACTION. The administrator's decisions regarding individual accounts do not create precedent or obligations with respect to any other member's account.</p>
+
+      <h3>14. Indemnification</h3>
+      <p>You agree to defend, indemnify, and hold harmless Panamá Connect, the Costa Blanca Villas HOA, its board members, administrators, and agents from and against any claims, damages, losses, liabilities, costs, and expenses (including legal fees) arising from: (a) your use of the platform; (b) content you post; (c) your violation of this Agreement; or (d) your violation of any applicable law or the rights of another person.</p>
+
+      <h3>15. Governing Law & Disputes</h3>
+      <p>This Agreement is governed exclusively by the laws of the <strong>República de Panamá</strong>. Any dispute arising out of or relating to this Agreement or your use of the platform shall be resolved through good-faith negotiation first, and if unresolved, shall be submitted to the exclusive jurisdiction of the competent courts of <strong>Coclé Province, Panamá</strong>. You waive any objection to jurisdiction or venue in such courts.</p>
+
+      <h3>16. Changes to This Agreement</h3>
+      <p>We reserve the right to modify this Agreement at any time. Material changes will be announced through the platform's community feed. Your continued use of the platform after the effective date of any revision constitutes your acceptance of the updated Agreement. We encourage you to review this Agreement periodically.</p>
+
+      <h3>17. Survival</h3>
+      <p>The following sections of this Agreement survive termination or expiration of your membership, regardless of the reason for termination, and remain in full force and effect indefinitely: Section 3 (ban evasion prohibition), Section 6 (content license), Section 10 (waiver of removal claims), Section 13 (limitation of liability), Section 13a (no class actions), Section 14 (indemnification), Section 15 (governing law), and this Section 17. Termination of your account does not relieve you of any obligation or liability incurred prior to removal.</p>
+
+      <h3>18. Entire Agreement & Severability</h3>
+      <p>This Member Agreement, together with the Privacy Policy, constitutes the entire agreement between you and Panamá Connect with respect to your use of the platform and supersedes all prior understandings, representations, or agreements, whether written or oral. If any provision of this Agreement is found by a court of competent jurisdiction to be invalid or unenforceable, that provision shall be modified to the minimum extent necessary to make it enforceable, and all remaining provisions shall continue in full force and effect.</p>
+
+      <h3>19. Contact</h3>
+      <p>Questions, concerns, or formal notices regarding this Agreement should be directed to the <strong>Costa Blanca Villas HOA</strong> through the official HOA account on this platform or through official HOA channels.</p>
+    `;
+
+    const PRIVACY_CONTENT = `
+      <span class="legal-date">Effective Date: April 1, 2026 &nbsp;·&nbsp; Costa Blanca Villas, Farallón, Coclé, Panamá &nbsp;·&nbsp; Governed by Ley No. 81 of March 26, 2019</span>
+
+      <h3>1. Data Controller Identity</h3>
+      <p>The data controller for this platform is the <strong>Costa Blanca Villas HOA</strong>, located at Costa Blanca Villas, Farallón, Coclé, República de Panamá. Data-related requests may be submitted through the official HOA account on this platform. Panamá Connect is operated as a private, closed community tool — not a commercial data-processing operation.</p>
+
+      <h3>2. Legal Basis for Processing</h3>
+      <p>In accordance with <strong>Ley No. 81 of 2019 (Ley sobre Protección de Datos Personales)</strong> and its implementing Executive Decree No. 285 of May 28, 2021, we process personal data under the following lawful bases:</p>
+      <ul>
+        <li><strong>Consent:</strong> By creating an account and using this platform, you provide express, informed, and voluntary consent to the processing of your personal data for the purposes described herein.</li>
+        <li><strong>Contractual necessity:</strong> Processing is necessary to provide you access to the community platform you have requested.</li>
+        <li><strong>Legitimate interest:</strong> Maintaining platform security and community integrity constitutes a legitimate interest under Article 9 of Ley No. 81.</li>
+      </ul>
+      <p>You may withdraw consent at any time by requesting account deletion. Withdrawal does not affect the lawfulness of processing that occurred before withdrawal.</p>
+
+      <h3>3. Personal Data We Collect — Full Disclosure</h3>
+      <p>In compliance with Art. 5 and Art. 11 of Ley No. 81 of 2019, we provide this complete and transparent disclosure of every category of personal data we collect, the source of that data, and the purpose for which it is used.</p>
+
+      <h3>3a. Data You Provide Directly</h3>
+      <ul>
+        <li><strong>Account registration:</strong> Username, display name, property/villa address, account role (neighbor, business, HOA, etc.), and any optional bio or profile description you choose to add.</li>
+        <li><strong>Posts and content:</strong> The full text of every post, comment, safety alert, listing, event, or recommendation you publish on the platform — including post type, category, and any tags or metadata associated with it.</li>
+        <li><strong>Reactions and interactions:</strong> Records of every reaction (like, agree, insightful, etc.) you place on any post or comment, and every neighbor connection you initiate or accept.</li>
+        <li><strong>Uploaded media:</strong> Images and photos you attach to posts or your profile, stored in their original form on the platform server.</li>
+        <li><strong>Business profile data (business accounts only):</strong> Business name, physical address, business category, operating hours, contact details, and any photos or descriptions submitted to the business directory.</li>
+      </ul>
+
+      <h3>3b. Data Collected Automatically</h3>
+      <ul>
+        <li><strong>Authentication session:</strong> A cryptographically signed session cookie is created when you log in. This cookie contains a session identifier only — no personal data — and expires when you log out or your session times out.</li>
+        <li><strong>Login activity:</strong> The date and time of each login, used solely for platform security and to detect unauthorized access attempts.</li>
+        <li><strong>Platform activity timestamps:</strong> The date and time posts and comments are created, edited, or deleted, retained as part of the community record.</li>
+      </ul>
+
+      <h3>3c. Data We Do NOT Collect</h3>
+      <p>We explicitly do <strong>not</strong> collect the following, and have no technical mechanism to do so:</p>
+      <ul>
+        <li>Email addresses, phone numbers, or any contact information beyond what you voluntarily add to your profile</li>
+        <li>Government-issued ID numbers, passport numbers, or Cédula numbers</li>
+        <li>Financial data, payment information, or bank details of any kind</li>
+        <li>Health, medical, or biometric data</li>
+        <li>Device identifiers, IP addresses, or browser fingerprints</li>
+        <li>GPS or precise location data</li>
+        <li>Social media accounts or external platform credentials</li>
+        <li>Behavioral tracking, advertising profiles, or browsing history</li>
+      </ul>
+      <p>This platform does not use analytics tools, advertising networks, or any third-party tracking technology. No sensitive personal data as defined under Art. 7 of Ley No. 81 is collected or processed.</p>
+
+      <h3>3d. How Your Data Is Used — Purpose Table</h3>
+      <p>The following table maps each data category to its specific purpose and legal basis:</p>
+      <ul>
+        <li><strong>Profile data</strong> → Display your identity to community members · Legal basis: Consent</li>
+        <li><strong>Posts &amp; content</strong> → Populate the community feed and enable discussion · Legal basis: Consent / Contractual</li>
+        <li><strong>Reactions &amp; connections</strong> → Enable social features and community engagement · Legal basis: Consent</li>
+        <li><strong>Uploaded media</strong> → Display images within posts and profiles · Legal basis: Consent</li>
+        <li><strong>Session cookie</strong> → Maintain your authenticated session securely · Legal basis: Contractual necessity</li>
+        <li><strong>Login timestamps</strong> → Detect unauthorized access and maintain security · Legal basis: Legitimate interest</li>
+        <li><strong>Activity timestamps</strong> → Maintain accurate community record and content chronology · Legal basis: Contractual necessity</li>
+      </ul>
+
+      <h3>4. Purpose of Processing</h3>
+      <p>Personal data is processed exclusively for the following purposes and will not be used for any incompatible purpose without renewed consent:</p>
+      <ul>
+        <li>Displaying your profile and content to other verified community members</li>
+        <li>Enabling community features including posts, comments, reactions, and neighbor connections</li>
+        <li>Facilitating official HOA communications and community governance</li>
+        <li>Maintaining platform security and enforcing community standards</li>
+      </ul>
+
+      <h3>5. Data Sharing & Third Parties</h3>
+      <p>Your personal data is <strong>never sold, rented, or disclosed</strong> to advertisers, data brokers, or any outside commercial party. Data is accessible only to:</p>
+      <ul>
+        <li>Verified members of the Costa Blanca Villas community (your posts and profile)</li>
+        <li>Platform administrators and HOA board members (for moderation and governance purposes)</li>
+        <li>Competent Panamanian authorities, if required by judicial order or legal obligation</li>
+      </ul>
+      <p>Any transfer of personal data outside of Panama shall only be conducted to jurisdictions that provide an equivalent or higher level of protection in accordance with Art. 36 of Ley No. 81.</p>
+
+      <h3>6. Data Retention</h3>
+      <p>Personal data is retained for as long as your account is active, or as required to fulfill the purposes described above. In accordance with Art. 12 of Ley No. 81, data will not be retained beyond <strong>7 years</strong> following the termination of your membership. Upon account deletion request, your personal profile data will be removed within 10 business days. Community posts may be anonymized rather than deleted to preserve community record integrity, unless you specifically request their removal.</p>
+
+      <h3>7. Your Rights (Derechos ARCOP)</h3>
+      <p>Under Ley No. 81 of 2019, you have the following rights with respect to your personal data, which we will fulfill within <strong>10 business days</strong> of a verified request:</p>
+      <ul>
+        <li><strong>Access (Acceso):</strong> Request a copy of the personal data we hold about you</li>
+        <li><strong>Rectification (Rectificación):</strong> Request correction of inaccurate or incomplete data</li>
+        <li><strong>Cancellation/Deletion (Cancelación):</strong> Request deletion of your data where it is no longer necessary or consent has been withdrawn</li>
+        <li><strong>Opposition (Oposición):</strong> Object to processing of your data in certain circumstances</li>
+        <li><strong>Portability (Portabilidad):</strong> Request your data in a structured, machine-readable format</li>
+      </ul>
+      <p>To exercise any of these rights, contact the HOA through the official HOA account on this platform. You also have the right to lodge a complaint with <strong>ANTAI</strong> (Autoridad Nacional de Transparencia y Acceso a la Información), the Panamanian data protection authority.</p>
+
+      <h3>8. Cookies</h3>
+      <p>We use a single, cryptographically signed session cookie solely for authentication purposes. We do not use tracking cookies, advertising pixels, analytics tools, or any third-party cookies. Your browsing activity within this platform is not tracked, profiled, or shared.</p>
+
+      <h3>9. Security</h3>
+      <p>We implement technical and organizational measures appropriate to the nature and scale of this platform, consistent with Art. 26 of Ley No. 81, including:</p>
+      <ul>
+        <li>Access restriction to verified, invitation-only community members</li>
+        <li>Signed and encrypted session cookies</li>
+        <li>File upload restrictions and size limitations</li>
+        <li>Administrative access controls limited to designated HOA personnel</li>
+      </ul>
+      <p>In the event of a personal data security breach, we will notify ANTAI within <strong>72 hours</strong> of discovery and will inform affected users as required by law.</p>
+
+      <h3>10. Disclaimer of Liability</h3>
+      <p>Panamá Connect and the Costa Blanca Villas HOA expressly disclaim liability to the fullest extent permitted by Panamanian law for:</p>
+      <ul>
+        <li>The accuracy, completeness, or reliability of any content posted by community members</li>
+        <li>Any loss, harm, or dispute arising from member-to-member interactions, transactions, or communications conducted through or facilitated by this platform</li>
+        <li>Unauthorized access to your account resulting from your failure to safeguard your credentials</li>
+        <li>Service interruptions, data loss, or technical failures beyond our reasonable control</li>
+        <li>Actions taken by third parties who gain access through your account or credentials</li>
+        <li>Any reliance placed on safety alerts, recommendations, listings, or other user-generated content posted on this platform</li>
+      </ul>
+      <p>This platform is provided as a <strong>community convenience tool</strong> on an "as-is" basis, without warranties of any kind, express or implied. The HOA is not responsible for and does not endorse any goods, services, or recommendations posted by community members.</p>
+
+      <h3>11. Children's Privacy</h3>
+      <p>This platform is intended exclusively for adults aged 18 and over. We do not knowingly collect personal data from minors. If we become aware that a minor has registered an account without parental consent, we will delete that account promptly. If you believe a minor has submitted data to this platform, notify an administrator immediately.</p>
+
+      <h3>12. Changes to This Policy</h3>
+      <p>We reserve the right to update this Privacy Policy at any time to reflect changes in law or platform operation. Material changes will be announced via the platform's community feed with reasonable advance notice. Continued use of the platform after the effective date of a revised policy constitutes your acceptance of the changes. The current version is always available on the login page.</p>
+
+      <h3>13. Governing Law</h3>
+      <p>This Privacy Policy is governed by and construed in accordance with the laws of the <strong>República de Panamá</strong>, including Ley No. 81 of March 26, 2019 and its implementing regulations. Any disputes shall be subject to the exclusive jurisdiction of the competent courts of Coclé Province, Panamá.</p>
+
+      <h3>14. Contact & Data Requests</h3>
+      <p>All data subject requests, privacy concerns, or questions regarding this policy should be submitted to the HOA through the official <strong>Costa Blanca Villas HOA</strong> account on this platform. We will acknowledge your request within 3 business days and fulfill it within the 10-business-day period required by Ley No. 81.</p>
+    `;
+
+    function openLegal(tab) {
+      switchLegalTab(tab);
+      document.getElementById('legalOverlay').classList.add('open');
+    }
+
+    function closeLegal() {
+      document.getElementById('legalOverlay').classList.remove('open');
+    }
+
+    function switchLegalTab(tab) {
+      document.getElementById('tabTos').classList.toggle('active', tab === 'tos');
+      document.getElementById('tabPrivacy').classList.toggle('active', tab === 'privacy');
+      document.getElementById('legalTitle').textContent = tab === 'tos' ? 'Member Agreement' : 'Privacy Policy';
+      document.getElementById('legalBody').innerHTML = tab === 'tos' ? TOS_CONTENT : PRIVACY_CONTENT;
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLegal(); });
+  </script>
 
   <script>
     async function handleLogin(e) {
@@ -397,6 +1129,13 @@
             window.location.href = routes[data.role] || '/app';
           }, 600);
         } else {
+          const data = await res.json().catch(() => ({}));
+          if (res.status === 403 && data.error === 'banned') {
+            err.textContent = `Your account has been suspended from Panamá Connect. Reason: ${data.reason || 'Violation of Member Agreement'}. Please contact the HOA board if you believe this is in error.`;
+            err.style.lineHeight = '1.5';
+          } else {
+            err.textContent = 'Invalid username or password. Please try again.';
+          }
           err.classList.add('show');
           btn.textContent = 'Sign In';
           btn.classList.remove('loading');

@@ -116,11 +116,11 @@ async function loadTides() {
 async function checkAuth() {
   try {
     const res = await fetch('/api/auth/me', { credentials: 'include' });
-    if (!res.ok) { window.location.href = '/'; return; }
+    if (!res.ok) { window.location.href = '/login'; return; }
     currentUser = await res.json();
     renderUserUI();
   } catch {
-    window.location.href = '/';
+    window.location.href = '/login';
   }
 }
 
@@ -148,8 +148,13 @@ function renderUserUI() {
 
   // Create post modal avatar
   const createAv = document.getElementById('createAvatar');
-  if (createAv) createAv.style.background = currentUser.avatar;
-  setTextSafe('createInitials', currentUser.initials);
+  if (createAv) {
+    createAv.style.background = currentUser.avatar;
+    if (currentUser.avatarUrl) {
+      createAv.innerHTML = `<img src="${currentUser.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    }
+  }
+  setTextSafe('createInitials', currentUser.avatarUrl ? '' : currentUser.initials);
   setTextSafe('createName', currentUser.name);
 }
 
@@ -192,7 +197,7 @@ async function renderSection(section, container) {
     case 'profile':     await renderProfile(container); break;
     case 'settings':    renderSettings(container); break;
     case 'realestate':  await renderRealEstate(container); break;
-    case 'golf':        await renderGolf(container); break;
+    case 'transport':   await renderTransport(container); break;
     default:            await renderFeed(container);
   }
   lucide.createIcons();
@@ -205,8 +210,8 @@ async function renderFeed(container) {
   createCard.className = 'create-post-card';
   createCard.onclick = openCreatePost;
   createCard.innerHTML = `
-    <div class="avatar-post" style="background:${currentUser?.avatar || '#0077B6'};width:40px;height:40px;">
-      ${currentUser?.initials || 'ME'}
+    <div class="avatar-post" style="background:${currentUser?.avatar || '#0077B6'};width:40px;height:40px;overflow:hidden;">
+      ${currentUser?.avatarUrl ? `<img src="${currentUser.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (currentUser?.initials || 'ME')}
     </div>
     <div class="create-post-input">What's happening?</div>
     <div class="create-type-btns">
@@ -225,7 +230,13 @@ async function renderFeed(container) {
     container.innerHTML += emptyStateHTML('🌊', 'No posts yet', 'Be the first to post in Costa Blanca Villas!');
     return;
   }
-  posts.forEach(post => container.appendChild(buildPostCard(post)));
+  posts.forEach(post => {
+    if (post.type === 'sponsored') {
+      container.appendChild(buildSponsoredCard(post));
+    } else {
+      container.appendChild(buildPostCard(post));
+    }
+  });
   lucide.createIcons();
 }
 
@@ -484,6 +495,17 @@ function renderSettings(container) {
       <div class="profile-location"><i data-lucide="map-pin" style="width:13px;height:13px"></i> ${u.address || 'Costa Blanca Villas'} · Farallón, Panama</div>
     </div>
 
+    ${u.role === 'admin' ? `
+    <div style="background:linear-gradient(135deg,#03045e,#0077B6);border-radius:12px;padding:16px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:white;">⚡ Administrator</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:2px;">You have full admin access to Panamá Connect</div>
+      </div>
+      <button onclick="window.open('/admin','_blank')" style="padding:8px 16px;background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.25);border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+        Open Admin Dashboard →
+      </button>
+    </div>` : ''}
+
     <div class="settings-group">
       <div class="settings-group-title">Profile</div>
       <div class="settings-row">
@@ -546,12 +568,43 @@ function renderSettings(container) {
         <button class="settings-btn" onclick="showToast('Password reset email sent')">Reset</button>
       </div>
       <div class="settings-row">
-        <div class="settings-row-info"><div class="settings-row-label" style="color:var(--coral)">Sign Out</div><div class="settings-row-sub">Log out of Good Neighbors</div></div>
+        <div class="settings-row-info"><div class="settings-row-label" style="color:var(--coral)">Sign Out</div><div class="settings-row-sub">Log out of Panamá Connect</div></div>
         <button class="settings-btn danger" onclick="logout()">Sign Out</button>
       </div>
     </div>
   `;
   lucide.createIcons();
+}
+
+// ─── Build Sponsored Post Card ───────────────────────────────────
+function buildSponsoredCard(post) {
+  const card = document.createElement('div');
+  card.className = 'post-card';
+  card.style.cssText = 'border:1.5px solid #bee3f8;background:linear-gradient(135deg,#f0f9ff 0%,#ffffff 100%);';
+  card.dataset.postId = post.id;
+  card.innerHTML = `
+    <div class="post-card-inner">
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:#e8f4fd;border-bottom:1px solid #bee3f8;font-size:11.5px;font-weight:700;color:#0077B6;margin:-12px -12px 10px -12px;border-radius:12px 12px 0 0;letter-spacing:0.3px;">
+        📢 SPONSORED · PARTNER
+      </div>
+      <div class="post-header">
+        <div class="post-author">
+          <div class="avatar-post" style="background:${post.avatar}">${post.initials}</div>
+          <div class="post-author-info">
+            <div class="post-author-name">${escHtml(post.businessName)}</div>
+            <div class="post-meta">Community Partner</div>
+          </div>
+        </div>
+      </div>
+      <div class="post-content">${escHtml(post.content)}</div>
+      ${post.linkUrl ? `
+        <a href="${escHtml(post.linkUrl)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:9px 18px;background:#0077B6;color:white;border-radius:10px;font-size:13.5px;font-weight:700;text-decoration:none;transition:background 0.15s;" onmouseover="this.style.background='#005f92'" onmouseout="this.style.background='#0077B6'">
+          ${escHtml(post.linkLabel || 'Learn More')} →
+        </a>
+      ` : ''}
+    </div>
+  `;
+  return card;
 }
 
 // ─── Build Post Card ─────────────────────────────────────────────
@@ -578,8 +631,8 @@ function buildPostCard(post) {
 
       <div class="post-header">
         <div class="post-author">
-          <div class="avatar-post" style="background:${post.author?.avatar || '#0077B6'}">
-            ${post.author?.initials || '??'}
+          <div class="avatar-post" style="background:${post.author?.avatar || '#0077B6'};overflow:hidden;">
+            ${post.author?.avatarUrl ? `<img src="${post.author.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (post.author?.initials || '??')}
           </div>
           <div class="post-author-info">
             <div class="post-author-name">
@@ -595,6 +648,13 @@ function buildPostCard(post) {
           </div>
         </div>
         <span class="post-type-pill pill-${post.type}">${postTypeLabel(post.type)}</span>
+        <div style="position:relative;margin-left:auto;">
+          <button onclick="togglePostMenu('${post.id}')" style="width:30px;height:30px;border:none;background:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text-light);transition:background 0.15s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">⋯</button>
+          <div id="post-menu-${post.id}" style="display:none;position:absolute;right:0;top:34px;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:180px;z-index:50;overflow:hidden;">
+            <button onclick="openReportModal('post','${post.id}','${escHtml(post.author?.name || 'post').replace(/'/g,"\\'")}');togglePostMenu('${post.id}')" style="width:100%;padding:11px 16px;background:none;border:none;text-align:left;cursor:pointer;font-size:13.5px;font-family:inherit;color:var(--text);display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">⚑ Report Post</button>
+            ${currentUser?.role === 'admin' ? `<button onclick="adminDeletePost('${post.id}');togglePostMenu('${post.id}')" style="width:100%;padding:11px 16px;background:none;border:none;text-align:left;cursor:pointer;font-size:13.5px;font-family:inherit;color:var(--coral);display:flex;align-items:center;gap:10px;border-top:1px solid var(--border);" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background='none'">🗑️ Delete Post</button>` : ''}
+          </div>
+        </div>
       </div>
 
       <div class="post-content" id="content-${post.id}">
@@ -793,8 +853,8 @@ async function toggleComments(postId, triggerEl) {
     const inputRow = document.createElement('div');
     inputRow.className = 'comment-input-row';
     inputRow.innerHTML = `
-      <div class="avatar-comment" style="background:${currentUser?.avatar || '#0077B6'};width:30px;height:30px;flex-shrink:0">
-        ${currentUser?.initials || 'ME'}
+      <div class="avatar-comment" style="background:${currentUser?.avatar || '#0077B6'};width:30px;height:30px;flex-shrink:0;overflow:hidden;">
+        ${currentUser?.avatarUrl ? `<img src="${currentUser.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (currentUser?.initials || 'ME')}
       </div>
       <input type="text" class="comment-input" placeholder="Add a comment..." id="comment-input-${postId}" onkeydown="commentKeydown(event,'${postId}')" />
       <button class="comment-submit" onclick="submitComment('${postId}')">
@@ -1242,8 +1302,8 @@ async function renderBusinessPage(bizId, container) {
               <div class="biz-more-dropdown" id="bizMoreMenu-${biz.id}" style="display:none;">
                 <div class="biz-more-item" onclick="showToast('${escHtml(biz.name)} muted.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔇</span><div><div class="biz-more-item-text">Mute</div><div class="biz-more-item-sub">Hide all posts from ${escHtml(biz.name)}</div></div></div>
                 <div class="biz-more-item" onclick="showToast('${escHtml(biz.name)} blocked.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🚫</span><div><div class="biz-more-item-text">Block</div><div class="biz-more-item-sub">Stop messages from ${escHtml(biz.name)}</div></div></div>
-                <div class="biz-more-item" onclick="showToast('Reported. Thank you.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">⚑</span><div><div class="biz-more-item-text">Report</div><div class="biz-more-item-sub">Flag for review</div></div></div>
-                <div class="biz-more-item" onclick="showToast('Link copied!');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔗</span><div><div class="biz-more-item-text">Share ${escHtml(biz.name)}</div><div class="biz-more-item-sub">Share on or off Good Neighbors</div></div></div>
+                <div class="biz-more-item" onclick="openReportModal('business','${biz.id}','${escHtml(biz.name).replace(/'/g,"\\'")}');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">⚑</span><div><div class="biz-more-item-text">Report</div><div class="biz-more-item-sub">Flag for review</div></div></div>
+                <div class="biz-more-item" onclick="showToast('Link copied!');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔗</span><div><div class="biz-more-item-text">Share ${escHtml(biz.name)}</div><div class="biz-more-item-sub">Share on or off Panamá Connect</div></div></div>
               </div>
             </div>
           </div>
@@ -1256,7 +1316,7 @@ async function renderBusinessPage(bizId, container) {
         <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);">
           <span style="font-size:15px;">ℹ️</span> Is this your business?
         </div>
-        <button onclick="showToast('Claim page coming soon!')" style="font-size:13px;font-weight:700;color:var(--ocean);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit;">Claim page →</button>
+        <button onclick="openClaimModal('${biz.id}','${escHtml(biz.name).replace(/'/g,"\\'")}')" style="font-size:13px;font-weight:700;color:var(--ocean);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit;">Claim this business →</button>
       </div>
     </div>
 
@@ -1381,6 +1441,72 @@ function toggleBizMoreMenu(bizId) {
   if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
 }
 
+function openClaimModal(bizId, bizName) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:20px;width:min(480px,100%);padding:28px;box-shadow:0 24px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto;">
+      <div style="font-size:24px;margin-bottom:6px;">🏪</div>
+      <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;color:#0d1b2a;">Claim ${escHtml(bizName)}</h3>
+      <p style="font-size:13px;color:#4a6378;margin-bottom:20px;">Tell us who you are and we'll verify ownership. You'll receive login credentials within 24 hours to manage your business profile.</p>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px;">
+        <div>
+          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Your full name *</label>
+          <input id="claimName" type="text" placeholder="e.g. Maria González" value="${currentUser?.name || ''}" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Email address *</label>
+          <input id="claimEmail" type="email" placeholder="you@example.com" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Phone number</label>
+          <input id="claimPhone" type="tel" placeholder="+507 6XXX-XXXX" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Your role at this business</label>
+          <select id="claimRole" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;">
+            <option value="Owner">Owner</option>
+            <option value="Manager">Manager</option>
+            <option value="Marketing">Marketing / PR</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Anything to help us verify? <span style="font-weight:400;color:#8a9db0;">(optional)</span></label>
+          <textarea id="claimMessage" rows="2" placeholder="e.g. I am the registered owner, my name appears on the business license." style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;resize:none;box-sizing:border-box;"></textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:11px;background:#f0f3f7;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">Cancel</button>
+        <button onclick="submitClaim(this,'${bizId}')" style="flex:1;padding:11px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">Submit Claim</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function submitClaim(btn, bizId) {
+  const name  = document.getElementById('claimName')?.value.trim();
+  const email = document.getElementById('claimEmail')?.value.trim();
+  const phone = document.getElementById('claimPhone')?.value.trim();
+  const role  = document.getElementById('claimRole')?.value;
+  const message = document.getElementById('claimMessage')?.value.trim();
+  if (!name || !email) { showToast('Name and email are required'); return; }
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  const res = await fetch('/api/business/claim', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ businessId: bizId, name, email, phone, role, message })
+  });
+  const data = await res.json();
+  btn.closest('[style*=fixed]').remove();
+  if (res.ok) {
+    showToast('Claim submitted! We'll review and send your login within 24 hours.');
+  } else {
+    showToast(data.error || 'Could not submit claim — please try again.');
+  }
+}
+
 async function toggleBizFave(bizId) {
   const res = await fetch(`/api/businesses/${bizId}/fave`, { method: 'POST', credentials: 'include' });
   if (!res.ok) return;
@@ -1475,7 +1601,7 @@ function buildGroupCard(group) {
     : `background:${banner};`;
   card.innerHTML = `
     <div class="group-card-banner" style="${bannerStyle}">
-      <div class="group-card-icon">${group.icon}</div>
+      <div class="group-card-icon" style="overflow:hidden;">${/^(data:|https?:)/.test(group.icon) ? `<img src="${group.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">` : group.icon}</div>
     </div>
     <div class="group-card-body">
       <div class="group-card-name">${escHtml(group.name)}</div>
@@ -1487,13 +1613,27 @@ function buildGroupCard(group) {
       <div class="group-card-actions">
         ${group.joined
           ? `<button class="btn-group-open" onclick="openGroupPage('${group.id}')">View Group →</button>`
-          : `<button class="btn-join-group" id="group-btn-${group.id}" onclick="toggleGroup('${group.id}',this)">Join Group</button>`}
+          : group.pendingRequest
+            ? `<button class="btn-join-group" style="background:#f0f3f7;color:var(--text-mid);cursor:default;" disabled>Requested ✓</button>`
+            : `<button class="btn-join-group" id="group-btn-${group.id}" onclick="toggleGroup('${group.id}',this)">${group.privacy === 'private' ? '🔒 Request to Join' : 'Join Group'}</button>`}
         ${group.joined ? `<button class="btn-join-group joined" id="group-btn-${group.id}" onclick="toggleGroup('${group.id}',this)" style="flex:0 0 auto;padding:8px 10px;">✓</button>` : ''}
         ${group.isAdmin ? `<button onclick="deleteGroup('${group.id}',this)" title="Delete group" style="padding:7px 10px;background:none;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;font-size:14px;color:var(--coral);flex-shrink:0;">🗑️</button>` : ''}
       </div>
     </div>
   `;
   return card;
+}
+
+async function handleJoinRequest(groupId, username, action) {
+  const res = await fetch(`/api/groups/${groupId}/join-requests/${username}/${action}`, {
+    method: 'POST', credentials: 'include'
+  });
+  if (res.ok) {
+    showToast(action === 'approve' ? 'Member approved!' : 'Request denied.');
+    await renderGroupPage(groupId, document.getElementById('sectionContent'));
+  } else {
+    showToast('Something went wrong.');
+  }
 }
 
 async function toggleGroup(groupId, btn) {
@@ -1503,8 +1643,11 @@ async function toggleGroup(groupId, btn) {
     });
     if (!res.ok) throw new Error();
     const data = await res.json();
-    // Refresh the whole groups list so card state is correct
-    showToast(data.joined ? 'You joined the group! 🎉' : 'You left the group.');
+    if (data.requested) {
+      showToast('Request sent — the group owner will review it.');
+    } else {
+      showToast(data.joined ? 'You joined the group! 🎉' : 'You left the group.');
+    }
     await renderGroups(document.getElementById('sectionContent'));
   } catch {
     showToast('Could not update group membership.');
@@ -1539,7 +1682,7 @@ async function renderGroupPage(groupId, container) {
     <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;">
       <div class="group-page-banner" style="${bannerStyle}"></div>
       <div class="group-page-header">
-        <div class="group-page-icon">${group.icon}</div>
+        <div class="group-page-icon" style="overflow:hidden;">${/^(data:|https?:)/.test(group.icon) ? `<img src="${group.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:18px;">` : group.icon}</div>
         <div class="group-page-info">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div class="group-page-name">${escHtml(group.name)}</div>
@@ -1557,6 +1700,21 @@ async function renderGroupPage(groupId, container) {
         </div>
       </div>
     </div>
+
+    ${(group.isCreator || group.isAdmin) && group.joinRequests?.length ? `
+    <div style="background:white;border:1px solid #fde68a;border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;box-shadow:var(--shadow-sm);">
+      <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:12px;">🔒 Join Requests (${group.joinRequests.length})</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        ${group.joinRequests.map(r => `
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">${r.initials}</div>
+            <div style="flex:1;font-size:14px;font-weight:600;color:var(--text-dark);">${escHtml(r.name)}</div>
+            <button onclick="handleJoinRequest('${group.id}','${r.username}','approve')" style="padding:7px 14px;background:#16a34a;color:white;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Approve</button>
+            <button onclick="handleJoinRequest('${group.id}','${r.username}','deny')" style="padding:7px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--coral);">Deny</button>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : ''}
 
     <div class="group-compose-box" id="groupComposeBox">
       <div style="display:flex;align-items:flex-start;gap:12px;">
@@ -1630,6 +1788,91 @@ async function deleteGroup(groupId, cardEl, fromPage) {
   }
 }
 
+// ─── Unified Report System ────────────────────────────────────────────────────
+function togglePostMenu(postId) {
+  const menu = document.getElementById('post-menu-' + postId);
+  if (!menu) return;
+  const isOpen = menu.style.display !== 'none';
+  // close all open post menus first
+  document.querySelectorAll('[id^="post-menu-"]').forEach(m => m.style.display = 'none');
+  if (!isOpen) {
+    menu.style.display = 'block';
+    setTimeout(() => document.addEventListener('click', function closeMenu(e) {
+      if (!menu.contains(e.target)) { menu.style.display = 'none'; document.removeEventListener('click', closeMenu); }
+    }), 10);
+  }
+}
+
+function openReportModal(targetType, targetId, targetLabel) {
+  const existing = document.getElementById('reportModal');
+  if (existing) existing.remove();
+
+  const REASONS = {
+    post:     ['Harassment or bullying', 'False or misleading information', 'Hate speech or discrimination', 'Spam or advertising', 'Privacy violation', 'Threatening content', 'Inappropriate content', 'Other'],
+    business: ['Misleading or false information', 'Spam or excessive posting', 'Inappropriate content', 'Not a legitimate business', 'Other'],
+    group:    ['Harassment or bullying', 'Inappropriate content', 'Spam', 'Hate speech', 'Other'],
+    member:   ['Harassment', 'Impersonation', 'Spam', 'Threatening behavior', 'Other'],
+  };
+  const reasons = REASONS[targetType] || REASONS.post;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'reportModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:18px;width:min(440px,100%);padding:26px;box-shadow:0 24px 60px rgba(0,0,0,0.25);" onclick="event.stopPropagation()">
+      <div style="font-size:22px;margin-bottom:8px;">⚑</div>
+      <h3 style="font-size:16px;font-weight:800;margin-bottom:5px;">Report ${targetType.charAt(0).toUpperCase()+targetType.slice(1)}</h3>
+      <p style="font-size:13px;color:#5a7184;margin-bottom:18px;line-height:1.5;">Help us keep Panamá Connect safe. Reports go directly to the admin team for review.</p>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;font-weight:700;color:#2d3748;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Reason *</label>
+        <select id="rptReason" style="width:100%;padding:10px 13px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;">
+          <option value="">Select a reason…</option>
+          ${reasons.map(r => `<option value="${r}">${r}</option>`).join('')}
+        </select>
+      </div>
+      <div style="margin-bottom:18px;">
+        <label style="font-size:12px;font-weight:700;color:#2d3748;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Additional details <span style="color:#a0aec0;font-weight:400;text-transform:none">(optional)</span></label>
+        <textarea id="rptNote" placeholder="Tell us more about what happened…" style="width:100%;min-height:72px;padding:10px 13px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;resize:none;outline:none;background:#f8fafc;"></textarea>
+      </div>
+      <div id="rptErr" style="display:none;color:#c0392b;font-size:12.5px;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="document.getElementById('reportModal').remove()" style="flex:1;padding:11px;background:#f0f3f7;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">Cancel</button>
+        <button onclick="submitReport('${targetType}','${targetId}','${targetLabel.replace(/'/g,"\\'")}')" style="flex:1;padding:11px;background:#E63946;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">Submit Report</button>
+      </div>
+    </div>`;
+  overlay.addEventListener('click', () => overlay.remove());
+  document.body.appendChild(overlay);
+}
+
+async function submitReport(targetType, targetId, targetLabel) {
+  const reason = document.getElementById('rptReason')?.value;
+  const note = document.getElementById('rptNote')?.value.trim() || '';
+  const errEl = document.getElementById('rptErr');
+  if (!reason) { if (errEl) { errEl.textContent = 'Please select a reason.'; errEl.style.display = 'block'; } return; }
+  const res = await fetch('/api/reports', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ targetType, targetId, targetLabel, reason, note })
+  });
+  if (res.ok) {
+    document.getElementById('reportModal')?.remove();
+    showToast('Report submitted — the admin team will review it shortly.');
+  } else {
+    if (errEl) { errEl.textContent = 'Something went wrong. Please try again.'; errEl.style.display = 'block'; }
+  }
+}
+
+async function adminDeletePost(postId) {
+  if (!confirm('Delete this post? This cannot be undone.')) return;
+  const res = await fetch(`/api/posts/${postId}`, { method: 'DELETE', credentials: 'include' });
+  if (res.ok) {
+    document.getElementById('post-card-' + postId)?.remove();
+    showToast('Post deleted.');
+  } else {
+    showToast('Could not delete post.');
+  }
+}
+
 function reportGroup(groupId) {
   const modal = document.getElementById('eventDetailModal');
   const body = document.getElementById('eventDetailBody');
@@ -1637,7 +1880,7 @@ function reportGroup(groupId) {
   if (title) title.textContent = 'Report Group';
   body.innerHTML = `
     <div style="padding:22px;">
-      <p style="font-size:13px;color:var(--text-mid);margin-bottom:18px;line-height:1.6;">Help us keep Good Neighbors safe and respectful. Let us know why you're reporting this group.</p>
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:18px;line-height:1.6;">Help us keep Panamá Connect safe and respectful. Let us know why you're reporting this group.</p>
       <div style="margin-bottom:14px;">
         <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Reason *</label>
         <select id="reportReason" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:white;color:var(--text-dark);">
@@ -1667,8 +1910,10 @@ async function submitGroupReport(groupId) {
   const reason = document.getElementById('reportReason')?.value;
   if (!reason) { showToast('Please select a reason.'); return; }
   const note = document.getElementById('reportNote')?.value.trim() || '';
-  const res = await fetch(`/api/groups/${groupId}/report`, {
+  const res = await fetch('/api/reports', {
     method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ targetType: 'group', targetId: groupId, targetLabel: 'Group ' + groupId, reason, note }),
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ reason, note })
   });
@@ -1695,8 +1940,14 @@ function openCreateGroupModal() {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Icon</label>
-          <input id="cgIcon" type="text" value="👥" placeholder="Emoji" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:18px;font-family:inherit;outline:none;text-align:center;" />
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Group Photo</label>
+          <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;height:88px;border:1.5px dashed var(--border);border-radius:13px;cursor:pointer;background:#f8fafc;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--ocean)'" onmouseout="this.style.borderColor='var(--border)'">
+            <input type="file" accept="image/*" style="display:none;" onchange="previewGroupPhoto(this)">
+            <div id="cgPhotoPreview" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+              <span style="font-size:22px;">📷</span>
+              <span style="font-size:11px;color:var(--text-mid);font-weight:600;">Upload photo</span>
+            </div>
+          </label>
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Privacy</label>
@@ -1717,16 +1968,32 @@ function openCreateGroupModal() {
   openModal('eventDetailModal');
 }
 
+let cgPhotoDataUrl = null;
+
+function previewGroupPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    cgPhotoDataUrl = e.target.result;
+    const preview = document.getElementById('cgPhotoPreview');
+    if (preview) {
+      preview.innerHTML = `<img src="${cgPhotoDataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:11px;">`;
+    }
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
 async function submitCreateGroup() {
   const name = document.getElementById('cgName')?.value.trim();
   if (!name) { showToast('Please enter a group name.'); return; }
   const body = {
     name,
     description: document.getElementById('cgDesc')?.value.trim(),
-    icon: document.getElementById('cgIcon')?.value.trim() || '👥',
+    icon: cgPhotoDataUrl || '👥',
     privacy: document.getElementById('cgPrivacy')?.value || 'public',
     coverPhoto: document.getElementById('cgCover')?.value.trim() || ''
   };
+  cgPhotoDataUrl = null;
   const res = await fetch('/api/groups', {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -2182,64 +2449,262 @@ async function submitListing() {
   }
 }
 
-// ─── Golf ────────────────────────────────────────────────────────
-async function renderGolf(container) {
-  container.innerHTML = sectionHeaderHTML('golf');
+// ─── Transportation ───────────────────────────────────────────────
+async function renderTransport(container) {
+  container.innerHTML = sectionHeaderHTML('transport');
 
   container.innerHTML += `
-    <!-- Course profile card -->
-    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:18px;box-shadow:var(--shadow-sm);">
-      <div style="height:180px;background:linear-gradient(135deg,#2D6A4F,#52B788);position:relative;overflow:hidden;">
-        <img src="https://picsum.photos/seed/golf-course/900/300" alt="Golf Course" style="width:100%;height:100%;object-fit:cover;opacity:0.7;">
-        <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:20px;background:linear-gradient(to top,rgba(0,0,0,0.6),transparent);">
-          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Official Community Golf Club</div>
-          <div style="font-size:22px;font-weight:800;color:white;">Mantarraya Golf Club</div>
-          <div style="font-size:13px;color:rgba(255,255,255,0.85);">Royal Decameron Panama · Rio Hato, Coclé</div>
+
+    <!-- Golf Cart Rentals -->
+    <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">🛺 Golf Cart Rentals</div>
+    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div>
+          <div style="font-size:14.5px;font-weight:700;color:var(--text-dark);">Community Cart Rentals</div>
+          <div style="font-size:12.5px;color:var(--text-mid);margin-top:2px;">Residents renting their carts — post yours or find one available</div>
         </div>
+        <button onclick="openCartListingForm()" style="padding:9px 16px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">+ List My Cart</button>
       </div>
-      <div style="padding:20px 24px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
-          <div>
-            <div style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Hours of Operation</div>
-            <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;">
-              <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-mid);">Tue – Fri</span><span style="font-weight:600;color:var(--text-dark);">8:00 AM – 4:00 PM</span></div>
-              <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-mid);">Saturday</span><span style="font-weight:600;color:var(--text-dark);">7:00 AM – 5:00 PM</span></div>
-              <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-mid);">Sun & Holidays</span><span style="font-weight:600;color:var(--text-dark);">7:00 AM – 3:00 PM</span></div>
-              <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-mid);">Monday</span><span style="font-weight:600;color:#E76F51;">Closed</span></div>
-            </div>
-          </div>
-          <div>
-            <div style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Green Fees</div>
-            <div style="font-size:28px;font-weight:800;color:#2D6A4F;">$64.20</div>
-            <div style="font-size:12px;color:var(--text-light);">per player · 18 holes</div>
-            <div style="font-size:12px;color:var(--text-light);margin-top:4px;">📞 +507 6379-3055</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;">
-          <a href="https://www.golf-booking.com" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:#2D6A4F;color:white;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;">
-            ⛳ Book a Tee Time
-          </a>
-          <a href="tel:+50763793055" style="padding:13px 18px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-weight:600;color:var(--text-dark);text-decoration:none;display:flex;align-items:center;gap:6px;">
-            📞 Call
-          </a>
-        </div>
-        <div style="margin-top:12px;padding:10px 14px;background:#F0FFF4;border:1px solid #B7E4C7;border-radius:10px;font-size:12.5px;color:#2D6A4F;">
-          ⚠️ New hours from April 16: Tue–Fri 8AM–4PM · Sat 7AM–5PM · Sun & Holidays 7AM–3PM · Mon Closed
-        </div>
+      <div id="cartListings" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="text-align:center;padding:20px;color:var(--text-light);font-size:13.5px;">No carts listed yet — be the first to post yours!</div>
       </div>
     </div>
 
-    <!-- Tip to book -->
-    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:18px;box-shadow:var(--shadow-sm);">
-      <div style="font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">How to Book</div>
-      <div style="font-size:13.5px;color:var(--text-mid);line-height:1.65;">
-        Book tee times online through <strong>golf-booking.com</strong> — select your date, number of holes (9 or 18), and number of players. Available tee times are shown with green dots. You can also call the club directly at <a href="tel:+50763793055" style="color:var(--ocean);font-weight:600;">+507 6379-3055</a>.
+    <!-- Transport Costs Community Board -->
+    <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">🚕 Getting Around · Fares & Costs</div>
+    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div>
+          <div style="font-size:14.5px;font-weight:700;color:var(--text-dark);">Community Fare Board</div>
+          <div style="font-size:12.5px;color:var(--text-mid);margin-top:2px;">Share what you paid — taxi, bus, or private driver to the airports, Panama City & more</div>
+        </div>
+        <button onclick="openTransportPost()" style="padding:9px 16px;background:#f57c00;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">+ Post Fare</button>
       </div>
+      <div id="transportPosts" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="text-align:center;padding:20px;color:var(--text-light);font-size:13.5px;">No fares posted yet — share what you paid!</div>
+      </div>
+    </div>
+
+    <!-- Airports -->
+    <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">✈️ Airports</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+
+      <a href="https://flightaware.com/live/airport/MPTO" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,#0d1b2a 0%,#0077B6 100%);border-radius:16px;padding:18px 22px;text-decoration:none;box-shadow:0 4px 16px rgba(0,119,182,0.25);">
+        <div style="width:52px;height:52px;border-radius:12px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i data-lucide="plane" style="width:26px;height:26px;color:white;stroke-width:1.8;"></i></div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+            <span style="font-size:22px;font-weight:900;color:white;letter-spacing:-0.5px;">PTY</span>
+            <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px;">MPTO</span>
+          </div>
+          <div style="font-size:13.5px;font-weight:600;color:rgba(255,255,255,0.9);margin-bottom:1px;">Tocumen International Airport</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.55);">Panama City</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:7px 13px;white-space:nowrap;flex-shrink:0;">
+          <span style="font-size:12px;font-weight:700;color:white;">FlightAware</span>
+          <span style="font-size:12px;color:rgba(255,255,255,0.6);">→</span>
+        </div>
+      </a>
+
+      <a href="https://www.flightaware.com/live/airport/MPSM" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,#0d2a1e 0%,#2A9D8F 100%);border-radius:16px;padding:18px 22px;text-decoration:none;box-shadow:0 4px 16px rgba(42,157,143,0.25);">
+        <div style="width:52px;height:52px;border-radius:12px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i data-lucide="plane" style="width:26px;height:26px;color:white;stroke-width:1.8;"></i></div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+            <span style="font-size:22px;font-weight:900;color:white;letter-spacing:-0.5px;">RIH</span>
+            <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px;">MPSM</span>
+          </div>
+          <div style="font-size:13.5px;font-weight:600;color:rgba(255,255,255,0.9);margin-bottom:1px;">Scarlett Martínez International</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.55);">Río Hato · ~5 min away</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:7px 13px;white-space:nowrap;flex-shrink:0;">
+          <span style="font-size:12px;font-weight:700;color:white;">FlightAware</span>
+          <span style="font-size:12px;color:rgba(255,255,255,0.6);">→</span>
+        </div>
+      </a>
+
     </div>
 
   `;
 
+  renderTransportPosts();
   if (window.lucide) lucide.createIcons();
+}
+
+// ─── Golf Cart Listings ───────────────────────────────────────────
+const cartListings = [];
+const transportPosts = [];
+
+function openCartListingForm() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:20px;width:min(460px,100%);padding:28px;box-shadow:0 24px 60px rgba(0,0,0,0.3);">
+      <div style="font-size:24px;margin-bottom:6px;">🛺</div>
+      <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;color:#0d1b2a;">List Your Golf Cart</h3>
+      <p style="font-size:13px;color:#4a6378;margin-bottom:18px;">Let neighbors rent your cart. You handle the arrangement directly.</p>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+        <div>
+          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Cart description</label>
+          <input id="cartDesc" type="text" placeholder="e.g. 4-seater, 2023, good condition" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Rate</label>
+            <input id="cartRate" type="text" placeholder="e.g. $25/day" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
+          </div>
+          <div>
+            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Contact</label>
+            <input id="cartContact" type="text" placeholder="WhatsApp or villa #" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Availability</label>
+          <input id="cartAvail" type="text" placeholder="e.g. Weekends only, or contact to check" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:11px;background:#f0f3f7;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">Cancel</button>
+        <button onclick="submitCartListing(this)" style="flex:1;padding:11px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">Post Listing</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function submitCartListing(btn) {
+  const desc = document.getElementById('cartDesc').value.trim();
+  const rate = document.getElementById('cartRate').value.trim();
+  const contact = document.getElementById('cartContact').value.trim();
+  const avail = document.getElementById('cartAvail').value.trim();
+  if (!desc || !contact) { showToast('Description and contact required'); return; }
+  cartListings.unshift({
+    id: 'cart' + Date.now(),
+    desc, rate, contact, avail,
+    postedBy: currentUser?.name || 'A neighbor',
+    avatar: currentUser?.avatar || '#0077B6',
+    initials: currentUser?.initials || '??',
+    postedAt: new Date().toISOString()
+  });
+  btn.closest('[style*=fixed]').remove();
+  renderCartListings();
+  showToast('Cart listing posted!');
+}
+
+function renderCartListings() {
+  const el = document.getElementById('cartListings');
+  if (!el) return;
+  if (!cartListings.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:13.5px;">No carts listed yet — be the first to post yours!</div>'; return; }
+  el.innerHTML = cartListings.map(c => `
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid var(--border);">
+      <div style="width:38px;height:38px;border-radius:10px;background:${c.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${c.initials}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:700;color:var(--text-dark);">🛺 ${escHtml(c.desc)}</div>
+        <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap;">
+          ${c.rate ? `<span style="font-size:12.5px;color:#16a34a;font-weight:700;">💵 ${escHtml(c.rate)}</span>` : ''}
+          ${c.avail ? `<span style="font-size:12.5px;color:var(--text-mid);">📅 ${escHtml(c.avail)}</span>` : ''}
+        </div>
+        <div style="font-size:12.5px;color:var(--text-mid);margin-top:4px;">Posted by ${escHtml(c.postedBy)} · ${timeAgo(new Date(c.postedAt))}</div>
+      </div>
+      <a href="tel:${encodeURIComponent(c.contact)}" style="padding:8px 12px;background:var(--ocean);color:white;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;">📞 Contact</a>
+    </div>
+  `).join('');
+}
+
+function openTransportPost() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:20px;width:min(460px,100%);padding:28px;box-shadow:0 24px 60px rgba(0,0,0,0.3);">
+      <div style="font-size:24px;margin-bottom:6px;">🚕</div>
+      <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;color:#0d1b2a;">Post a Fare</h3>
+      <p style="font-size:13px;color:#4a6378;margin-bottom:18px;">Share what you paid so neighbors know what to expect.</p>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+        <div>
+          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Transport type</label>
+          <select id="tpType" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;">
+            <option value="Taxi">🚕 Taxi</option>
+            <option value="Bus">🚌 Bus</option>
+            <option value="Private Driver">🚗 Private Driver</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Route / destination</label>
+          <select id="tpRoute" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;">
+            <option value="To PTY (Tocumen)">✈️ To PTY — Tocumen International</option>
+            <option value="To RIH (Río Hato)">🛩️ To RIH — Río Hato Airport</option>
+            <option value="To Panama City">🌆 To Panama City</option>
+            <option value="To Albrook Bus Terminal">🚌 To Albrook Bus Terminal</option>
+            <option value="To Penonome">🛣️ To Penonomé</option>
+            <option value="Local / within Farallón">📍 Local / within Farallón</option>
+            <option value="Other">📝 Other (add in notes)</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Cost</label>
+            <input id="tpCost" type="text" placeholder="e.g. $65" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
+          </div>
+          <div>
+            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Passengers</label>
+            <input id="tpPax" type="text" placeholder="e.g. 2 people" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Notes (optional)</label>
+          <input id="tpNotes" type="text" placeholder="e.g. driver contact, took ~2.5 hrs, luggage included" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:11px;background:#f0f3f7;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">Cancel</button>
+        <button onclick="submitTransportPost(this)" style="flex:1;padding:11px;background:#f57c00;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">Post Fare</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function submitTransportPost(btn) {
+  const type  = document.getElementById('tpType').value;
+  const route = document.getElementById('tpRoute').value;
+  const cost  = document.getElementById('tpCost').value.trim();
+  const pax   = document.getElementById('tpPax').value.trim();
+  const notes = document.getElementById('tpNotes').value.trim();
+  if (!cost) { showToast('Add a cost so neighbors know what to expect'); return; }
+  transportPosts.unshift({
+    id: 'tp' + Date.now(),
+    type, route, cost, pax, notes,
+    postedBy: currentUser?.name || 'A neighbor',
+    avatar: currentUser?.avatar || '#f57c00',
+    initials: currentUser?.initials || '??',
+    postedAt: new Date().toISOString()
+  });
+  btn.closest('[style*=fixed]').remove();
+  renderTransportPosts();
+  showToast('Fare posted — thanks!');
+}
+
+const typeEmoji = { 'Taxi': '🚕', 'Bus': '🚌', 'Private Driver': '🚗' };
+
+function renderTransportPosts() {
+  const el = document.getElementById('transportPosts');
+  if (!el) return;
+  if (!transportPosts.length) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:13.5px;">No fares posted yet — share what you paid!</div>';
+    return;
+  }
+  el.innerHTML = transportPosts.map(p => `
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid var(--border);">
+      <div style="width:38px;height:38px;border-radius:10px;background:${p.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${p.initials}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${typeEmoji[p.type] || '🚗'} ${escHtml(p.type)} — ${escHtml(p.route)}</div>
+        <div style="display:flex;gap:12px;margin-top:5px;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:13.5px;color:#16a34a;font-weight:800;">💵 ${escHtml(p.cost)}</span>
+          ${p.pax ? `<span style="font-size:12.5px;color:var(--text-mid);">👥 ${escHtml(p.pax)}</span>` : ''}
+        </div>
+        ${p.notes ? `<div style="font-size:12.5px;color:var(--text-mid);margin-top:4px;">💬 ${escHtml(p.notes)}</div>` : ''}
+        <div style="font-size:11.5px;color:var(--text-light);margin-top:4px;">Posted by ${escHtml(p.postedBy)} · ${timeAgo(new Date(p.postedAt))}</div>
+      </div>
+    </div>
+  `).join('');
 }
 
 // ─── Section Headers ─────────────────────────────────────────────
@@ -2254,7 +2719,7 @@ const sectionMeta = {
   notifications: { title: 'Notifications', desc: 'Stay up to date on what matters', emoji: '🔔' },
   profile: { title: 'My Profile', desc: 'Your Costa Blanca Villas profile', emoji: '👤' },
   realestate: { title: 'Real Estate', desc: 'Properties for sale & rent near Costa Blanca Villas', emoji: '🏡' },
-  golf: { title: 'Golf', desc: 'Mantarraya Golf Club · Book tee times & connect with golfers', emoji: '⛳' }
+  transport: { title: 'Transportation', desc: 'Getting around Farallón, to Panama City & the airports', emoji: '🚗' }
 };
 
 function sectionHeaderHTML(section) {
@@ -2340,7 +2805,7 @@ function closeMobileMenu() {
 // ─── Auth ────────────────────────────────────────────────────────
 async function logout() {
   await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-  window.location.href = '/';
+  window.location.href = '/login';
 }
 
 // ─── Toast ───────────────────────────────────────────────────────
@@ -2414,6 +2879,11 @@ function updateAvatarDisplays(avatarUrl) {
   // Dropdown
   const ddEl = document.getElementById('dropdownAvatar');
   if (ddEl) { ddEl.style.backgroundImage = `url(${avatarUrl})`; ddEl.style.backgroundSize = 'cover'; const di = document.getElementById('dropdownInitials'); if(di) di.style.display='none'; }
+  // Create post modal
+  const createAv = document.getElementById('createAvatar');
+  if (createAv) { createAv.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; }
+  const createInit = document.getElementById('createInitials');
+  if (createInit) createInit.textContent = '';
 }
 
 // ─── Lightbox ────────────────────────────────────────────────────
