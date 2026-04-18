@@ -1501,7 +1501,7 @@ async function submitClaim(btn, bizId) {
   const data = await res.json();
   btn.closest('[style*=fixed]').remove();
   if (res.ok) {
-    showToast('Claim submitted! We'll review and send your login within 24 hours.');
+    showToast('Claim submitted! We will review and send your login within 24 hours.');
   } else {
     showToast(data.error || 'Could not submit claim — please try again.');
   }
