@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadNotifications();
   loadTides();
   loadWhatsHappening();
+  loadSidebarWidgets();
   initMobile();
   navigate(currentUser?.role === 'realtor' ? 'realestate' : 'feed');
 });
@@ -95,6 +96,96 @@ async function loadWhatsHappening() {
   }).join('');
 }
 
+async function loadSidebarWidgets() {
+  const [events, neighbors, feedPosts, marketplaceItems, safetyPosts, realEstateListings] = await Promise.all([
+    fetchJSON('/api/events'),
+    fetchJSON('/api/neighbors'),
+    fetchJSON('/api/posts?section=feed'),
+    fetchJSON('/api/marketplace'),
+    fetchJSON('/api/posts?section=safety'),
+    fetchJSON('/api/realestate'),
+  ]);
+
+  // Nav badges — only show if count > 0
+  function setBadge(id, count) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (count > 0) { el.textContent = count; el.style.display = ''; }
+    else el.style.display = 'none';
+  }
+  setBadge('badgeMarketplace', (marketplaceItems || []).length);
+  setBadge('badgeEvents', (events || []).filter(e => new Date(e.date || e.eventDate) >= new Date()).length);
+  setBadge('badgeSafety', (safetyPosts || []).filter(p => p.severity !== 'resolved').length);
+  setBadge('badgeRealestate', (realEstateListings || []).length);
+
+  // Sidebar stats
+  const nbCount = document.getElementById('sidebarNeighbors');
+  if (nbCount) nbCount.textContent = (neighbors || []).length;
+
+  // Next Event
+  const nextEventEl = document.getElementById('nextEventCard');
+  if (nextEventEl) {
+    const upcoming = (events || [])
+      .filter(e => new Date(e.date || e.eventDate) >= new Date())
+      .sort((a, b) => new Date(a.date || a.eventDate) - new Date(b.date || b.eventDate))[0];
+    if (upcoming) {
+      const d = new Date(upcoming.date || upcoming.eventDate);
+      const month = d.toLocaleString('en', { month: 'short' }).toUpperCase();
+      const day   = d.getDate();
+      const going = upcoming.rsvpCounts?.going || 0;
+      nextEventEl.innerHTML = `
+        <div class="next-event-date"><span class="nev-month">${month}</span><span class="nev-day">${day}</span></div>
+        <div class="next-event-info">
+          <div class="nev-title">${escHtml(upcoming.title)}</div>
+          <div class="nev-meta">${upcoming.time || upcoming.eventTime || ''} · ${escHtml(upcoming.location || '')}</div>
+          ${going ? `<div class="nev-going">🙋 ${going} going</div>` : ''}
+        </div>`;
+      nextEventEl.style.cursor = 'pointer';
+    } else {
+      nextEventEl.innerHTML = '<div style="font-size:12px;color:var(--text-light);padding:8px 0">No upcoming events yet.</div>';
+    }
+  }
+
+  // Trending Topics — most-reacted posts
+  const trendingEl = document.getElementById('trendingTopicsList');
+  if (trendingEl) {
+    const posts = (feedPosts || [])
+      .filter(p => p.type !== 'sponsored')
+      .map(p => ({ p, total: Object.values(p.reactions || {}).reduce((a, b) => a + b, 0) + (p.commentCount || 0) }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+    if (posts.length) {
+      const icons = { safety: '🚨', for_sale: '🏷️', lost_found: '🔍', events: '🎉', recommendation: '⭐', poll: '📊', general: '💬', free: '🎁' };
+      trendingEl.innerHTML = posts.map(({ p }) =>
+        `<div class="trend-item" onclick="navigate('${p.type === 'safety' ? 'safety' : 'feed'}')">${icons[p.type] || '💬'} ${escHtml((p.content || '').slice(0, 48))}${(p.content || '').length > 48 ? '…' : ''}</div>`
+      ).join('');
+    } else {
+      trendingEl.innerHTML = '<div style="font-size:12px;color:var(--text-light)">No posts yet.</div>';
+    }
+  }
+
+  // New Neighbors — most recently joined users
+  const nnEl = document.getElementById('newNeighborsList');
+  if (nnEl) {
+    const recent = (neighbors || []).slice(0, 5);
+    if (recent.length) {
+      nnEl.innerHTML = recent.map(n => `
+        <div class="new-neighbor">
+          <div class="avatar-sm" style="background:${n.avatar || n.avatarHex || '#0077B6'};overflow:hidden;">
+            ${n.avatarUrl ? `<img src="${n.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(n.initials || '?')}
+          </div>
+          <div class="nn-info">
+            <div class="nn-name">${escHtml(n.name)}</div>
+            <div class="nn-street">${escHtml(n.address || '')}</div>
+          </div>
+          <button class="btn-wave">👋</button>
+        </div>`).join('');
+    } else {
+      nnEl.innerHTML = '<div style="font-size:12px;color:var(--text-light)">No neighbors yet.</div>';
+    }
+  }
+}
+
 async function loadTides() {
   const el = document.getElementById('tideData');
   if (!el) return;
@@ -122,6 +213,16 @@ async function checkAuth() {
   } catch {
     window.location.href = '/login';
   }
+}
+
+async function refreshPoints() {
+  try {
+    const fresh = await fetchJSON('/api/auth/me');
+    if (fresh && typeof fresh.points === 'number') {
+      currentUser.points = fresh.points;
+      setTextSafe('sidebarPoints', fresh.points);
+    }
+  } catch {}
 }
 
 function renderUserUI() {
@@ -161,6 +262,16 @@ function renderUserUI() {
 function setTextSafe(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val;
+}
+
+function pointsLevelLabel(pts) {
+  const p = pts ?? 0;
+  if (p >= 2000) return 'Legend';
+  if (p >= 1000) return 'Champion';
+  if (p >= 500)  return 'Regular';
+  if (p >= 200)  return 'Member';
+  if (p >= 50)   return 'Neighbor';
+  return 'Newcomer';
 }
 
 // ─── Navigation ─────────────────────────────────────────────────
@@ -456,9 +567,9 @@ async function renderProfile(container) {
           <div class="profile-stat-val">${user.neighbors || 89}</div>
           <div class="profile-stat-lbl">Neighbors</div>
         </div>
-        <div class="profile-stat">
-          <div class="profile-stat-val">${user.points || 412}</div>
-          <div class="profile-stat-lbl">Points</div>
+        <div class="profile-stat" title="${pointsLevelLabel(user.points)}">
+          <div class="profile-stat-val">${user.points ?? 0}</div>
+          <div class="profile-stat-lbl">Points · ${pointsLevelLabel(user.points)}</div>
         </div>
         <div class="profile-stat">
           <div class="profile-stat-val">${user.yearsInNeighborhood || 4}</div>
@@ -897,6 +1008,7 @@ async function submitComment(postId) {
       inner.insertBefore(buildCommentEl(comment), inner.lastChild);
       lucide.createIcons();
     }
+    refreshPoints();
     showToast('Comment posted! 💬');
   } catch {
     showToast('Could not post comment. Please try again.');
@@ -2178,6 +2290,7 @@ async function submitPost() {
     selectedSeverity = 'medium';
     const safetyFields = document.getElementById('safetyFields');
     if (safetyFields) safetyFields.style.display = 'none';
+    refreshPoints();
     showToast('Your post is live! 🌊');
 
     // Navigate to feed and show post

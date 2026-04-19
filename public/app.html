@@ -121,15 +121,15 @@
         </div>
         <div class="sidebar-stats">
           <div class="sidebar-stat">
-            <span class="stat-val" id="sidebarPosts">27</span>
+            <span class="stat-val" id="sidebarPosts">0</span>
             <span class="stat-lbl">Posts</span>
           </div>
           <div class="sidebar-stat">
-            <span class="stat-val" id="sidebarNeighbors">94</span>
+            <span class="stat-val" id="sidebarNeighbors">0</span>
             <span class="stat-lbl">Neighbors</span>
           </div>
           <div class="sidebar-stat">
-            <span class="stat-val" id="sidebarPoints">438</span>
+            <span class="stat-val" id="sidebarPoints">0</span>
             <span class="stat-lbl">Points</span>
           </div>
         </div>
@@ -145,17 +145,17 @@
         <button class="nav-item" data-section="marketplace" onclick="navigate('marketplace')">
           <i data-lucide="shopping-bag"></i>
           <span>Marketplace</span>
-          <span class="nav-badge">10</span>
+          <span class="nav-badge" id="badgeMarketplace" style="display:none"></span>
         </button>
         <button class="nav-item" data-section="events" onclick="navigate('events')">
           <i data-lucide="calendar"></i>
           <span>Events</span>
-          <span class="nav-badge">5</span>
+          <span class="nav-badge" id="badgeEvents" style="display:none"></span>
         </button>
         <button class="nav-item" data-section="safety" onclick="navigate('safety')">
           <i data-lucide="shield-alert"></i>
           <span>Safety</span>
-          <span class="nav-badge danger">3</span>
+          <span class="nav-badge danger" id="badgeSafety" style="display:none"></span>
         </button>
 
         <div class="nav-section-label">Discover</div>
@@ -174,7 +174,7 @@
         <button class="nav-item" data-section="realestate" onclick="navigate('realestate')">
           <i data-lucide="home"></i>
           <span>Real Estate</span>
-          <span class="nav-badge" style="background:var(--seafoam)">8</span>
+          <span class="nav-badge" id="badgeRealestate" style="display:none;background:var(--seafoam)"></span>
         </button>
         <button class="nav-item" data-section="transport" onclick="navigate('transport')">
           <i data-lucide="car"></i>
@@ -294,17 +294,7 @@
           <i data-lucide="calendar" style="width:16px;height:16px;color:#6C63FF"></i>
           Next Event
         </div>
-        <div class="next-event-card" onclick="navigate('events')">
-          <div class="next-event-date">
-            <span class="nev-month">APR</span>
-            <span class="nev-day">4</span>
-          </div>
-          <div class="next-event-info">
-            <div class="nev-title">Bingo Night — Beach Club</div>
-            <div class="nev-meta">7:00 PM · Costa Blanca Beach Club</div>
-            <div class="nev-going">🙋 48 going</div>
-          </div>
-        </div>
+        <div id="nextEventCard" onclick="navigate('events')"></div>
       </div>
 
       <div class="right-widget">
@@ -312,11 +302,7 @@
           <i data-lucide="trending-up" style="width:16px;height:16px;color:#2A9D8F"></i>
           Trending Topics
         </div>
-        <div class="trend-item" onclick="navigate('businesses')">🦞 Amar By La Playa — best ceviche</div>
-        <div class="trend-item" onclick="navigate('safety')">🚗 Suspicious vehicle near north gate</div>
-        <div class="trend-item" onclick="navigate('events')">🎉 Bingo Night this Friday</div>
-        <div class="trend-item" onclick="navigate('marketplace')">⛳ Golf cart for sale — Villa #3</div>
-        <div class="trend-item" onclick="navigate('events')">🎤 Karaoke at Nico's Beach Bar</div>
+        <div id="trendingTopicsList"><div style="font-size:12px;color:var(--text-light)">Loading…</div></div>
       </div>
 
       <div class="right-widget">
@@ -324,30 +310,7 @@
           <i data-lucide="users" style="width:16px;height:16px;color:#0077B6"></i>
           New Neighbors
         </div>
-        <div class="new-neighbor">
-          <div class="avatar-sm" style="background:#E63946">EH</div>
-          <div class="nn-info">
-            <div class="nn-name">Emily Hart</div>
-            <div class="nn-street">Villa 318</div>
-          </div>
-          <button class="btn-wave">👋</button>
-        </div>
-        <div class="new-neighbor">
-          <div class="avatar-sm" style="background:#2A9D8F">DG</div>
-          <div class="nn-info">
-            <div class="nn-name">Daniel Giroux</div>
-            <div class="nn-street">Villa 102</div>
-          </div>
-          <button class="btn-wave">👋</button>
-        </div>
-        <div class="new-neighbor">
-          <div class="avatar-sm" style="background:#457B9D">KM</div>
-          <div class="nn-info">
-            <div class="nn-name">Kerry Maurer</div>
-            <div class="nn-street">Villa 323</div>
-          </div>
-          <button class="btn-wave">👋</button>
-        </div>
+        <div id="newNeighborsList"><div style="font-size:12px;color:var(--text-light)">Loading…</div></div>
       </div>
     </aside>
   </div>
@@ -642,6 +605,8 @@
       <button class="mmd-item" onclick="navigate('neighbors');closeMobileMenu()"><i data-lucide="users"></i> Neighbors</button>
       <button class="mmd-item" onclick="navigate('groups');closeMobileMenu()"><i data-lucide="layers"></i> Groups</button>
       <button class="mmd-item" onclick="navigate('realestate');closeMobileMenu()"><i data-lucide="home"></i> Real Estate</button>
+      <button class="mmd-item" onclick="navigate('transport');closeMobileMenu()"><i data-lucide="car"></i> Transport</button>
+      <button class="mmd-item" onclick="navigate('notifications');closeMobileMenu()"><i data-lucide="bell"></i> Notifications</button>
       <button class="mmd-item" onclick="navigate('profile');closeMobileMenu()"><i data-lucide="user"></i> My Profile</button>
       <button class="mmd-item" onclick="navigate('settings');closeMobileMenu()"><i data-lucide="settings"></i> Settings</button>
       <button class="mmd-item danger" onclick="logout()"><i data-lucide="log-out"></i> Sign Out</button>

@@ -551,17 +551,6 @@
         <button type="submit" class="btn-login" id="loginBtn">Sign In</button>
       </form>
 
-      <div class="divider">or continue as</div>
-
-      <div class="quick-login" style="grid-template-columns:1fr;">
-        <button class="quick-login-btn" onclick="quickLogin('mike','beach123')">
-          <span class="avatar-dot" style="background:#F4A261">MH</span>
-          <span class="ql-inner">
-            <span class="ql-name">Mike Hart</span>
-            <span class="ql-role">Demo Neighbor</span>
-          </span>
-        </button>
-      </div>
 
       <div class="footer-text">
         By signing in you agree to our <a href="#" onclick="openLegal('tos');return false;">Member Agreement</a> and <a href="#" onclick="openLegal('privacy');return false;">Privacy Policy</a>
@@ -569,6 +558,12 @@
 
       <div class="signup-link">
         New to Costa Blanca Villas? <a onclick="openSignUp()">Request Access →</a>
+      </div>
+
+      <div style="text-align:center;margin-top:16px;">
+        <button onclick="setLang('en')" id="langEn" style="background:none;border:none;cursor:pointer;font-size:12px;font-weight:600;color:#0077B6;padding:4px 8px;border-radius:6px;">ENG</button>
+        <span style="color:#cbd5e0;font-size:12px;">|</span>
+        <button onclick="setLang('es')" id="langEs" style="background:none;border:none;cursor:pointer;font-size:12px;font-weight:600;color:#a0aec0;padding:4px 8px;border-radius:6px;">ESP</button>
       </div>
 
     </div>
@@ -672,7 +667,7 @@
               </div>
             `).join('')}
           </div>
-          <p style="font-size:11.5px;color:#a0aec0;margin-top:14px;line-height:1.5;">Realtor and HOA accounts are by invitation only. All applications are reviewed and approved by the community admin.</p>
+          <p style="font-size:11.5px;color:#a0aec0;margin-top:14px;line-height:1.5;">Realtor accounts are by invitation only. All applications are reviewed and approved by the community admin.</p>
         `;
       } else if (suStep === 1) {
         const isBiz = suRole === 'business' || suRole === 'realtor';
@@ -723,7 +718,7 @@
           </div>
           <div style="background:rgba(0,119,182,0.06);border-radius:10px;padding:14px;margin-top:16px;font-size:12.5px;color:#4a6378;line-height:1.6;">
             <strong style="color:#0077B6;">What happens next?</strong><br>
-            Your application will be reviewed by the Costa Blanca Villas HOA team. You'll be notified within 24 hours once your account is approved. By submitting, you agree to our Member Agreement and Privacy Policy.
+            Your application will be reviewed by the Panamá Connect team. You'll be notified within 24 hours once your account is approved. By submitting, you agree to our Member Agreement and Privacy Policy.
           </div>
         `;
       } else if (suStep === 3) {
@@ -736,7 +731,7 @@
           <div class="su-success">
             <div class="su-success-icon">🎉</div>
             <h3>Application Submitted!</h3>
-            <p>Thanks for joining the waitlist. The HOA team will review your application and get back to you within <strong>24 hours</strong>.<br><br>Once approved, you'll receive your login credentials and can sign in right here.</p>
+            <p>Thanks for joining the waitlist. The Panamá Connect team will review your application and get back to you within <strong>24 hours</strong>.<br><br>Once approved, you'll receive your login credentials and can sign in right here.</p>
             <button class="su-btn-next" style="margin-top:24px;width:100%" onclick="closeSignUp()">Got It</button>
           </div>
         `;
@@ -830,7 +825,7 @@
       </p>
 
       <h3>1. Who We Are</h3>
-      <p>Panamá Connect is a private, closed neighborhood platform operated by and for the residents, property owners, renters, and approved businesses of <strong>Costa Blanca Villas</strong>, Farallón, Coclé, Panamá. The platform is administered by the Costa Blanca Villas HOA and designated community administrators. It is not a public service, not a commercial social network, and not affiliated with any governmental body.</p>
+      <p>Panamá Connect is a private, closed neighborhood platform operated by and for the residents, property owners, renters, and approved businesses of <strong>Costa Blanca Villas</strong>, Farallón, Coclé, Panamá. The platform is administered by designated Panamá Connect administrators. It is not a public service, not a commercial social network, and not affiliated with any governmental body.</p>
       <p>The platform exists to help neighbors connect, share information, stay safe, and build community — nothing more.</p>
 
       <h3>2. Membership Eligibility</h3>
@@ -838,9 +833,9 @@
       <ul>
         <li><strong>Property owners</strong> — individuals who own a villa, lot, or unit within Costa Blanca Villas</li>
         <li><strong>Renters and long-term guests</strong> — individuals currently renting or occupying a unit with owner authorization</li>
-        <li><strong>HOA members and board representatives</strong> — acting in their official community capacity</li>
+        <li><strong>Community administrators</strong> — acting in their official platform capacity</li>
         <li><strong>Approved local businesses</strong> — businesses serving the community, approved by an administrator</li>
-        <li><strong>Authorized realtors</strong> — real estate professionals specifically approved by the HOA</li>
+        <li><strong>Authorized realtors</strong> — real estate professionals specifically approved by platform administrators</li>
       </ul>
       <p>You must be at least <strong>18 years of age</strong> to hold an account. Membership is a privilege, not a right, and may be revoked at any time per Section 10 of this Agreement.</p>
 
@@ -848,7 +843,7 @@
       <p><strong>One account per person.</strong> You may not create multiple accounts, share your account with another person, or use someone else's account. Accounts are personal and non-transferable.</p>
       <p><strong>Accurate information.</strong> You agree to provide your real name and accurate property information. The use of aliases, fake names, or false addresses to obtain or maintain membership is grounds for immediate removal.</p>
       <p><strong>Account security.</strong> You are solely responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account. Notify an administrator immediately if you suspect unauthorized access.</p>
-      <p><strong>No ban evasion.</strong> If your account has been suspended or removed, you are strictly prohibited from accessing the platform through any means — including creating a new account under a different name, using another member's account, accessing the platform through a third party, or facilitating a proxy to act on your behalf. Any attempt to circumvent a suspension or removal will be treated as a material breach of this Agreement and may be referred to the HOA board and, where applicable, relevant authorities.</p>
+      <p><strong>No ban evasion.</strong> If your account has been suspended or removed, you are strictly prohibited from accessing the platform through any means — including creating a new account under a different name, using another member's account, accessing the platform through a third party, or facilitating a proxy to act on your behalf. Any attempt to circumvent a suspension or removal will be treated as a material breach of this Agreement and may be referred to platform administrators and, where applicable, relevant authorities.</p>
 
       <h3>4. Community Guidelines — What We Expect</h3>
       <p>Panamá Connect is built on mutual respect. Every member agrees to uphold the following standards in all interactions on the platform:</p>
@@ -872,7 +867,7 @@
         <li>Sharing another member's private contact information without their express consent</li>
         <li>Posting content that violates the laws of the República de Panamá</li>
         <li>Attempting to circumvent platform security, access controls, or administrative functions</li>
-        <li>Using the platform to organize or facilitate activity that disrupts community peace or HOA governance</li>
+        <li>Using the platform to organize or facilitate activity that disrupts community peace</li>
       </ul>
 
       <h3>6. Content You Post</h3>
@@ -897,7 +892,7 @@
         <li>Panamá Connect is a <strong>communications facilitator only</strong> — we are not a party to any transaction, agreement, or exchange between members</li>
         <li>All transactions are solely between the buyer and seller; the platform provides no warranty, guarantee, or protection for any exchange</li>
         <li>Recommendations and reviews reflect the personal opinions of individual members — the platform does not endorse or verify them</li>
-        <li>Members transact entirely at their own risk. The platform, its administrators, and the HOA bear no liability for any loss, dispute, injury, or dissatisfaction arising from member transactions</li>
+        <li>Members transact entirely at their own risk. The platform and its administrators bear no liability for any loss, dispute, injury, or dissatisfaction arising from member transactions</li>
       </ul>
 
       <h3>9. Business & Realtor Accounts</h3>
@@ -911,29 +906,29 @@
       <p>Business access may be revoked at any time, with or without cause, at the sole discretion of platform administrators.</p>
 
       <h3>10. Account Suspension, Removal & Permanent Exclusion</h3>
-      <p>Platform administrators and the HOA board hold full and unilateral authority over all membership decisions on this platform. <strong>Any account may be suspended, restricted, or permanently removed at any time, at the sole and absolute discretion of the administrators, with or without prior notice, with or without cause, and without any obligation to provide a reason, explanation, or warning.</strong></p>
+      <p>Panamá Connect administrators hold full and unilateral authority over all membership decisions on this platform. <strong>Any account may be suspended, restricted, or permanently removed at any time, at the sole and absolute discretion of the administrators, with or without prior notice, with or without cause, and without any obligation to provide a reason, explanation, or warning.</strong></p>
       <p>Factors that may contribute to removal include, but are not limited to: violation of this Agreement, conduct detrimental to the community, disputes that cannot be resolved constructively, loss of residential or business eligibility, or any other circumstance the administrators determine — in their exclusive and unreviewable judgment — to be contrary to the best interest of the community.</p>
       <p><strong>Permanent exclusion.</strong> A removal decision may, at the administrator's discretion, constitute a permanent ban from the platform. Permanently excluded members are prohibited from re-applying for membership, registering a new account, or accessing the platform in any capacity — directly, indirectly, or through a third party — for any reason, at any future time, regardless of any change in their residency status or circumstances.</p>
-      <p><strong>No right of appeal.</strong> All removal and exclusion decisions are final. There is no internal appeals process on this platform. Membership is a privilege, not a right, and no removed member is entitled to reinstatement. The HOA board's judgment on all membership matters is conclusive and not subject to review by any internal body.</p>
-      <p><strong>Waiver of claims arising from removal.</strong> By accepting this Agreement, you expressly and irrevocably waive any and all claims, demands, or causes of action — whether in contract, tort, equity, or otherwise — against Panamá Connect, the Costa Blanca Villas HOA, its board members, administrators, or agents arising from or related to any decision to suspend, restrict, remove, or permanently exclude your account. This waiver applies regardless of the reason for removal, including where no reason is given.</p>
+      <p><strong>No right of appeal.</strong> All removal and exclusion decisions are final. There is no internal appeals process on this platform. Membership is a privilege, not a right, and no removed member is entitled to reinstatement. The administrators' judgment on all membership matters is conclusive and not subject to review by any internal body.</p>
+      <p><strong>Waiver of claims arising from removal.</strong> By accepting this Agreement, you expressly and irrevocably waive any and all claims, demands, or causes of action — whether in contract, tort, equity, or otherwise — against Panamá Connect, its administrators, or agents arising from or related to any decision to suspend, restrict, remove, or permanently exclude your account. This waiver applies regardless of the reason for removal, including where no reason is given.</p>
       <p>Panamá Connect reserves the right to retain, anonymize, or delete a removed member's content at its sole discretion.</p>
 
       <h3>11. Platform Availability & Changes</h3>
-      <p>Panamá Connect is provided as a community convenience on a best-effort basis. We make no guarantee of continuous availability, uptime, or data preservation. The platform may be modified, suspended, or discontinued at any time without notice. The HOA bears no liability for any loss — of data, access, or otherwise — arising from platform changes or outages.</p>
+      <p>Panamá Connect is provided as a community convenience on a best-effort basis. We make no guarantee of continuous availability, uptime, or data preservation. The platform may be modified, suspended, or discontinued at any time without notice. Panamá Connect bears no liability for any loss — of data, access, or otherwise — arising from platform changes or outages.</p>
 
       <h3>12. Disclaimer of Warranties</h3>
-      <p>THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY PANAMANIAN LAW, PANAMÁ CONNECT, THE COSTA BLANCA VILLAS HOA, AND ITS ADMINISTRATORS EXPRESSLY DISCLAIM ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, ACCURACY OF CONTENT, AND NON-INFRINGEMENT.</p>
+      <p>THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY PANAMANIAN LAW, PANAMÁ CONNECT AND ITS ADMINISTRATORS EXPRESSLY DISCLAIM ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, ACCURACY OF CONTENT, AND NON-INFRINGEMENT.</p>
       <p>We do not warrant that: (a) the platform will be uninterrupted or error-free; (b) any content posted by members is accurate, complete, or reliable; (c) any defects will be corrected; or (d) the platform is free of harmful components.</p>
 
       <h3>13. Limitation of Liability</h3>
-      <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, PANAMÁ CONNECT, THE COSTA BLANCA VILLAS HOA, AND ITS ADMINISTRATORS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO: LOSS OF DATA, LOSS OF PROPERTY, LOSS OF ACCESS, LOSS OF COMMUNITY STANDING, PERSONAL INJURY, REPUTATIONAL HARM, OR ANY OTHER LOSS ARISING FROM: (A) YOUR USE OF OR INABILITY TO USE THE PLATFORM; (B) CONTENT POSTED BY OTHER MEMBERS; (C) TRANSACTIONS BETWEEN MEMBERS; OR (D) ANY DECISION TO SUSPEND, RESTRICT, REMOVE, OR PERMANENTLY EXCLUDE YOUR ACCOUNT — REGARDLESS OF WHETHER SUCH DAMAGES WERE FORESEEABLE AND REGARDLESS OF THE THEORY OF LIABILITY.</p>
+      <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, PANAMÁ CONNECT AND ITS ADMINISTRATORS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO: LOSS OF DATA, LOSS OF PROPERTY, LOSS OF ACCESS, LOSS OF COMMUNITY STANDING, PERSONAL INJURY, REPUTATIONAL HARM, OR ANY OTHER LOSS ARISING FROM: (A) YOUR USE OF OR INABILITY TO USE THE PLATFORM; (B) CONTENT POSTED BY OTHER MEMBERS; (C) TRANSACTIONS BETWEEN MEMBERS; OR (D) ANY DECISION TO SUSPEND, RESTRICT, REMOVE, OR PERMANENTLY EXCLUDE YOUR ACCOUNT — REGARDLESS OF WHETHER SUCH DAMAGES WERE FORESEEABLE AND REGARDLESS OF THE THEORY OF LIABILITY.</p>
       <p>In no event shall the total aggregate liability of the platform to any member for any and all claims exceed the amount, if any, paid by that member to access the platform in the twelve (12) months preceding the claim. As this platform is provided free of charge, that amount is zero (B/. 0.00).</p>
 
       <h3>13a. No Class Actions</h3>
       <p>TO THE FULLEST EXTENT PERMITTED BY LAW, YOU AGREE THAT ANY DISPUTE WITH THE PLATFORM SHALL BE BROUGHT SOLELY IN YOUR INDIVIDUAL CAPACITY AND NOT AS A PLAINTIFF OR CLASS MEMBER IN ANY PURPORTED CLASS ACTION, COLLECTIVE PROCEEDING, OR REPRESENTATIVE ACTION. The administrator's decisions regarding individual accounts do not create precedent or obligations with respect to any other member's account.</p>
 
       <h3>14. Indemnification</h3>
-      <p>You agree to defend, indemnify, and hold harmless Panamá Connect, the Costa Blanca Villas HOA, its board members, administrators, and agents from and against any claims, damages, losses, liabilities, costs, and expenses (including legal fees) arising from: (a) your use of the platform; (b) content you post; (c) your violation of this Agreement; or (d) your violation of any applicable law or the rights of another person.</p>
+      <p>You agree to defend, indemnify, and hold harmless Panamá Connect, its administrators, and agents from and against any claims, damages, losses, liabilities, costs, and expenses (including legal fees) arising from: (a) your use of the platform; (b) content you post; (c) your violation of this Agreement; or (d) your violation of any applicable law or the rights of another person.</p>
 
       <h3>15. Governing Law & Disputes</h3>
       <p>This Agreement is governed exclusively by the laws of the <strong>República de Panamá</strong>. Any dispute arising out of or relating to this Agreement or your use of the platform shall be resolved through good-faith negotiation first, and if unresolved, shall be submitted to the exclusive jurisdiction of the competent courts of <strong>Coclé Province, Panamá</strong>. You waive any objection to jurisdiction or venue in such courts.</p>
@@ -948,14 +943,14 @@
       <p>This Member Agreement, together with the Privacy Policy, constitutes the entire agreement between you and Panamá Connect with respect to your use of the platform and supersedes all prior understandings, representations, or agreements, whether written or oral. If any provision of this Agreement is found by a court of competent jurisdiction to be invalid or unenforceable, that provision shall be modified to the minimum extent necessary to make it enforceable, and all remaining provisions shall continue in full force and effect.</p>
 
       <h3>19. Contact</h3>
-      <p>Questions, concerns, or formal notices regarding this Agreement should be directed to the <strong>Costa Blanca Villas HOA</strong> through the official HOA account on this platform or through official HOA channels.</p>
+      <p>Questions, concerns, or formal notices regarding this Agreement should be directed to the platform administrators through the official Panamá Connect admin account on this platform.</p>
     `;
 
     const PRIVACY_CONTENT = `
       <span class="legal-date">Effective Date: April 1, 2026 &nbsp;·&nbsp; Costa Blanca Villas, Farallón, Coclé, Panamá &nbsp;·&nbsp; Governed by Ley No. 81 of March 26, 2019</span>
 
       <h3>1. Data Controller Identity</h3>
-      <p>The data controller for this platform is the <strong>Costa Blanca Villas HOA</strong>, located at Costa Blanca Villas, Farallón, Coclé, República de Panamá. Data-related requests may be submitted through the official HOA account on this platform. Panamá Connect is operated as a private, closed community tool — not a commercial data-processing operation.</p>
+      <p>Panamá Connect is operated as a private, closed community tool — not a commercial data-processing operation.</p>
 
       <h3>2. Legal Basis for Processing</h3>
       <p>In accordance with <strong>Ley No. 81 of 2019 (Ley sobre Protección de Datos Personales)</strong> and its implementing Executive Decree No. 285 of May 28, 2021, we process personal data under the following lawful bases:</p>
@@ -971,7 +966,7 @@
 
       <h3>3a. Data You Provide Directly</h3>
       <ul>
-        <li><strong>Account registration:</strong> Username, display name, property/villa address, account role (neighbor, business, HOA, etc.), and any optional bio or profile description you choose to add.</li>
+        <li><strong>Account registration:</strong> Username, display name, property/villa address, account role (neighbor, business, realtor, etc.), and any optional bio or profile description you choose to add.</li>
         <li><strong>Posts and content:</strong> The full text of every post, comment, safety alert, listing, event, or recommendation you publish on the platform — including post type, category, and any tags or metadata associated with it.</li>
         <li><strong>Reactions and interactions:</strong> Records of every reaction (like, agree, insightful, etc.) you place on any post or comment, and every neighbor connection you initiate or accept.</li>
         <li><strong>Uploaded media:</strong> Images and photos you attach to posts or your profile, stored in their original form on the platform server.</li>
@@ -1016,7 +1011,7 @@
       <ul>
         <li>Displaying your profile and content to other verified community members</li>
         <li>Enabling community features including posts, comments, reactions, and neighbor connections</li>
-        <li>Facilitating official HOA communications and community governance</li>
+        <li>Facilitating official community communications and platform governance</li>
         <li>Maintaining platform security and enforcing community standards</li>
       </ul>
 
@@ -1024,7 +1019,7 @@
       <p>Your personal data is <strong>never sold, rented, or disclosed</strong> to advertisers, data brokers, or any outside commercial party. Data is accessible only to:</p>
       <ul>
         <li>Verified members of the Costa Blanca Villas community (your posts and profile)</li>
-        <li>Platform administrators and HOA board members (for moderation and governance purposes)</li>
+        <li>Platform administrators (for moderation and governance purposes)</li>
         <li>Competent Panamanian authorities, if required by judicial order or legal obligation</li>
       </ul>
       <p>Any transfer of personal data outside of Panama shall only be conducted to jurisdictions that provide an equivalent or higher level of protection in accordance with Art. 36 of Ley No. 81.</p>
@@ -1041,7 +1036,7 @@
         <li><strong>Opposition (Oposición):</strong> Object to processing of your data in certain circumstances</li>
         <li><strong>Portability (Portabilidad):</strong> Request your data in a structured, machine-readable format</li>
       </ul>
-      <p>To exercise any of these rights, contact the HOA through the official HOA account on this platform. You also have the right to lodge a complaint with <strong>ANTAI</strong> (Autoridad Nacional de Transparencia y Acceso a la Información), the Panamanian data protection authority.</p>
+      <p>To exercise any of these rights, contact the administrators through the official Panamá Connect admin account on this platform. You also have the right to lodge a complaint with <strong>ANTAI</strong> (Autoridad Nacional de Transparencia y Acceso a la Información), the Panamanian data protection authority.</p>
 
       <h3>8. Cookies</h3>
       <p>We use a single, cryptographically signed session cookie solely for authentication purposes. We do not use tracking cookies, advertising pixels, analytics tools, or any third-party cookies. Your browsing activity within this platform is not tracked, profiled, or shared.</p>
@@ -1052,12 +1047,12 @@
         <li>Access restriction to verified, invitation-only community members</li>
         <li>Signed and encrypted session cookies</li>
         <li>File upload restrictions and size limitations</li>
-        <li>Administrative access controls limited to designated HOA personnel</li>
+        <li>Administrative access controls limited to designated platform administrators</li>
       </ul>
       <p>In the event of a personal data security breach, we will notify ANTAI within <strong>72 hours</strong> of discovery and will inform affected users as required by law.</p>
 
       <h3>10. Disclaimer of Liability</h3>
-      <p>Panamá Connect and the Costa Blanca Villas HOA expressly disclaim liability to the fullest extent permitted by Panamanian law for:</p>
+      <p>Panamá Connect expressly disclaims liability to the fullest extent permitted by Panamanian law for:</p>
       <ul>
         <li>The accuracy, completeness, or reliability of any content posted by community members</li>
         <li>Any loss, harm, or dispute arising from member-to-member interactions, transactions, or communications conducted through or facilitated by this platform</li>
@@ -1066,7 +1061,7 @@
         <li>Actions taken by third parties who gain access through your account or credentials</li>
         <li>Any reliance placed on safety alerts, recommendations, listings, or other user-generated content posted on this platform</li>
       </ul>
-      <p>This platform is provided as a <strong>community convenience tool</strong> on an "as-is" basis, without warranties of any kind, express or implied. The HOA is not responsible for and does not endorse any goods, services, or recommendations posted by community members.</p>
+      <p>This platform is provided as a <strong>community convenience tool</strong> on an "as-is" basis, without warranties of any kind, express or implied. Panamá Connect does not endorse any goods, services, or recommendations posted by community members.</p>
 
       <h3>11. Children's Privacy</h3>
       <p>This platform is intended exclusively for adults aged 18 and over. We do not knowingly collect personal data from minors. If we become aware that a minor has registered an account without parental consent, we will delete that account promptly. If you believe a minor has submitted data to this platform, notify an administrator immediately.</p>
@@ -1078,7 +1073,7 @@
       <p>This Privacy Policy is governed by and construed in accordance with the laws of the <strong>República de Panamá</strong>, including Ley No. 81 of March 26, 2019 and its implementing regulations. Any disputes shall be subject to the exclusive jurisdiction of the competent courts of Coclé Province, Panamá.</p>
 
       <h3>14. Contact & Data Requests</h3>
-      <p>All data subject requests, privacy concerns, or questions regarding this policy should be submitted to the HOA through the official <strong>Costa Blanca Villas HOA</strong> account on this platform. We will acknowledge your request within 3 business days and fulfill it within the 10-business-day period required by Ley No. 81.</p>
+      <p>All data subject requests, privacy concerns, or questions regarding this policy should be submitted through the official <strong>Panamá Connect</strong> admin account on this platform. We will acknowledge your request within 3 business days and fulfill it within the 10-business-day period required by Ley No. 81.</p>
     `;
 
     function openLegal(tab) {
@@ -1131,7 +1126,7 @@
         } else {
           const data = await res.json().catch(() => ({}));
           if (res.status === 403 && data.error === 'banned') {
-            err.textContent = `Your account has been suspended from Panamá Connect. Reason: ${data.reason || 'Violation of Member Agreement'}. Please contact the HOA board if you believe this is in error.`;
+            err.textContent = `Your account has been suspended from Panamá Connect. Reason: ${data.reason || 'Violation of Member Agreement'}. Please contact a platform administrator if you believe this is in error.`;
             err.style.lineHeight = '1.5';
           } else {
             err.textContent = 'Invalid username or password. Please try again.';
@@ -1148,6 +1143,41 @@
         btn.classList.remove('loading');
         btn.disabled = false;
       }
+    }
+
+    const translations = {
+      en: {
+        username: 'Username', password: 'Password', signin: 'Sign In',
+        newto: 'New to Costa Blanca Villas?', request: 'Request Access →',
+        agree: 'By signing in you agree to our', member: 'Member Agreement', and: 'and', privacy: 'Privacy Policy',
+        forgotLabel: 'Forgot password?'
+      },
+      es: {
+        username: 'Usuario', password: 'Contraseña', signin: 'Iniciar Sesión',
+        newto: '¿Nuevo en Costa Blanca Villas?', request: 'Solicitar Acceso →',
+        agree: 'Al iniciar sesión aceptas nuestro', member: 'Acuerdo de Miembro', and: 'y', privacy: 'Política de Privacidad',
+        forgotLabel: '¿Olvidaste tu contraseña?'
+      }
+    };
+
+    function setLang(lang) {
+      const t = translations[lang];
+      document.getElementById('langEn').style.color = lang === 'en' ? '#0077B6' : '#a0aec0';
+      document.getElementById('langEs').style.color = lang === 'es' ? '#0077B6' : '#a0aec0';
+      const ul = document.querySelector('label[for="username"]');
+      const pl = document.querySelector('label[for="password"]');
+      if (ul) ul.textContent = t.username;
+      if (pl) pl.textContent = t.password;
+      const uInput = document.getElementById('username');
+      const pInput = document.getElementById('password');
+      if (uInput) uInput.placeholder = t.username;
+      if (pInput) pInput.placeholder = t.password;
+      const signBtn = document.querySelector('.btn-login');
+      if (signBtn) signBtn.textContent = t.signin;
+      const signupLink = document.querySelector('.signup-link');
+      if (signupLink) signupLink.innerHTML = `${t.newto} <a onclick="openSignUp()">${t.request}</a>`;
+      const forgotLink = document.querySelector('.forgot-link');
+      if (forgotLink) forgotLink.textContent = t.forgotLabel;
     }
 
     function quickLogin(username, password) {

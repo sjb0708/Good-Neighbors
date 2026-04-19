@@ -1,14 +1,19 @@
 {
   "name": "panama-connect",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Panama Connect - Beach Community App",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node -r dotenv/config server.js",
+    "seed": "node -r dotenv/config db/seed-admin.js"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "@vercel/blob": "^0.27.0",
+    "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.5"
