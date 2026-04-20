@@ -345,10 +345,17 @@ async function renderFeed(container) {
 // ─── Marketplace ────────────────────────────────────────────────
 async function renderMarketplace(container) {
   container.innerHTML = sectionHeaderHTML('marketplace');
+
+  const listBtn = document.createElement('button');
+  listBtn.onclick = openListItemModal;
+  listBtn.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 20px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:16px;';
+  listBtn.innerHTML = '+ List an Item';
+  container.appendChild(listBtn);
+
   let items = await fetchJSON('/api/marketplace');
-  if (!items) items = await fetchJSON('/api/marketplace');
   if (!items || !items.length) {
     container.innerHTML += emptyStateHTML('🛒', 'Nothing listed yet', 'Be the first to list something!');
+    container.appendChild(listBtn);
     return;
   }
   const grid = document.createElement('div');
@@ -356,6 +363,103 @@ async function renderMarketplace(container) {
   items.forEach(item => grid.appendChild(buildMarketCard(item)));
   container.appendChild(grid);
   if (window.lucide) lucide.createIcons();
+}
+
+let marketImageData = null;
+
+function openListItemModal() {
+  marketImageData = null;
+  const existing = document.getElementById('listItemModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'listItemModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <h3 style="margin:0;font-size:17px;font-weight:800;">List an Item</h3>
+        <button onclick="document.getElementById('listItemModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-light);">✕</button>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">TITLE *</label>
+        <input id="liTitle" type="text" placeholder="What are you listing?" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">PRICE</label>
+          <input id="liPrice" type="number" placeholder="0 = Free" min="0" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">CONDITION</label>
+          <select id="liCondition" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:white;box-sizing:border-box;">
+            <option value="">Any</option>
+            <option>New</option><option>Like New</option><option>Good</option><option>Fair</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">CATEGORY</label>
+        <select id="liCategory" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:white;box-sizing:border-box;">
+          <option value="">Select…</option>
+          <option>Furniture</option><option>Electronics</option><option>Clothing</option><option>Toys</option>
+          <option>Home & Garden</option><option>Sports</option><option>Decor</option><option>Transportation</option><option>Free</option><option>Other</option>
+        </select>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">DESCRIPTION</label>
+        <textarea id="liDesc" placeholder="Describe your item…" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:none;height:72px;box-sizing:border-box;"></textarea>
+      </div>
+      <div style="margin-bottom:18px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">PHOTO</label>
+        <label style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:80px;border:1.5px dashed var(--border);border-radius:10px;cursor:pointer;background:#f8fafc;">
+          <input type="file" accept="image/*" style="display:none;" onchange="previewMarketImage(this)">
+          <div id="liImagePreview" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);font-weight:600;">📷 Upload photo</div>
+        </label>
+      </div>
+      <button onclick="submitListItem()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Post Listing</button>
+      <div id="liErr" style="color:var(--coral);font-size:13px;margin-top:8px;display:none;"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function previewMarketImage(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    marketImageData = e.target.result;
+    const prev = document.getElementById('liImagePreview');
+    if (prev) prev.innerHTML = `<img src="${marketImageData}" style="height:70px;border-radius:8px;object-fit:cover;" />`;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+async function submitListItem() {
+  const title = document.getElementById('liTitle')?.value.trim();
+  const price = document.getElementById('liPrice')?.value;
+  const condition = document.getElementById('liCondition')?.value;
+  const category = document.getElementById('liCategory')?.value;
+  const description = document.getElementById('liDesc')?.value.trim();
+  const errEl = document.getElementById('liErr');
+
+  if (!title) { errEl.textContent = 'Please enter a title.'; errEl.style.display = 'block'; return; }
+
+  const res = await fetch('/api/marketplace', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, price: price || 0, condition, category, description, image: marketImageData || null })
+  });
+  if (res.ok) {
+    document.getElementById('listItemModal')?.remove();
+    marketImageData = null;
+    await renderMarketplace(document.getElementById('sectionContent'));
+    showToast('Item listed! 🛒');
+  } else {
+    const d = await res.json();
+    errEl.textContent = d.error || 'Something went wrong.';
+    errEl.style.display = 'block';
+  }
 }
 
 // ─── Events ─────────────────────────────────────────────────────
