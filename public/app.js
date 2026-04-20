@@ -1816,7 +1816,6 @@ async function renderGroupPage(groupId, container) {
             <span>${group.privacy === 'private' ? '🔒 Private' : '🌐 Public'}</span>
           </div>
           <div class="group-page-desc">${escHtml(group.description)}</div>
-          <div class="group-page-location">📍 Costa Blanca Villas · Farallón, Panama</div>
         </div>
       </div>
     </div>
