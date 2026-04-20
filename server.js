@@ -316,6 +316,14 @@ app.post('/api/auth/register', async (req, res) => {
           (${username}, ${email}, ${passwordHash}, ${role}, ${displayName}, ${fullName},
            ${avatarHex}, ${initials}, 'active')
       `;
+      // Notify all existing neighbors about the new member
+      const allNeighbors = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND username != ${username}`;
+      if (allNeighbors.length) {
+        await Promise.all(allNeighbors.map(n =>
+          sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
+              VALUES (${n.id}, 'new_neighbor', ${`${displayName} just joined Costa Blanca Connect — say hello! 👋`}, ${avatarHex}, ${initials})`
+        ));
+      }
       return res.json({ ok: true, role: 'neighbor' });
     }
 
@@ -866,6 +874,18 @@ app.post('/api/posts', requireAuth(async (req, res) => {
 
   await awardPoints(u.id, type === 'safety' ? 'safety_post' : 'post', type === 'safety' ? POINTS.safety_post : POINTS.post);
 
+  // Notify all neighbors about lost & found posts
+  if (type === 'lost_found') {
+    const allMembers = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${u.id}`;
+    if (allMembers.length) {
+      const msg = `${u.name} posted a Lost & Found: "${(content||'').slice(0,80)}${(content||'').length>80?'…':''}"`;
+      await Promise.all(allMembers.map(m =>
+        sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
+            VALUES (${m.id}, 'lost_found', ${msg}, ${u.avatar_hex}, ${u.initials})`
+      ));
+    }
+  }
+
   // Auto-cross-post to Safety & Security Watch group if high severity
   if (type === 'safety' && resolvedSeverity === 'high') {
     const [g6] = await sql`SELECT id FROM groups WHERE name ILIKE '%Safety%Security%Watch%' LIMIT 1`;
@@ -1316,6 +1336,18 @@ app.post('/api/marketplace', requireAuth(async (req, res) => {
     RETURNING *
   `;
   await awardPoints(req.currentUser.id, 'marketplace_list', POINTS.marketplace_list);
+
+  // Notify all neighbors about the new listing
+  const u = req.currentUser;
+  const neighbors = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${u.id}`;
+  if (neighbors.length) {
+    const msg = `${u.name} listed "${title}" in the Marketplace${isFree ? ' — Free!' : price ? ` for $${parseFloat(price).toFixed(2)}` : ''}`;
+    await Promise.all(neighbors.map(n =>
+      sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
+          VALUES (${n.id}, 'marketplace', ${msg}, ${u.avatar_hex}, ${u.initials})`
+    ));
+  }
+
   res.json({ ok: true, item });
 }));
 

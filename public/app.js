@@ -669,6 +669,18 @@ function renderSettings(container) {
         <div class="settings-row-info"><div class="settings-row-label">Group Activity</div><div class="settings-row-sub">New posts in groups you've joined</div></div>
         <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
       </div>
+      <div class="settings-row">
+        <div class="settings-row-info"><div class="settings-row-label">Lost & Found</div><div class="settings-row-sub">New lost & found posts in the community</div></div>
+        <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info"><div class="settings-row-label">Marketplace</div><div class="settings-row-sub">New items listed in the marketplace</div></div>
+        <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info"><div class="settings-row-label">New Neighbors</div><div class="settings-row-sub">When someone new joins the community</div></div>
+        <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
+      </div>
     </div>
 
     <div class="settings-group">
