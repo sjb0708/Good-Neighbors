@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard — Panamá Connect</title>
+  <title>Admin Dashboard — Costa Blanca Connect</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -148,9 +148,9 @@
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="sidebar-logo">
-      <img src="/logo.png" alt="Panamá Connect">
+      <img src="/logo.png" alt="Costa Blanca Connect">
       <div>
-        <div class="sidebar-logo-text">Panamá Connect</div>
+        <div class="sidebar-logo-text">Costa Blanca Connect</div>
         <div class="sidebar-logo-sub">Admin Dashboard</div>
       </div>
     </div>
@@ -234,7 +234,7 @@
     <div class="topbar">
       <div>
         <div class="topbar-title" id="topbarTitle">Dashboard</div>
-        <div class="topbar-sub" id="topbarSub">Panamá Connect · Costa Blanca Villas</div>
+        <div class="topbar-sub" id="topbarSub">Costa Blanca Connect · Costa Blanca Villas</div>
       </div>
       <div class="topbar-actions">
         <button class="topbar-refresh" onclick="loadAll()">↻ Refresh</button>
@@ -308,7 +308,7 @@
           <div class="panel-header">
             <div>
               <h2>All Members</h2>
-              <div class="panel-header-sub">Active accounts on Panamá Connect</div>
+              <div class="panel-header-sub">Active accounts on Costa Blanca Connect</div>
             </div>
           </div>
           <table class="members-table">
@@ -376,7 +376,7 @@
           <div class="panel-header">
             <div>
               <h2>Banned Members</h2>
-              <div class="panel-header-sub">Accounts permanently suspended from Panamá Connect</div>
+              <div class="panel-header-sub">Accounts permanently suspended from Costa Blanca Connect</div>
             </div>
           </div>
           <div id="bannedList"><div class="panel-empty">Loading…</div></div>
@@ -1073,7 +1073,7 @@
     }
 
     async function removeMember(username, name) {
-      if (!confirm(`Remove ${name} from Panamá Connect? This cannot be undone.`)) return;
+      if (!confirm(`Remove ${name} from Costa Blanca Connect? This cannot be undone.`)) return;
       const res = await fetch(`/api/admin/users/${username}`, { method: 'DELETE', credentials: 'include' });
       if (res.ok) { showToast(`${name} has been removed`); await loadMembers(); }
       else { const d = await res.json(); showToast(d.error || 'Error'); }

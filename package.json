@@ -1,7 +1,7 @@
 {
-  "name": "panama-connect",
+  "name": "costa-blanca-connect",
   "version": "2.0.0",
-  "description": "Panama Connect - Beach Community App",
+  "description": "Costa Blanca Connect - Beach Community App",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

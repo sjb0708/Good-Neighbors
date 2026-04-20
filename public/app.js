@@ -610,7 +610,7 @@ function renderSettings(container) {
     <div style="background:linear-gradient(135deg,#03045e,#0077B6);border-radius:12px;padding:16px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
       <div>
         <div style="font-size:13px;font-weight:700;color:white;">⚡ Administrator</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:2px;">You have full admin access to Panamá Connect</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:2px;">You have full admin access to Costa Blanca Connect</div>
       </div>
       <button onclick="window.open('/admin','_blank')" style="padding:8px 16px;background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.25);border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
         Open Admin Dashboard →
@@ -679,7 +679,7 @@ function renderSettings(container) {
         <button class="settings-btn" onclick="showToast('Password reset email sent')">Reset</button>
       </div>
       <div class="settings-row">
-        <div class="settings-row-info"><div class="settings-row-label" style="color:var(--coral)">Sign Out</div><div class="settings-row-sub">Log out of Panamá Connect</div></div>
+        <div class="settings-row-info"><div class="settings-row-label" style="color:var(--coral)">Sign Out</div><div class="settings-row-sub">Log out of Costa Blanca Connect</div></div>
         <button class="settings-btn danger" onclick="logout()">Sign Out</button>
       </div>
     </div>
@@ -1415,7 +1415,7 @@ async function renderBusinessPage(bizId, container) {
                 <div class="biz-more-item" onclick="showToast('${escHtml(biz.name)} muted.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔇</span><div><div class="biz-more-item-text">Mute</div><div class="biz-more-item-sub">Hide all posts from ${escHtml(biz.name)}</div></div></div>
                 <div class="biz-more-item" onclick="showToast('${escHtml(biz.name)} blocked.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🚫</span><div><div class="biz-more-item-text">Block</div><div class="biz-more-item-sub">Stop messages from ${escHtml(biz.name)}</div></div></div>
                 <div class="biz-more-item" onclick="openReportModal('business','${biz.id}','${escHtml(biz.name).replace(/'/g,"\\'")}');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">⚑</span><div><div class="biz-more-item-text">Report</div><div class="biz-more-item-sub">Flag for review</div></div></div>
-                <div class="biz-more-item" onclick="showToast('Link copied!');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔗</span><div><div class="biz-more-item-text">Share ${escHtml(biz.name)}</div><div class="biz-more-item-sub">Share on or off Panamá Connect</div></div></div>
+                <div class="biz-more-item" onclick="showToast('Link copied!');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔗</span><div><div class="biz-more-item-text">Share ${escHtml(biz.name)}</div><div class="biz-more-item-sub">Share on or off Costa Blanca Connect</div></div></div>
               </div>
             </div>
           </div>
@@ -1934,7 +1934,7 @@ function openReportModal(targetType, targetId, targetLabel) {
     <div style="background:white;border-radius:18px;width:min(440px,100%);padding:26px;box-shadow:0 24px 60px rgba(0,0,0,0.25);" onclick="event.stopPropagation()">
       <div style="font-size:22px;margin-bottom:8px;">⚑</div>
       <h3 style="font-size:16px;font-weight:800;margin-bottom:5px;">Report ${targetType.charAt(0).toUpperCase()+targetType.slice(1)}</h3>
-      <p style="font-size:13px;color:#5a7184;margin-bottom:18px;line-height:1.5;">Help us keep Panamá Connect safe. Reports go directly to the admin team for review.</p>
+      <p style="font-size:13px;color:#5a7184;margin-bottom:18px;line-height:1.5;">Help us keep Costa Blanca Connect safe. Reports go directly to the admin team for review.</p>
       <div style="margin-bottom:12px;">
         <label style="font-size:12px;font-weight:700;color:#2d3748;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Reason *</label>
         <select id="rptReason" style="width:100%;padding:10px 13px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;">
@@ -1992,7 +1992,7 @@ function reportGroup(groupId) {
   if (title) title.textContent = 'Report Group';
   body.innerHTML = `
     <div style="padding:22px;">
-      <p style="font-size:13px;color:var(--text-mid);margin-bottom:18px;line-height:1.6;">Help us keep Panamá Connect safe and respectful. Let us know why you're reporting this group.</p>
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:18px;line-height:1.6;">Help us keep Costa Blanca Connect safe and respectful. Let us know why you're reporting this group.</p>
       <div style="margin-bottom:14px;">
         <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Reason *</label>
         <select id="reportReason" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:white;color:var(--text-dark);">

@@ -1,4 +1,4 @@
--- Panama Connect — Full Database Schema
+-- Costa Blanca Connect — Full Database Schema
 -- Run this against your Neon database to initialise all tables.
 
 -- ─── Core auth & users ────────────────────────────────────────────────────────

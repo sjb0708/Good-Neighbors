@@ -341,9 +341,9 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     if (!transporter) return;
 
     await transporter.sendMail({
-      from: `"Panamá Connect" <${(await getEmailConfig()).gmail_user}>`,
+      from: `"Costa Blanca Connect" <${(await getEmailConfig()).gmail_user}>`,
       to: user.email,
-      subject: 'Reset your Panamá Connect password',
+      subject: 'Reset your Costa Blanca Connect password',
       html: `
         <div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
           <h2 style="color:#1a3a5c;">Password Reset</h2>
@@ -352,7 +352,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
           <a href="${link}" style="display:inline-block;background:#1a3a5c;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:16px 0;">Reset Password</a>
           <p>If you didn't request this, you can safely ignore this email.</p>
           <hr style="border:none;border-top:1px solid #eee;margin-top:24px;">
-          <p style="color:#888;font-size:12px;">Panamá Connect · Costa Blanca Villas, Farallón, Coclé, Panamá</p>
+          <p style="color:#888;font-size:12px;">Costa Blanca Connect · Costa Blanca Villas, Farallón, Coclé, Panamá</p>
         </div>
       `
     });
@@ -1689,6 +1689,6 @@ app.get('/reset-password',  (req, res) => res.sendFile(path.join(__dirname, 'pub
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Panamá Connect running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Costa Blanca Connect running on http://localhost:${PORT}`));
 
 module.exports = app;

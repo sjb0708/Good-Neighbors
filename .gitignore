@@ -3,3 +3,4 @@ public/images/avatars/
 .env
 *.log
 .DS_Store
+.vercel
