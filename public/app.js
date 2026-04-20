@@ -331,15 +331,7 @@ async function renderFeed(container) {
     <div class="avatar-post" style="background:${currentUser?.avatar || '#0077B6'};width:40px;height:40px;overflow:hidden;">
       ${currentUser?.avatarUrl ? `<img src="${currentUser.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (currentUser?.initials || 'ME')}
     </div>
-    <div class="create-post-input">What's happening?</div>
-    <div class="create-type-btns">
-      <button class="create-type-btn" onclick="event.stopPropagation();openCreatePost('for_sale')">
-        🏷️ Sell
-      </button>
-      <button class="create-type-btn" onclick="event.stopPropagation();openCreatePost('events')">
-        📅 Event
-      </button>
-    </div>
+    <div class="create-post-input">What's happening in Costa Blanca Villas?</div>
   `;
   container.appendChild(createCard);
 
