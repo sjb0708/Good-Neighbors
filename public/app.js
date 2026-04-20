@@ -665,6 +665,10 @@ function renderSettings(container) {
         <div class="settings-row-info"><div class="settings-row-label">Comments & Reactions</div><div class="settings-row-sub">When someone reacts to your posts</div></div>
         <label class="toggle-switch"><input type="checkbox" onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
       </div>
+      <div class="settings-row">
+        <div class="settings-row-info"><div class="settings-row-label">Group Activity</div><div class="settings-row-sub">New posts in groups you've joined</div></div>
+        <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
+      </div>
     </div>
 
     <div class="settings-group">
