@@ -1278,8 +1278,8 @@ body {
 .create-post-input {
   flex: 1;
   height: 40px;
-  background: var(--bg);
-  border: 1.5px solid transparent;
+  background: #f0f4f8;
+  border: 1.5px solid var(--border);
   border-radius: 20px;
   padding: 0 16px;
   font-size: 14px;
@@ -1289,6 +1289,7 @@ body {
   display: flex;
   align-items: center;
   transition: all 0.2s;
+  user-select: none;
 }
 
 .create-post-card:hover .create-post-input { border-color: var(--ocean); background: white; }
