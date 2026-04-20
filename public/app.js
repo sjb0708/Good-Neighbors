@@ -324,12 +324,20 @@ async function renderSection(section, container) {
 // ─── Feed ────────────────────────────────────────────────────────
 async function renderFeed(container) {
   container.innerHTML = sectionHeaderHTML('feed');
-  const createCard = document.createElement('div');
-  container.appendChild(document.createElement('div'));
+
+  const compose = document.createElement('div');
+  compose.style.cssText = 'display:flex;align-items:center;gap:10px;background:white;border-radius:16px;padding:12px 16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.07);cursor:pointer;border:1.5px solid var(--border);';
+  compose.onclick = () => openCreatePost();
+  compose.innerHTML = `
+    <div style="width:38px;height:38px;border-radius:50%;background:${currentUser?.avatar||'#0077B6'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${currentUser?.initials||'?'}</div>
+    <div style="flex:1;padding:9px 14px;background:var(--bg);border-radius:30px;font-size:14px;color:var(--text-light);font-family:inherit;">What's happening in Costa Blanca Villas?</div>
+    <button onclick="event.stopPropagation();openCreatePost()" style="padding:8px 18px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">+ Post</button>
+  `;
+  container.appendChild(compose);
 
   const posts = await fetchJSON('/api/posts?section=feed');
   if (!posts || !posts.length) {
-    container.innerHTML += emptyStateHTML('🌊', 'No posts yet', 'Be the first to post in Costa Blanca Villas!');
+    container.insertAdjacentHTML('beforeend', emptyStateHTML('🌊', 'No posts yet', 'Be the first to post in Costa Blanca Villas!'));
     return;
   }
   posts.forEach(post => {
