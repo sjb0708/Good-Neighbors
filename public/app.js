@@ -621,7 +621,7 @@ async function renderBusinesses(container) {
   currentBizId = null;
   const topBar = document.createElement('div');
   topBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;';
-  const addBtnHtml = currentUser?.role === 'admin'
+  const addBtnHtml = currentUser
     ? `<button onclick="openAddBusinessModal()" style="padding:9px 18px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Business</button>`
     : '';
   topBar.innerHTML = `<div><h2 style="font-size:19px;font-weight:800;color:var(--text-dark);margin:0;">Business Directory</h2><p style="font-size:13px;color:var(--text-light);margin:2px 0 0;">Local restaurants and services near Farallón</p></div>${addBtnHtml}`;
@@ -673,7 +673,7 @@ async function submitAddBusiness() {
   const name = document.getElementById('abName')?.value.trim();
   const errEl = document.getElementById('abErr');
   if (!name) { errEl.textContent = 'Business name is required.'; errEl.style.display = 'block'; return; }
-  const res = await fetch('/api/admin/businesses', {
+  const res = await fetch('/api/businesses', {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1676,12 +1676,15 @@ function buildBusinessListingCard(biz) {
   const card = document.createElement('div');
   card.className = 'biz-listing-card';
   card.onclick = () => openBusinessPage(biz.id);
+  const logoContent = biz.logoUrl
+    ? `<img src="${biz.logoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">`
+    : icon;
   card.innerHTML = `
-    <div class="biz-listing-logo" style="background:${bg};color:${fg};">${icon}</div>
+    <div class="biz-listing-logo" style="background:${biz.logoUrl ? 'transparent' : bg};color:${fg};">${logoContent}</div>
     <div class="biz-listing-body">
       <div class="biz-listing-name">
         ${escHtml(biz.name)}
-        <span class="biz-verified-badge">✓</span>
+        ${biz.claimed ? '<span class="biz-verified-badge">✓</span>' : '<span style="font-size:11px;font-weight:700;color:#92400E;background:#FEF3C7;border:1px solid #F59E0B;padding:2px 7px;border-radius:20px;">📋 Unclaimed</span>'}
         ${faveYears.length ? '<span style="font-size:12px;color:#3A7D44;font-weight:600;">🏆 Neighborhood Fave</span>' : ''}
       </div>
       <div class="biz-listing-category">${escHtml(biz.category)}</div>
@@ -1726,8 +1729,8 @@ async function renderBusinessPage(bizId, container) {
   const currentYear = new Date().getFullYear();
   const alreadyWonThisYear = faveYears.includes(currentYear);
   const pct = Math.min(100, Math.round((currentYearFaves / faveThreshold) * 100));
+  const isPageOwner = currentUser && (currentUser.id === biz.claimedByUserId || currentUser.id === biz.addedByUserId || currentUser.role === 'admin');
 
-  // Trophy icon — CSS circle outline style like Nextdoor
   const trophySVG = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4a2 2 0 0 1-2-2V5h4"/><path d="M18 9h2a2 2 0 0 0 2-2V5h-4"/><path d="M12 17v4"/><path d="M8 21h8"/><path d="M6 5h12v4a6 6 0 0 1-12 0V5Z"/></svg>`;
 
   const wrap = document.createElement('div');
@@ -1735,17 +1738,28 @@ async function renderBusinessPage(bizId, container) {
   wrap.innerHTML = `
     <button class="group-back-btn" onclick="navigate('businesses')">← Back to Businesses</button>
 
-    <!-- Header card — matches Nextdoor layout exactly -->
+    <!-- Header card -->
     <div class="biz-page-header-card" style="flex-direction:column;padding:0;overflow:hidden;">
-      <!-- Top section: logo + name + actions -->
-      <div style="display:flex;align-items:flex-start;gap:18px;padding:24px 24px 16px;">
+      <!-- Banner -->
+      <div style="position:relative;height:140px;background:${biz.bannerUrl ? `url(${biz.bannerUrl}) center/cover no-repeat` : 'linear-gradient(135deg,var(--ocean),var(--seafoam))'};flex-shrink:0;">
+        ${isPageOwner ? `<label title="Change banner" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.45);color:white;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;"><input type="file" accept="image/*" style="display:none" onchange="uploadBizBanner('${biz.id}',this)">📷 Banner</label>` : ''}
+      </div>
+      <!-- Logo overlapping banner -->
+      <div style="display:flex;align-items:flex-end;gap:18px;padding:0 24px 0;margin-top:-44px;position:relative;z-index:1;">
         <div style="position:relative;flex-shrink:0;">
-          <div class="biz-logo-circle" style="background:${bg};font-size:40px;width:88px;height:88px;">${icon}</div>
-          <div style="position:absolute;bottom:-3px;right:-3px;width:22px;height:22px;background:var(--ocean);border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:10px;color:white;font-weight:700;">✓</div>
+          <div class="biz-logo-circle" style="background:${biz.logoUrl ? 'white' : bg};font-size:40px;width:88px;height:88px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.15);overflow:hidden;">
+            ${biz.logoUrl ? `<img src="${biz.logoUrl}" style="width:100%;height:100%;object-fit:cover;">` : icon}
+          </div>
+          ${isPageOwner ? `<label title="Change logo" style="position:absolute;bottom:0;right:0;width:26px;height:26px;background:var(--ocean);border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;"><input type="file" accept="image/*" style="display:none" onchange="uploadBizLogo('${biz.id}',this)">📷</label>` : `<div style="position:absolute;bottom:-3px;right:-3px;width:22px;height:22px;background:${biz.claimed ? 'var(--ocean)' : '#F59E0B'};border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:10px;color:white;font-weight:700;">${biz.claimed ? '✓' : '!'}</div>`}
         </div>
-        <div style="flex:1;min-width:0;padding-top:4px;">
+        <div style="padding-bottom:12px;padding-top:48px;"></div>
+      </div>
+      <!-- Name + actions -->
+      <div style="display:flex;align-items:flex-start;gap:18px;padding:8px 24px 16px;">
+        <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
             <span style="font-size:22px;font-weight:800;color:var(--text-dark);">${escHtml(biz.name)}</span>
+            ${!biz.claimed ? '<span style="font-size:11px;font-weight:700;color:#92400E;background:#FEF3C7;border:1px solid #F59E0B;padding:2px 8px;border-radius:20px;">📋 Unclaimed</span>' : ''}
             <span style="font-size:14px;font-weight:600;color:var(--text-light);">${biz.recommendedBy}</span>
           </div>
           <div style="font-size:14px;color:var(--ocean);font-weight:500;margin-bottom:14px;">${escHtml(biz.category)}</div>
@@ -1756,23 +1770,20 @@ async function renderBusinessPage(bizId, container) {
               <button class="btn-biz-more" onclick="toggleBizMoreMenu('${biz.id}')">⋯</button>
               <div class="biz-more-dropdown" id="bizMoreMenu-${biz.id}" style="display:none;">
                 <div class="biz-more-item" onclick="showToast('${escHtml(biz.name)} muted.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔇</span><div><div class="biz-more-item-text">Mute</div><div class="biz-more-item-sub">Hide all posts from ${escHtml(biz.name)}</div></div></div>
-                <div class="biz-more-item" onclick="showToast('${escHtml(biz.name)} blocked.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🚫</span><div><div class="biz-more-item-text">Block</div><div class="biz-more-item-sub">Stop messages from ${escHtml(biz.name)}</div></div></div>
                 <div class="biz-more-item" onclick="openReportModal('business','${biz.id}','${escHtml(biz.name).replace(/'/g,"\\'")}');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">⚑</span><div><div class="biz-more-item-text">Report</div><div class="biz-more-item-sub">Flag for review</div></div></div>
-                <div class="biz-more-item" onclick="showToast('Link copied!');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔗</span><div><div class="biz-more-item-text">Share ${escHtml(biz.name)}</div><div class="biz-more-item-sub">Share on or off Costa Blanca Connect</div></div></div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-      <!-- Description in header — like Nextdoor -->
+      <!-- Description -->
       <div style="padding:0 24px 20px;font-size:14px;color:var(--text-mid);line-height:1.65;">${escHtml(biz.description)}</div>
-      <!-- Claim page banner -->
-      <div style="border-top:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;background:#fafcff;">
-        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);">
-          <span style="font-size:15px;">ℹ️</span> Is this your business?
+      <!-- Claim banner (only if unclaimed) -->
+      ${!biz.claimed ? `<div style="border-top:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;background:#FFFBEA;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#92400E;font-weight:600;">
+          📋 This business hasn't been claimed yet
         </div>
-        <button onclick="openClaimModal('${biz.id}','${escHtml(biz.name).replace(/'/g,"\\'")}')" style="font-size:13px;font-weight:700;color:var(--ocean);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit;">Claim this business →</button>
-      </div>
+        <button onclick="openClaimModal('${biz.id}','${escHtml(biz.name).replace(/'/g,"\\'")}')" style="font-size:13px;font-weight:700;color:var(--ocean);background:none;border:none;cursor:pointer;font-family:inherit;">Claim this business →</button>
+      </div>` : ''}
     </div>
 
     <!-- Two-column layout -->
@@ -1879,6 +1890,22 @@ async function renderBusinessPage(bizId, container) {
 
   container.innerHTML = '';
   container.appendChild(wrap);
+}
+
+async function uploadBizBanner(bizId, input) {
+  if (!input.files || !input.files[0]) return;
+  const fd = new FormData(); fd.append('banner', input.files[0]);
+  const res = await fetch(`/api/businesses/${bizId}/banner`, { method: 'POST', body: fd, credentials: 'include' });
+  if (res.ok) { await openBusinessPage(bizId); showToast('Banner updated!'); }
+  else showToast('Upload failed');
+}
+
+async function uploadBizLogo(bizId, input) {
+  if (!input.files || !input.files[0]) return;
+  const fd = new FormData(); fd.append('logo', input.files[0]);
+  const res = await fetch(`/api/businesses/${bizId}/logo`, { method: 'POST', body: fd, credentials: 'include' });
+  if (res.ok) { await openBusinessPage(bizId); showToast('Logo updated!'); }
+  else showToast('Upload failed');
 }
 
 function switchBizTab(tabName) {

@@ -1090,18 +1090,55 @@ function formatBusiness(b) {
     photos: b.photos||[], tags: b.tags||[], rating: parseFloat(b.rating)||0,
     reviewCount: b.review_count||0, recommendedBy: b.recommended_by||0,
     claimed: b.claimed, faveYears: b.fave_years||[], faveThreshold: b.fave_threshold||30,
+    bannerUrl: b.banner_url||null, logoUrl: b.logo_url||null,
+    addedByUserId: b.added_by_user_id||null, claimedByUserId: b.claimed_by_user_id||null,
   };
 }
+
+app.post('/api/businesses', requireAuth(async (req, res) => {
+  const { name, category, description, address, phone, hours, website } = req.body;
+  if (!name) return res.status(400).json({ error: 'Business name required' });
+  const [biz] = await sql`
+    INSERT INTO businesses (name, category, description, address, phone, hours, website, added_by_user_id, claimed)
+    VALUES (${name}, ${category||null}, ${description||''}, ${address||null}, ${phone||null}, ${hours||null}, ${website||null}, ${req.currentUser.id}, false)
+    RETURNING *
+  `;
+  res.json({ ok: true, business: formatBusiness(biz) });
+}));
 
 app.post('/api/admin/businesses', requireAdmin(async (req, res) => {
   const { name, category, description, address, phone, hours, website } = req.body;
   if (!name) return res.status(400).json({ error: 'Business name required' });
   const [biz] = await sql`
-    INSERT INTO businesses (name, category, description, address, phone, hours, website)
-    VALUES (${name}, ${category||null}, ${description||''}, ${address||null}, ${phone||null}, ${hours||null}, ${website||null})
+    INSERT INTO businesses (name, category, description, address, phone, hours, website, added_by_user_id, claimed)
+    VALUES (${name}, ${category||null}, ${description||''}, ${address||null}, ${phone||null}, ${hours||null}, ${website||null}, ${req.currentUser.id}, false)
     RETURNING *
   `;
   res.json({ ok: true, business: formatBusiness(biz) });
+}));
+
+app.post('/api/businesses/:id/banner', requireAuth(upload.single('banner'), async (req, res) => {
+  const [biz] = await sql`SELECT claimed_by_user_id, added_by_user_id FROM businesses WHERE id=${req.params.id}`;
+  if (!biz) return res.status(404).json({ error: 'Not found' });
+  const isOwner = biz.claimed_by_user_id === req.currentUser.id || biz.added_by_user_id === req.currentUser.id;
+  if (!isOwner && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  if (!req.file) return res.status(400).json({ error: 'No file' });
+  const b64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+  const url = await storeImage(b64, 'biz-banner');
+  await sql`UPDATE businesses SET banner_url=${url} WHERE id=${req.params.id}`;
+  res.json({ ok: true, bannerUrl: url });
+}));
+
+app.post('/api/businesses/:id/logo', requireAuth(upload.single('logo'), async (req, res) => {
+  const [biz] = await sql`SELECT claimed_by_user_id, added_by_user_id FROM businesses WHERE id=${req.params.id}`;
+  if (!biz) return res.status(404).json({ error: 'Not found' });
+  const isOwner = biz.claimed_by_user_id === req.currentUser.id || biz.added_by_user_id === req.currentUser.id;
+  if (!isOwner && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  if (!req.file) return res.status(400).json({ error: 'No file' });
+  const b64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+  const url = await storeImage(b64, 'biz-logo');
+  await sql`UPDATE businesses SET logo_url=${url} WHERE id=${req.params.id}`;
+  res.json({ ok: true, logoUrl: url });
 }));
 
 app.get('/api/businesses', async (req, res) => {
@@ -1838,6 +1875,9 @@ app.get('/reset-password',  (req, res) => res.sendFile(path.join(__dirname, 'pub
 async function runMigrations() {
   try {
     await sql`ALTER TABLE marketplace_items ADD COLUMN IF NOT EXISTS sold BOOLEAN DEFAULT FALSE`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS banner_url TEXT`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS logo_url TEXT`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS added_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL`;
   } catch (e) { console.error('Migration error:', e.message); }
 }
 
