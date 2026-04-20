@@ -1841,7 +1841,24 @@ async function renderGroupPage(groupId, container) {
         <div style="width:38px;height:38px;border-radius:50%;background:${currentUser?.avatar || '#0077B6'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${currentUser?.initials || '?'}</div>
         <div style="flex:1;">
           <textarea id="groupPostBox" placeholder="Write something to ${escHtml(group.name)}…"></textarea>
-          <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+          <div id="groupPollBuilder" style="display:none;margin-top:8px;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:10px;">
+            <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:8px;">Poll Question</div>
+            <input id="groupPollQuestion" type="text" placeholder="Ask a question…" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;margin-bottom:6px;box-sizing:border-box;" />
+            <div id="groupPollOptions">
+              <input class="group-poll-opt" type="text" placeholder="Option 1" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;margin-bottom:4px;box-sizing:border-box;" />
+              <input class="group-poll-opt" type="text" placeholder="Option 2" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;margin-bottom:4px;box-sizing:border-box;" />
+            </div>
+            <button onclick="addGroupPollOption()" style="font-size:12px;color:var(--ocean);background:none;border:none;cursor:pointer;font-weight:600;padding:0;">+ Add option</button>
+          </div>
+          <div id="groupImagePreview" style="display:none;margin-top:8px;"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+            <div style="display:flex;gap:8px;">
+              <label title="Add photo" style="cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;gap:4px;background:white;">
+                <input type="file" accept="image/*" style="display:none;" onchange="previewGroupPostImage(this)">
+                📷 Photo
+              </label>
+              <button onclick="toggleGroupPoll()" title="Create poll" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:600;color:var(--text-mid);background:white;cursor:pointer;font-family:inherit;">📊 Poll</button>
+            </div>
             <button onclick="submitGroupPost('${group.id}')" style="padding:9px 22px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Post</button>
           </div>
         </div>
@@ -1854,7 +1871,8 @@ async function renderGroupPage(groupId, container) {
       ${posts.length === 0
         ? `<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:40px;text-align:center;color:var(--text-light);font-size:14px;">No posts yet — be the first to share something!</div>`
         : posts.map(p => `
-          <div class="group-post-card">
+          <div class="group-post-card" id="gpost-${p.id}">
+            ${p.pinned ? `<div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--ocean);margin-bottom:8px;">📌 Pinned post</div>` : ''}
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
               <div style="display:flex;align-items:center;gap:10px;">
                 <div style="width:40px;height:40px;border-radius:50%;background:${p.author.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${escHtml(p.author.initials)}</div>
@@ -1863,9 +1881,30 @@ async function renderGroupPage(groupId, container) {
                   <div style="font-size:11.5px;color:var(--text-light);">${groupTimeAgo(p.createdAt)}</div>
                 </div>
               </div>
-              ${group.isAdmin ? `<button onclick="deleteGroupPost('${group.id}','${p.id}')" title="Delete post" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--coral);">🗑️</button>` : ''}
+              <div style="display:flex;gap:6px;">
+                ${group.isAdmin || group.isCreator ? `<button onclick="${p.pinned ? `unpinGroupPost('${group.id}','${p.id}')` : `pinGroupPost('${group.id}','${p.id}')`}" title="${p.pinned ? 'Unpin' : 'Pin to top'}" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;">${p.pinned ? '📌 Unpin' : '📌 Pin'}</button>` : ''}
+                ${group.isAdmin || group.isCreator ? `<button onclick="deleteGroupPost('${group.id}','${p.id}')" title="Delete" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--coral);">🗑️</button>` : ''}
+              </div>
             </div>
-            <div style="font-size:14px;color:var(--text-mid);line-height:1.65;">${escHtml(p.content)}</div>
+            ${p.content ? `<div style="font-size:14px;color:var(--text-mid);line-height:1.65;margin-bottom:${p.imageUrl||p.pollQuestion?'10px':'0'}">${escHtml(p.content)}</div>` : ''}
+            ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:100%;border-radius:10px;max-height:360px;object-fit:cover;margin-bottom:${p.pollQuestion?'10px':'0'}" />` : ''}
+            ${p.pollQuestion ? `
+              <div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:12px;">
+                <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:10px;">📊 ${escHtml(p.pollQuestion)}</div>
+                ${(p.pollOptions||[]).map((opt,i) => {
+                  const votes = Object.values(p.pollVotes||{});
+                  const count = votes.filter(v=>v===opt).length;
+                  const total = votes.length || 1;
+                  const pct = Math.round((count/total)*100);
+                  const myVote = p.pollVotes?.[currentUser?.id];
+                  return `<div style="margin-bottom:6px;">
+                    <button onclick="voteGroupPoll('${group.id}','${p.id}','${escHtml(opt)}')" style="width:100%;text-align:left;padding:8px 12px;border:1.5px solid ${myVote===opt?'var(--ocean)':'var(--border)'};border-radius:8px;background:${myVote===opt?'rgba(0,119,182,0.06)':'white'};cursor:pointer;font-family:inherit;font-size:13px;position:relative;overflow:hidden;">
+                      <div style="position:absolute;left:0;top:0;height:100%;width:${myVote?pct:0}%;background:rgba(0,119,182,0.08);border-radius:6px;"></div>
+                      <span style="position:relative;">${escHtml(opt)}${myVote?` <span style="color:var(--text-light);font-size:11px;">${pct}% (${count})</span>`:''}</span>
+                    </button>
+                  </div>`;
+                }).join('')}
+              </div>` : ''}
           </div>`).join('')}
     </div>
   `;
@@ -1874,20 +1913,81 @@ async function renderGroupPage(groupId, container) {
   container.appendChild(wrap);
 }
 
+let groupPostImageData = null;
+
+function previewGroupPostImage(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    groupPostImageData = e.target.result;
+    const prev = document.getElementById('groupImagePreview');
+    if (prev) { prev.style.display = 'block'; prev.innerHTML = `<img src="${groupPostImageData}" style="max-width:100%;border-radius:10px;max-height:200px;object-fit:cover;" />`; }
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function toggleGroupPoll() {
+  const el = document.getElementById('groupPollBuilder');
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function addGroupPollOption() {
+  const container = document.getElementById('groupPollOptions');
+  if (!container) return;
+  const count = container.querySelectorAll('.group-poll-opt').length + 1;
+  const inp = document.createElement('input');
+  inp.className = 'group-poll-opt';
+  inp.type = 'text';
+  inp.placeholder = `Option ${count}`;
+  inp.style.cssText = 'width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;margin-bottom:4px;box-sizing:border-box;';
+  container.appendChild(inp);
+}
+
 async function submitGroupPost(groupId) {
   const box = document.getElementById('groupPostBox');
   const content = box?.value.trim();
-  if (!content) return;
+  const pollQuestion = document.getElementById('groupPollQuestion')?.value.trim();
+  const pollOpts = [...document.querySelectorAll('.group-poll-opt')].map(i => i.value.trim()).filter(Boolean);
+  if (!content && !pollQuestion) { showToast('Write something first.'); return; }
+  if (pollQuestion && pollOpts.length < 2) { showToast('Add at least 2 poll options.'); return; }
+
+  const body = { content, image: groupPostImageData || undefined };
+  if (pollQuestion) { body.pollQuestion = pollQuestion; body.pollOptions = pollOpts; }
+
   const res = await fetch(`/api/groups/${groupId}/posts`, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content })
+    body: JSON.stringify(body)
   });
   if (res.ok) {
     box.value = '';
+    groupPostImageData = null;
+    const prev = document.getElementById('groupImagePreview');
+    if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
+    const pollBuilder = document.getElementById('groupPollBuilder');
+    if (pollBuilder) pollBuilder.style.display = 'none';
     await renderGroupPage(groupId, document.getElementById('sectionContent'));
     showToast('Posted to the group! 🎉');
   }
+}
+
+async function pinGroupPost(groupId, postId) {
+  const res = await fetch(`/api/groups/${groupId}/posts/${postId}/pin`, { method: 'POST', credentials: 'include' });
+  if (res.ok) { await renderGroupPage(groupId, document.getElementById('sectionContent')); showToast('Post pinned 📌'); }
+}
+
+async function unpinGroupPost(groupId, postId) {
+  const res = await fetch(`/api/groups/${groupId}/posts/${postId}/unpin`, { method: 'POST', credentials: 'include' });
+  if (res.ok) { await renderGroupPage(groupId, document.getElementById('sectionContent')); showToast('Post unpinned'); }
+}
+
+async function voteGroupPoll(groupId, postId, option) {
+  const res = await fetch(`/api/groups/${groupId}/posts/${postId}/poll-vote`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ option })
+  });
+  if (res.ok) await renderGroupPage(groupId, document.getElementById('sectionContent'));
 }
 
 async function deleteGroupPost(groupId, postId) {

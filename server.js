@@ -1477,7 +1477,7 @@ app.get('/api/groups/:id', async (req, res) => {
     const posts = await sql`
       SELECT gp.*, u.username, u.name, u.avatar_hex, u.initials
       FROM group_posts gp JOIN users u ON gp.author_id = u.id
-      WHERE gp.group_id=${g.id} ORDER BY gp.created_at DESC LIMIT 50
+      WHERE gp.group_id=${g.id} ORDER BY gp.pinned DESC, gp.created_at DESC LIMIT 50
     `;
 
     const isCreator = userId && g.created_by_user_id === userId;
@@ -1494,7 +1494,9 @@ app.get('/api/groups/:id', async (req, res) => {
     res.json({
       ...(await formatGroupRow({ ...g, created_by_user_id: g.created_by_user_id || g.created_by_user_id_val }, userId, isAdminUser)),
       posts: posts.map(p => ({
-        id: p.id, content: p.content, createdAt: p.created_at,
+        id: p.id, content: p.content, imageUrl: p.image_url, pinned: p.pinned,
+        pollQuestion: p.poll_question, pollOptions: p.poll_options, pollVotes: p.poll_votes,
+        createdAt: p.created_at,
         author: { id: p.author_id, username: p.username, name: p.name, avatar: p.avatar_hex, initials: p.initials },
       })),
       joinRequests,
@@ -1579,29 +1581,65 @@ app.post('/api/groups/:id/join-requests/:username/deny', requireAuth(async (req,
 }));
 
 app.post('/api/groups/:id/posts', requireAuth(async (req, res) => {
-  const { content } = req.body;
-  if (!content) return res.status(400).json({ error: 'Content required' });
-  const [g] = await sql`SELECT id FROM groups WHERE id=${req.params.id}`;
+  const { content, image, pollQuestion, pollOptions } = req.body;
+  if (!content && !pollQuestion) return res.status(400).json({ error: 'Content required' });
+  const [g] = await sql`SELECT id, name FROM groups WHERE id=${req.params.id}`;
   if (!g) return res.status(404).json({ error: 'Group not found' });
   const u = req.currentUser;
-  const [post] = await sql`INSERT INTO group_posts (group_id, author_id, content) VALUES (${g.id}, ${u.id}, ${content}) RETURNING *`;
+  const imageUrl = await storeImage(image, 'group');
+  const pollOpts = pollOptions && pollOptions.length >= 2 ? JSON.stringify(pollOptions) : null;
+  const pollVotes = pollOpts ? JSON.stringify({}) : null;
+  const [post] = await sql`
+    INSERT INTO group_posts (group_id, author_id, content, image_url, poll_question, poll_options, poll_votes)
+    VALUES (${g.id}, ${u.id}, ${content||''}, ${imageUrl}, ${pollQuestion||null}, ${pollOpts||null}::jsonb, ${pollVotes||null}::jsonb)
+    RETURNING *`;
   await sql`UPDATE groups SET last_activity_at=NOW() WHERE id=${g.id}`;
 
-  // Notify all group members except the poster
-  const [grp] = await sql`SELECT name FROM groups WHERE id=${g.id}`;
   const members = await sql`SELECT user_id FROM group_members WHERE group_id=${g.id} AND user_id != ${u.id}`;
   if (members.length) {
-    const msg = `${u.name} posted in ${grp?.name || 'your group'}: "${content.slice(0, 80)}${content.length > 80 ? '…' : ''}"`;
+    const msg = `${u.name} posted in ${g.name}: "${(content||pollQuestion||'').slice(0, 80)}…"`;
     await Promise.all(members.map(m =>
       sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
           VALUES (${m.user_id}, 'group_post', ${msg}, ${u.avatar_hex}, ${u.initials}, ${post.id})`
     ));
   }
 
-  res.json({ id: post.id, content: post.content, createdAt: post.created_at, author: { id: u.id, username: u.username, name: u.name, avatar: u.avatar_hex, initials: u.initials } });
+  res.json({ id: post.id, content: post.content, imageUrl: post.image_url, pollQuestion: post.poll_question, pollOptions: post.poll_options, pollVotes: post.poll_votes, pinned: post.pinned, createdAt: post.created_at, author: { id: u.id, username: u.username, name: u.name, avatar: u.avatar_hex, initials: u.initials } });
 }));
 
-app.delete('/api/groups/:id/posts/:postId', requireAdmin(async (req, res) => {
+app.post('/api/groups/:id/posts/:postId/pin', requireAuth(async (req, res) => {
+  const [g] = await sql`SELECT id, created_by_user_id FROM groups WHERE id=${req.params.id}`;
+  if (!g) return res.status(404).json({ error: 'Not found' });
+  const u = req.currentUser;
+  if (g.created_by_user_id !== u.id && u.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  await sql`UPDATE group_posts SET pinned=false WHERE group_id=${g.id}`;
+  const [post] = await sql`UPDATE group_posts SET pinned=true WHERE id=${req.params.postId} AND group_id=${g.id} RETURNING pinned`;
+  res.json({ ok: true, pinned: post?.pinned });
+}));
+
+app.post('/api/groups/:id/posts/:postId/unpin', requireAuth(async (req, res) => {
+  const [g] = await sql`SELECT id, created_by_user_id FROM groups WHERE id=${req.params.id}`;
+  if (!g) return res.status(404).json({ error: 'Not found' });
+  const u = req.currentUser;
+  if (g.created_by_user_id !== u.id && u.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  await sql`UPDATE group_posts SET pinned=false WHERE id=${req.params.postId} AND group_id=${g.id}`;
+  res.json({ ok: true });
+}));
+
+app.post('/api/groups/:id/posts/:postId/poll-vote', requireAuth(async (req, res) => {
+  const { option } = req.body;
+  const [post] = await sql`SELECT * FROM group_posts WHERE id=${req.params.postId}`;
+  if (!post || !post.poll_options) return res.status(400).json({ error: 'Not a poll' });
+  const votes = post.poll_votes || {};
+  votes[req.currentUser.id] = option;
+  await sql`UPDATE group_posts SET poll_votes=${JSON.stringify(votes)}::jsonb WHERE id=${req.params.postId}`;
+  res.json({ ok: true, votes });
+}));
+
+app.delete('/api/groups/:id/posts/:postId', requireAuth(async (req, res) => {
+  const [g] = await sql`SELECT id, created_by_user_id FROM groups WHERE id=${req.params.id}`;
+  const u = req.currentUser;
+  if (g?.created_by_user_id !== u.id && u.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
   await sql`DELETE FROM group_posts WHERE id=${req.params.postId} AND group_id=${req.params.id}`;
   res.json({ ok: true });
 }));
