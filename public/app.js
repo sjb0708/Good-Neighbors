@@ -567,11 +567,11 @@ async function renderProfile(container) {
       <div class="profile-bio">${user.bio || 'Love this neighborhood! Beach walks, farmer\'s market, and good vibes only.'}</div>
       <div class="profile-stats">
         <div class="profile-stat">
-          <div class="profile-stat-val">${user.posts || 23}</div>
+          <div class="profile-stat-val">${user.posts || 0}</div>
           <div class="profile-stat-lbl">Posts</div>
         </div>
         <div class="profile-stat">
-          <div class="profile-stat-val">${user.neighbors || 89}</div>
+          <div class="profile-stat-val">${user.neighbors || 0}</div>
           <div class="profile-stat-lbl">Neighbors</div>
         </div>
         <div class="profile-stat" title="${pointsLevelLabel(user.points)}">
