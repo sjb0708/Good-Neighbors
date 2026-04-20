@@ -752,8 +752,8 @@ app.post('/api/admin/pending/:id/approve', requireAdmin(async (req, res) => {
   if (!p) return res.status(404).json({ error: 'Not found' });
 
   const [newUser] = await sql`
-    INSERT INTO users (username, password_hash, role, name, full_name, address, bio, avatar_hex, initials, verified, points, years_in_neighborhood)
-    VALUES (${p.username}, ${p.password_hash}, ${p.role}, ${p.name}, ${p.full_name}, ${p.address}, ${p.bio||''}, ${p.avatar_hex}, ${p.initials}, true, 0, 0)
+    INSERT INTO users (username, email, password_hash, role, name, full_name, address, bio, avatar_hex, initials, verified, points, years_in_neighborhood)
+    VALUES (${p.username}, ${p.email||null}, ${p.password_hash}, ${p.role}, ${p.name}, ${p.full_name}, ${p.address}, ${p.bio||''}, ${p.avatar_hex}, ${p.initials}, true, 0, 0)
     RETURNING *
   `;
 
@@ -1347,6 +1347,31 @@ app.post('/api/admin/claims/:id/approve', requireAdmin(async (req, res) => {
   `;
   await sql`UPDATE businesses SET claimed=true, claimed_by_user_id=${newUser.id} WHERE id=${claim.business_id}`;
   await sql`UPDATE business_claims SET status='approved', reviewed_by_user_id=${req.currentUser.id}, reviewed_at=NOW(), generated_username=${username} WHERE id=${claim.id}`;
+
+  // Email credentials to business owner
+  const appUrl = process.env.APP_URL || 'https://costablancaconnect.vercel.app';
+  await sendEmail({
+    to: claim.email,
+    subject: `Welcome to Costa Blanca Connect — Your business login for ${claim.biz_name}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+        <div style="background:#0077B6;color:white;padding:24px;border-radius:10px 10px 0 0;">
+          <h2 style="margin:0;">🏘️ Costa Blanca Connect</h2>
+          <p style="margin:6px 0 0;opacity:0.85;">Your business has been approved!</p>
+        </div>
+        <div style="padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 10px 10px;">
+          <p>Hi ${claim.claimant_name},</p>
+          <p>Great news — <strong>${claim.biz_name}</strong> has been approved on Costa Blanca Connect. Here are your login credentials:</p>
+          <div style="background:#f4f8fb;border-radius:8px;padding:16px;margin:16px 0;">
+            <p style="margin:0 0 8px;"><strong>Username:</strong> ${username}</p>
+            <p style="margin:0;"><strong>Temporary Password:</strong> ${rawPassword}</p>
+          </div>
+          <p>Log in at <a href="${appUrl}">${appUrl}</a> and go to <strong>My Business</strong> to complete your profile, add photos, and post updates to the community.</p>
+          <p style="color:#888;font-size:12px;margin-top:24px;">Please change your password after your first login.</p>
+        </div>
+      </div>
+    `
+  });
 
   res.json({ ok: true, credentials: { username, password: rawPassword, businessName: claim.biz_name } });
 }));
