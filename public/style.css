@@ -1372,6 +1372,11 @@ body {
   color: var(--seafoam);
 }
 
+.market-price-badge.sold-badge {
+  background: #6b7280;
+  color: white;
+}
+
 .market-info { padding: 12px 14px 14px; }
 
 .market-title {

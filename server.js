@@ -26,9 +26,7 @@ const POINTS = {
   marketplace_list: 5, safety_post: 8
 };
 
-// ─── Email transporter (re-built from app_settings on demand) ────────────────
-let emailTransporter = null;
-
+// ─── Email (Gmail via nodemailer) ─────────────────────────────────────────────
 async function getEmailConfig() {
   const rows = await sql`SELECT key, value FROM app_settings WHERE key IN ('gmail_user','gmail_pass')`;
   const cfg  = {};
@@ -40,6 +38,15 @@ async function buildTransporter() {
   const cfg = await getEmailConfig();
   if (!cfg.gmail_user || !cfg.gmail_pass) return null;
   return nodemailer.createTransport({ service: 'gmail', auth: { user: cfg.gmail_user, pass: cfg.gmail_pass } });
+}
+
+async function sendEmail({ to, subject, html }) {
+  const transporter = await buildTransporter();
+  if (!transporter) { console.warn('Email not configured — skipped'); return; }
+  const cfg = await getEmailConfig();
+  try {
+    await transporter.sendMail({ from: `"Costa Blanca Connect" <${cfg.gmail_user}>`, to, subject, html });
+  } catch (err) { console.error('sendEmail failed:', err.message); }
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -362,19 +369,15 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
     const appUrl  = process.env.APP_URL || 'http://localhost:3000';
     const link    = `${appUrl}/reset-password?token=${token}`;
-    const transporter = await buildTransporter();
-    if (!transporter) return;
-
-    await transporter.sendMail({
-      from: `"Costa Blanca Connect" <${(await getEmailConfig()).gmail_user}>`,
+    await sendEmail({
       to: user.email,
       subject: 'Reset your Costa Blanca Connect password',
       html: `
         <div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
-          <h2 style="color:#1a3a5c;">Password Reset</h2>
+          <h2 style="color:#0077B6;">Password Reset</h2>
           <p>Hi ${user.name},</p>
           <p>We received a request to reset your password. Click the button below to set a new one. This link expires in 1 hour.</p>
-          <a href="${link}" style="display:inline-block;background:#1a3a5c;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:16px 0;">Reset Password</a>
+          <a href="${link}" style="display:inline-block;background:#0077B6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:16px 0;">Reset Password</a>
           <p>If you didn't request this, you can safely ignore this email.</p>
           <hr style="border:none;border-top:1px solid #eee;margin-top:24px;">
           <p style="color:#888;font-size:12px;">Costa Blanca Connect · Costa Blanca Villas, Farallón, Coclé, Panamá</p>
@@ -602,17 +605,13 @@ app.post('/api/admin/forward-to-decameron', requireAdmin(async (req, res) => {
   const { itemId, itemType, title, message, severity, author, createdAt } = req.body;
   const [decRow] = await sql`SELECT value FROM app_settings WHERE key='decameron_email'`;
   if (!decRow?.value) return res.status(400).json({ error: 'Decameron email not configured' });
-  const transporter = await buildTransporter();
-  if (!transporter) return res.status(400).json({ error: 'Email not configured' });
-  const cfg = await getEmailConfig();
   const sevColors = { low:'#16a34a', medium:'#d97706', high:'#ea580c', urgent:'#dc2626' };
   const sevLabels = { low:'Low', medium:'Medium', high:'High', urgent:'URGENT' };
   try {
-    await transporter.sendMail({
-      from: `"Costa Blanca Villas Admin" <${cfg.gmail_user}>`,
+    await sendEmail({
       to: decRow.value,
       subject: `[Safety Alert] ${title} — Costa Blanca Villas`,
-      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;"><div style="background:#1a3a5c;color:white;padding:20px;border-radius:8px 8px 0 0;"><h2 style="margin:0;">🏘️ Costa Blanca Villas — Safety Alert</h2></div><div style="background:#fff3cd;border-left:4px solid ${sevColors[severity]||'#d97706'};padding:14px 20px;"><strong>Severity:</strong> ${sevLabels[severity]||severity} · <strong>Reported by:</strong> ${author} · <strong>Time:</strong> ${new Date(createdAt).toLocaleString()}</div><div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;"><h3 style="color:#1a3a5c;margin-top:0;">${title}</h3><p style="white-space:pre-wrap;">${message}</p></div></div>`
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;"><div style="background:#0077B6;color:white;padding:20px;border-radius:8px 8px 0 0;"><h2 style="margin:0;">🏘️ Costa Blanca Villas — Safety Alert</h2></div><div style="background:#fff3cd;border-left:4px solid ${sevColors[severity]||'#d97706'};padding:14px 20px;"><strong>Severity:</strong> ${sevLabels[severity]||severity} · <strong>Reported by:</strong> ${author} · <strong>Time:</strong> ${new Date(createdAt).toLocaleString()}</div><div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;"><h3 style="color:#0077B6;margin-top:0;">${title}</h3><p style="white-space:pre-wrap;">${message}</p></div></div>`
     });
     if (itemId) {
       await sql`UPDATE posts   SET forwarded_to_decameron=true WHERE id=${itemId}`;
@@ -649,7 +648,6 @@ app.post('/api/admin/email-config', requireOwner(async (req, res) => {
   if (!gmailUser || !gmailAppPassword) return res.status(400).json({ error: 'Gmail address and App Password required' });
   await sql`INSERT INTO app_settings (key,value) VALUES ('gmail_user',${gmailUser}) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()`;
   await sql`INSERT INTO app_settings (key,value) VALUES ('gmail_pass',${gmailAppPassword}) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()`;
-  emailTransporter = await buildTransporter();
   res.json({ ok: true, configured: true });
 }));
 
@@ -685,21 +683,14 @@ app.post('/api/admin/security-alerts', requireAdmin(async (req, res) => {
   }
 
   if (emailHOA && contacts.length) {
-    const transporter = await buildTransporter();
-    if (!transporter) {
-      emailStatus = 'not_configured';
-    } else {
-      try {
-        const cfg = await getEmailConfig();
-        await transporter.sendMail({
-          from: `"Costa Blanca Villas Admin" <${cfg.gmail_user}>`,
-          to: sentTo.join(', '),
-          subject: `[${severity||'Alert'}] ${title} — Costa Blanca Villas`,
-          html: `<div style="font-family:sans-serif;max-width:600px;"><h2>${title}</h2><p>${message.replace(/\n/g,'<br>')}</p></div>`
-        });
-        emailStatus = 'sent';
-      } catch (err) { emailStatus = 'failed'; emailError = err.message; }
-    }
+    try {
+      await sendEmail({
+        to: sentTo,
+        subject: `[${severity||'Alert'}] ${title} — Costa Blanca Villas`,
+        html: `<div style="font-family:sans-serif;max-width:600px;"><h2 style="color:#0077B6;">${title}</h2><p>${message.replace(/\n/g,'<br>')}</p><hr style="border:none;border-top:1px solid #eee;"><p style="color:#888;font-size:12px;">Costa Blanca Connect · Costa Blanca Villas, Farallón, Coclé, Panamá</p></div>`
+      });
+      emailStatus = 'sent';
+    } catch (err) { emailStatus = 'failed'; emailError = err.message; }
   }
 
   const [alert] = await sql`
@@ -765,6 +756,16 @@ app.post('/api/admin/pending/:id/approve', requireAdmin(async (req, res) => {
     VALUES (${p.username}, ${p.password_hash}, ${p.role}, ${p.name}, ${p.full_name}, ${p.address}, ${p.bio||''}, ${p.avatar_hex}, ${p.initials}, true, 0, 0)
     RETURNING *
   `;
+
+  if (p.role === 'business' && p.business_name) {
+    const [biz] = await sql`
+      INSERT INTO businesses (name, category, description, claimed, claimed_by_user_id)
+      VALUES (${p.business_name}, ${p.business_category||null}, ${p.bio||''}, true, ${newUser.id})
+      RETURNING id
+    `;
+    await sql`UPDATE users SET business_id=${biz.id} WHERE id=${newUser.id}`;
+  }
+
   await sql`UPDATE pending_registrations SET status='approved', reviewed_by_user_id=${req.currentUser.id}, reviewed_at=NOW() WHERE id=${p.id}`;
   res.json({ ok: true, user: formatUser(newUser) });
 }));
@@ -1092,6 +1093,17 @@ function formatBusiness(b) {
   };
 }
 
+app.post('/api/admin/businesses', requireAdmin(async (req, res) => {
+  const { name, category, description, address, phone, hours, website } = req.body;
+  if (!name) return res.status(400).json({ error: 'Business name required' });
+  const [biz] = await sql`
+    INSERT INTO businesses (name, category, description, address, phone, hours, website)
+    VALUES (${name}, ${category||null}, ${description||''}, ${address||null}, ${phone||null}, ${hours||null}, ${website||null})
+    RETURNING *
+  `;
+  res.json({ ok: true, business: formatBusiness(biz) });
+}));
+
 app.get('/api/businesses', async (req, res) => {
   try {
     const user  = await getUser(req);
@@ -1318,7 +1330,7 @@ app.get('/api/marketplace', async (req, res) => {
     `;
     res.json(rows.map(r => ({
       id: r.id, title: r.title, price: parseFloat(r.price)||0, free: r.is_free,
-      condition: r.condition, category: r.category,
+      condition: r.condition, category: r.category, sold: r.sold || false,
       seller: { id: r.seller_id, username: r.username, name: r.seller_name, avatar: r.avatar_hex, initials: r.initials, verified: r.verified, address: r.address },
       description: r.description, image: r.image_url, color: r.color, createdAt: r.created_at,
     })));
@@ -1356,6 +1368,14 @@ app.delete('/api/marketplace/:id', requireAuth(async (req, res) => {
   if (!item) return res.status(404).json({ error: 'Not found' });
   if (item.seller_id !== req.currentUser.id && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
   await sql`DELETE FROM marketplace_items WHERE id=${req.params.id}`;
+  res.json({ ok: true });
+}));
+
+app.patch('/api/marketplace/:id/sold', requireAuth(async (req, res) => {
+  const [item] = await sql`SELECT seller_id FROM marketplace_items WHERE id=${req.params.id}`;
+  if (!item) return res.status(404).json({ error: 'Not found' });
+  if (item.seller_id !== req.currentUser.id && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  await sql`UPDATE marketplace_items SET sold=TRUE WHERE id=${req.params.id}`;
   res.json({ ok: true });
 }));
 
@@ -1815,7 +1835,16 @@ app.get('/reset-password',  (req, res) => res.sendFile(path.join(__dirname, 'pub
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
+async function runMigrations() {
+  try {
+    await sql`ALTER TABLE marketplace_items ADD COLUMN IF NOT EXISTS sold BOOLEAN DEFAULT FALSE`;
+  } catch (e) { console.error('Migration error:', e.message); }
+}
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Costa Blanca Connect running on http://localhost:${PORT}`));
+app.listen(PORT, async () => {
+  await runMigrations();
+  console.log(`Costa Blanca Connect running on http://localhost:${PORT}`);
+});
 
 module.exports = app;

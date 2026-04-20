@@ -343,26 +343,63 @@ async function renderFeed(container) {
 }
 
 // ─── Marketplace ────────────────────────────────────────────────
+let _marketFilter = 'All';
+
 async function renderMarketplace(container) {
   container.innerHTML = sectionHeaderHTML('marketplace');
 
+  const topRow = document.createElement('div');
+  topRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;';
   const listBtn = document.createElement('button');
   listBtn.onclick = openListItemModal;
-  listBtn.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 20px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:16px;';
+  listBtn.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 20px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;';
   listBtn.innerHTML = '+ List an Item';
-  container.appendChild(listBtn);
+  topRow.appendChild(listBtn);
+  container.appendChild(topRow);
 
-  let items = await fetchJSON('/api/marketplace');
-  if (!items || !items.length) {
-    container.innerHTML += emptyStateHTML('🛒', 'Nothing listed yet', 'Be the first to list something!');
-    container.appendChild(listBtn);
+  const allItems = await fetchJSON('/api/marketplace');
+  if (!allItems || !allItems.length) {
+    container.appendChild(document.createRange().createContextualFragment(emptyStateHTML('🛒', 'Nothing listed yet', 'Be the first to list something!')));
     return;
   }
+
+  const cats = ['All', ...new Set(allItems.map(i => i.category).filter(Boolean))];
+  const filterBar = document.createElement('div');
+  filterBar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;';
+  filterBar.id = 'marketFilterBar';
+
+  function applyFilter(cat) {
+    _marketFilter = cat;
+    filterBar.querySelectorAll('button').forEach(b => {
+      b.style.background = b.dataset.cat === cat ? 'var(--ocean)' : 'var(--surface)';
+      b.style.color = b.dataset.cat === cat ? 'white' : 'var(--text-dark)';
+      b.style.borderColor = b.dataset.cat === cat ? 'var(--ocean)' : 'var(--border)';
+    });
+    const filtered = cat === 'All' ? allItems : allItems.filter(i => i.category === cat);
+    grid.innerHTML = '';
+    if (!filtered.length) {
+      grid.innerHTML = `<p style="color:var(--text-mid);font-size:14px;grid-column:1/-1;">No items in this category.</p>`;
+    } else {
+      filtered.forEach(item => grid.appendChild(buildMarketCard(item)));
+    }
+    if (window.lucide) lucide.createIcons();
+  }
+
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.dataset.cat = cat;
+    btn.textContent = cat;
+    btn.style.cssText = `padding:6px 14px;border-radius:20px;border:1.5px solid;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;background:${cat === _marketFilter ? 'var(--ocean)' : 'var(--surface)'};color:${cat === _marketFilter ? 'white' : 'var(--text-dark)'};border-color:${cat === _marketFilter ? 'var(--ocean)' : 'var(--border)'};`;
+    btn.onclick = () => applyFilter(cat);
+    filterBar.appendChild(btn);
+  });
+  container.appendChild(filterBar);
+
   const grid = document.createElement('div');
   grid.className = 'marketplace-grid';
-  items.forEach(item => grid.appendChild(buildMarketCard(item)));
   container.appendChild(grid);
-  if (window.lucide) lucide.createIcons();
+
+  applyFilter(_marketFilter);
 }
 
 let marketImageData = null;
@@ -453,6 +490,7 @@ async function submitListItem() {
   if (res.ok) {
     document.getElementById('listItemModal')?.remove();
     marketImageData = null;
+    _marketFilter = 'All';
     await renderMarketplace(document.getElementById('sectionContent'));
     showToast('Item listed! 🛒');
   } else {
@@ -475,8 +513,7 @@ async function renderEvents(container) {
   let evts = await fetchJSON('/api/events');
   if (!evts) evts = await fetchJSON('/api/events');
   if (!evts || !evts.length) {
-    container.innerHTML += emptyStateHTML('📅', 'No events coming up', 'Create an event and invite the neighborhood!');
-    container.appendChild(btn);
+    container.insertAdjacentHTML('beforeend', emptyStateHTML('📅', 'No events coming up', 'Create an event and invite the neighborhood!'));
     return;
   }
   evts.forEach((ev, i) => {
@@ -570,8 +607,7 @@ async function renderSafety(container) {
   const unique = safetyPosts.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
 
   if (!unique.length) {
-    container.innerHTML += emptyStateHTML('🛡️', 'No safety alerts', 'Your neighborhood is safe!');
-    container.appendChild(btn);
+    container.insertAdjacentHTML('beforeend', emptyStateHTML('🛡️', 'No safety alerts', 'Your neighborhood is safe!'));
     return;
   }
   unique.forEach(post => container.appendChild(buildPostCard(post)));
@@ -585,11 +621,14 @@ async function renderBusinesses(container) {
   currentBizId = null;
   const topBar = document.createElement('div');
   topBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;';
-  topBar.innerHTML = `<div><h2 style="font-size:19px;font-weight:800;color:var(--text-dark);margin:0;">Business Directory</h2><p style="font-size:13px;color:var(--text-light);margin:2px 0 0;">Local restaurants and services near Farallón</p></div>`;
+  const addBtnHtml = currentUser?.role === 'admin'
+    ? `<button onclick="openAddBusinessModal()" style="padding:9px 18px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Business</button>`
+    : '';
+  topBar.innerHTML = `<div><h2 style="font-size:19px;font-weight:800;color:var(--text-dark);margin:0;">Business Directory</h2><p style="font-size:13px;color:var(--text-light);margin:2px 0 0;">Local restaurants and services near Farallón</p></div>${addBtnHtml}`;
   container.appendChild(topBar);
   const businesses = await fetchJSON('/api/businesses');
   if (!businesses || !businesses.length) {
-    container.innerHTML += emptyStateHTML('🏪', 'No businesses listed', 'Know a great local business? Recommend it!');
+    container.insertAdjacentHTML('beforeend', emptyStateHTML('🏪', 'No businesses listed', 'Know a great local business? Recommend it!'));
     return;
   }
   const list = document.createElement('div');
@@ -600,6 +639,62 @@ async function renderBusinesses(container) {
     list.appendChild(card);
   });
   container.appendChild(list);
+}
+
+function openAddBusinessModal() {
+  const existing = document.getElementById('addBizModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'addBizModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <h3 style="margin:0;font-size:17px;font-weight:800;">Add Business</h3>
+        <button onclick="document.getElementById('addBizModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      ${['NAME *:abName:text:e.g. Costa Coffee','CATEGORY:abCategory:text:e.g. Restaurant','ADDRESS:abAddress:text:Street address','PHONE:abPhone:text:+34 xxx xxx xxx','HOURS:abHours:text:Mon–Fri 9am–6pm','WEBSITE:abWebsite:url:https://...'].map(f => {
+        const [label, id, type, placeholder] = f.split(':');
+        return `<div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">${label}</label><input id="${id}" type="${type}" placeholder="${placeholder}" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/></div>`;
+      }).join('')}
+      <div style="margin-bottom:18px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">DESCRIPTION</label>
+        <textarea id="abDesc" placeholder="What does this business offer?" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:none;height:72px;box-sizing:border-box;"></textarea>
+      </div>
+      <button onclick="submitAddBusiness()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Add to Directory</button>
+      <div id="abErr" style="color:var(--coral);font-size:13px;margin-top:8px;display:none;"></div>
+    </div>
+  `;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+async function submitAddBusiness() {
+  const name = document.getElementById('abName')?.value.trim();
+  const errEl = document.getElementById('abErr');
+  if (!name) { errEl.textContent = 'Business name is required.'; errEl.style.display = 'block'; return; }
+  const res = await fetch('/api/admin/businesses', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name,
+      category: document.getElementById('abCategory')?.value.trim() || null,
+      address: document.getElementById('abAddress')?.value.trim() || null,
+      phone: document.getElementById('abPhone')?.value.trim() || null,
+      hours: document.getElementById('abHours')?.value.trim() || null,
+      website: document.getElementById('abWebsite')?.value.trim() || null,
+      description: document.getElementById('abDesc')?.value.trim() || '',
+    })
+  });
+  if (res.ok) {
+    document.getElementById('addBizModal').remove();
+    await renderBusinesses(document.getElementById('sectionContent'));
+    showToast('Business added to directory!');
+  } else {
+    const d = await res.json();
+    errEl.textContent = d.error || 'Something went wrong.';
+    errEl.style.display = 'block';
+  }
 }
 
 // ─── Neighbors ──────────────────────────────────────────────────
@@ -1233,6 +1328,7 @@ const categoryIcons = {
 function buildMarketCard(item) {
   const card = document.createElement('div');
   card.className = 'market-card';
+  if (item.sold) card.style.opacity = '0.65';
   const icon = categoryIcons[item.category] || categoryIcons.default;
 
   const gradients = {
@@ -1248,12 +1344,21 @@ function buildMarketCard(item) {
   };
 
   const bg = gradients[item.color] || 'linear-gradient(135deg,rgba(0,119,182,0.1),rgba(42,157,143,0.08))';
-  const priceDisplay = item.free || item.price === 0 ? 'FREE' : `$${item.price}`;
-  const priceClass = item.free || item.price === 0 ? 'free-badge' : 'paid-badge';
+  const priceDisplay = item.sold ? 'SOLD' : (item.free || item.price === 0 ? 'FREE' : `$${item.price}`);
+  const priceClass = item.sold ? 'sold-badge' : (item.free || item.price === 0 ? 'free-badge' : 'paid-badge');
 
   const imgContent = item.image
     ? `<img src="${item.image}" alt="${escHtml(item.title)}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;" onclick="openLightbox('${item.image}')">`
     : `<span style="font-size:52px">${icon}</span>`;
+
+  const isMine = currentUser && (currentUser.id === item.seller?.id || currentUser.role === 'admin');
+  const sellerData = encodeURIComponent(JSON.stringify({ id: item.seller?.id, username: item.seller?.username, name: item.seller?.name, avatar: item.seller?.avatar, initials: item.seller?.initials }));
+
+  const ownerButtons = isMine ? `
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      ${!item.sold ? `<button onclick="event.stopPropagation();markMarketSold('${item.id}')" style="flex:1;padding:7px 4px;background:#52B788;color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">✓ Mark Sold</button>` : ''}
+      <button onclick="event.stopPropagation();deleteMarketItem('${item.id}')" style="flex:1;padding:7px 4px;background:var(--coral);color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Delete</button>
+    </div>` : '';
 
   card.innerHTML = `
     <div class="market-img" style="${item.image ? '' : `background:${bg}`}">
@@ -1270,16 +1375,62 @@ function buildMarketCard(item) {
       </div>
       <div class="market-condition">${escHtml(item.condition || '')}</div>
       <div style="font-size:12px;color:var(--text-mid);margin-bottom:10px;line-height:1.4;">${escHtml(item.description || '')}</div>
-      <button class="btn-contact" onclick="event.stopPropagation();contactSeller('${item.seller?.name || 'Seller'}')">
-        Message Seller
-      </button>
+      ${!item.sold ? `<button class="btn-contact" onclick="event.stopPropagation();contactSeller(decodeURIComponent('${sellerData}'))">Message Seller</button>` : '<div style="font-size:12px;color:var(--text-mid);font-weight:700;text-align:center;">This item has been sold</div>'}
+      ${ownerButtons}
     </div>
   `;
   return card;
 }
 
-function contactSeller(name) {
-  showToast(`Message sent to ${name}! They'll respond soon 📬`);
+function contactSeller(encodedData) {
+  let seller;
+  try { seller = typeof encodedData === 'string' ? JSON.parse(encodedData) : encodedData; } catch(e) { seller = {}; }
+  const existing = document.getElementById('contactSellerModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'contactSellerModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:360px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h3 style="margin:0;font-size:17px;font-weight:800;">Seller Info</h3>
+        <button onclick="document.getElementById('contactSellerModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg);border-radius:12px;margin-bottom:14px;">
+        <div class="avatar-sm" style="background:${seller.avatar || '#0077B6'};width:44px;height:44px;font-size:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;flex-shrink:0;">${seller.initials || '??'}</div>
+        <div>
+          <div style="font-weight:800;font-size:15px;">${escHtml(seller.name || 'Neighbor')}</div>
+          ${seller.username ? `<div style="font-size:12px;color:var(--text-mid);">@${escHtml(seller.username)}</div>` : ''}
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--text-mid);margin:0 0 16px;line-height:1.5;">To contact this seller, look them up in the <strong>Neighbors</strong> section or find them around the community.</p>
+      <button onclick="document.getElementById('contactSellerModal').remove()" style="width:100%;padding:11px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Got it</button>
+    </div>
+  `;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+async function deleteMarketItem(id) {
+  if (!confirm('Delete this listing? This cannot be undone.')) return;
+  const res = await fetch(`/api/marketplace/${id}`, { method: 'DELETE', credentials: 'include' });
+  if (res.ok) {
+    _marketFilter = 'All';
+    await renderMarketplace(document.getElementById('sectionContent'));
+    showToast('Listing deleted.');
+  } else {
+    showToast('Could not delete listing.');
+  }
+}
+
+async function markMarketSold(id) {
+  const res = await fetch(`/api/marketplace/${id}/sold`, { method: 'PATCH', credentials: 'include' });
+  if (res.ok) {
+    await renderMarketplace(document.getElementById('sectionContent'));
+    showToast('Marked as sold!');
+  } else {
+    showToast('Could not update listing.');
+  }
 }
 
 // ─── Event Card ──────────────────────────────────────────────────
