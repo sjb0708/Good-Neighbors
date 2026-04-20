@@ -1757,6 +1757,18 @@ app.get('/api/hoa/posts', requireAuth(async (req, res) => {
   res.json(posts);
 }));
 
+app.post('/api/events', requireAuth(async (req, res) => {
+  const u = req.currentUser;
+  const { title, description, location, eventDate, eventTime, endTime, category } = req.body;
+  if (!title || !eventDate) return res.status(400).json({ error: 'Title and date required' });
+  const [ev] = await sql`
+    INSERT INTO events (title, description, host_id, location, event_date, event_time, end_time, category, is_hoa_event)
+    VALUES (${title}, ${description||''}, ${u.id}, ${location||'Costa Blanca Villas'}, ${eventDate}, ${eventTime||'TBD'}, ${endTime||''}, ${category||'Community'}, false)
+    RETURNING *
+  `;
+  res.json({ id: ev.id, title: ev.title, description: ev.description, host: formatUser(u), location: ev.location, date: ev.event_date, time: ev.event_time, endTime: ev.end_time, category: ev.category, isHoaEvent: false, rsvp: { going:0, maybe:0, cantGo:0 }, userRsvp: null, goingAvatars: [] });
+}));
+
 app.post('/api/hoa/events', requireAuth(async (req, res) => {
   const u = req.currentUser;
   if (u.role !== 'hoa') return res.status(403).json({ error: 'Not an HOA account' });

@@ -465,11 +465,18 @@ async function submitListItem() {
 // ─── Events ─────────────────────────────────────────────────────
 async function renderEvents(container) {
   container.innerHTML = sectionHeaderHTML('events');
+
+  const btn = document.createElement('button');
+  btn.onclick = openCreateEventModal;
+  btn.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 20px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:16px;';
+  btn.innerHTML = '+ Create Event';
+  container.appendChild(btn);
+
   let evts = await fetchJSON('/api/events');
-  // Retry once if first attempt fails
   if (!evts) evts = await fetchJSON('/api/events');
   if (!evts || !evts.length) {
     container.innerHTML += emptyStateHTML('📅', 'No events coming up', 'Create an event and invite the neighborhood!');
+    container.appendChild(btn);
     return;
   }
   evts.forEach((ev, i) => {
@@ -480,18 +487,91 @@ async function renderEvents(container) {
   if (window.lucide) lucide.createIcons();
 }
 
+function openCreateEventModal() {
+  const existing = document.getElementById('createEventModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'createEventModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <h3 style="margin:0;font-size:17px;font-weight:800;">Create Event</h3>
+        <button onclick="document.getElementById('createEventModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-light);">✕</button>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">EVENT TITLE *</label>
+        <input id="evTitle" type="text" placeholder="e.g. Beach Cleanup Day" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">DATE *</label>
+          <input id="evDate" type="date" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">TIME</label>
+          <input id="evTime" type="time" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" />
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">LOCATION</label>
+        <input id="evLocation" type="text" placeholder="e.g. Costa Blanca Beach" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" />
+      </div>
+      <div style="margin-bottom:18px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">DESCRIPTION</label>
+        <textarea id="evDesc" placeholder="Tell neighbors what this event is about…" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:none;height:80px;box-sizing:border-box;"></textarea>
+      </div>
+      <button onclick="submitCreateEvent()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Post Event</button>
+      <div id="evErr" style="color:var(--coral);font-size:13px;margin-top:8px;display:none;"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function submitCreateEvent() {
+  const title = document.getElementById('evTitle')?.value.trim();
+  const date = document.getElementById('evDate')?.value;
+  const time = document.getElementById('evTime')?.value;
+  const location = document.getElementById('evLocation')?.value.trim();
+  const description = document.getElementById('evDesc')?.value.trim();
+  const errEl = document.getElementById('evErr');
+  if (!title) { errEl.textContent = 'Please enter a title.'; errEl.style.display = 'block'; return; }
+  if (!date) { errEl.textContent = 'Please select a date.'; errEl.style.display = 'block'; return; }
+  const res = await fetch('/api/events', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, eventDate: date, eventTime: time, location, description })
+  });
+  if (res.ok) {
+    document.getElementById('createEventModal')?.remove();
+    await renderEvents(document.getElementById('sectionContent'));
+    showToast('Event created! 📅');
+  } else {
+    const d = await res.json();
+    errEl.textContent = d.error || 'Something went wrong.';
+    errEl.style.display = 'block';
+  }
+}
+
 // ─── Safety ─────────────────────────────────────────────────────
 async function renderSafety(container) {
   container.innerHTML = sectionHeaderHTML('safety');
+
+  const btn = document.createElement('button');
+  btn.onclick = () => { openCreatePost('safety'); };
+  btn.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 20px;background:#E63946;color:white;border:none;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:16px;';
+  btn.innerHTML = '🚨 Report Safety Alert';
+  container.appendChild(btn);
+
   const posts = await fetchJSON('/api/posts?section=safety');
   const allPosts = await fetchJSON('/api/posts?section=feed');
   const safetyPosts = [...(posts || []), ...(allPosts || []).filter(p => p.type === 'safety')];
-  // deduplicate
   const seen = new Set();
   const unique = safetyPosts.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
 
   if (!unique.length) {
     container.innerHTML += emptyStateHTML('🛡️', 'No safety alerts', 'Your neighborhood is safe!');
+    container.appendChild(btn);
     return;
   }
   unique.forEach(post => container.appendChild(buildPostCard(post)));
