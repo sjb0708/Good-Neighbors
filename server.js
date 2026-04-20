@@ -1554,6 +1554,18 @@ app.post('/api/groups/:id/posts', requireAuth(async (req, res) => {
   const u = req.currentUser;
   const [post] = await sql`INSERT INTO group_posts (group_id, author_id, content) VALUES (${g.id}, ${u.id}, ${content}) RETURNING *`;
   await sql`UPDATE groups SET last_activity_at=NOW() WHERE id=${g.id}`;
+
+  // Notify all group members except the poster
+  const [grp] = await sql`SELECT name FROM groups WHERE id=${g.id}`;
+  const members = await sql`SELECT user_id FROM group_members WHERE group_id=${g.id} AND user_id != ${u.id}`;
+  if (members.length) {
+    const msg = `${u.name} posted in ${grp?.name || 'your group'}: "${content.slice(0, 80)}${content.length > 80 ? '…' : ''}"`;
+    await Promise.all(members.map(m =>
+      sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
+          VALUES (${m.user_id}, 'group_post', ${msg}, ${u.avatar_hex}, ${u.initials}, ${post.id})`
+    ));
+  }
+
   res.json({ id: post.id, content: post.content, createdAt: post.created_at, author: { id: u.id, username: u.username, name: u.name, avatar: u.avatar_hex, initials: u.initials } });
 }));
 
