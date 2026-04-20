@@ -229,8 +229,15 @@ function renderUserUI() {
   if (!currentUser) return;
   // Topbar
   const topbarAvatar = document.getElementById('topbarAvatar');
-  if (topbarAvatar) topbarAvatar.style.background = currentUser.avatar;
-  setTextSafe('topbarInitials', currentUser.initials);
+  if (topbarAvatar) {
+    topbarAvatar.style.background = currentUser.role === 'admin' ? '#0077B6' : currentUser.avatar;
+    if (currentUser.role === 'admin') {
+      topbarAvatar.title = 'Admin';
+      topbarAvatar.style.outline = '2px solid #48CAE4';
+      topbarAvatar.style.outlineOffset = '2px';
+    }
+  }
+  setTextSafe('topbarInitials', currentUser.role === 'admin' ? '🛡' : currentUser.initials);
 
   // Dropdown
   const dropAvatar = document.getElementById('dropdownAvatar');
@@ -748,6 +755,7 @@ function buildPostCard(post) {
           <div class="post-author-info">
             <div class="post-author-name">
               ${escHtml(post.author?.name || 'Anonymous')}
+              ${post.author?.role === 'admin' ? '<span style="display:inline-flex;align-items:center;justify-content:center;background:#0077B6;color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:1px 5px;margin-left:4px;letter-spacing:0.3px;">ADMIN</span>' : ''}
               ${post.author?.verified ? '<span class="verified-check">✓</span>' : ''}
             </div>
             <div class="post-meta">

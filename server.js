@@ -79,6 +79,7 @@ function formatAuthor(row) {
     initials: row.author_initials || row.initials,
     verified: row.author_verified !== undefined ? row.author_verified : row.verified,
     address: row.author_address || row.address || undefined,
+    role: row.author_role || row.role || undefined,
   };
 }
 
@@ -138,6 +139,7 @@ async function fetchPostsWithMeta(whereSql, userId) {
       u.initials  AS author_initials,
       u.verified  AS author_verified,
       u.address   AS author_address,
+      u.role      AS author_role,
       rb.name     AS resolved_by_name
     FROM posts p
     JOIN users u ON p.author_id = u.id
