@@ -1493,6 +1493,11 @@ app.get('/api/groups/:id', async (req, res) => {
 
     res.json({
       ...(await formatGroupRow({ ...g, created_by_user_id: g.created_by_user_id || g.created_by_user_id_val }, userId, isAdminUser)),
+      memberList: (await sql`
+        SELECT u.id, u.username, u.name, u.avatar_hex, u.initials, u.avatar_url, gm.joined_at
+        FROM group_members gm JOIN users u ON gm.user_id = u.id
+        WHERE gm.group_id=${g.id} ORDER BY gm.joined_at ASC
+      `).map(m => ({ id: m.id, username: m.username, name: m.name, avatar: m.avatar_hex, avatarUrl: m.avatar_url, initials: m.initials, joinedAt: m.joined_at })),
       posts: posts.map(p => ({
         id: p.id, content: p.content, imageUrl: p.image_url, pinned: p.pinned,
         pollQuestion: p.poll_question, pollOptions: p.poll_options, pollVotes: p.poll_votes,
@@ -1577,6 +1582,17 @@ app.post('/api/groups/:id/join-requests/:username/deny', requireAuth(async (req,
   if (g.created_by_user_id !== u.id && u.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
   const [target] = await sql`SELECT id FROM users WHERE username=${req.params.username}`;
   if (target) await sql`UPDATE group_join_requests SET status='denied' WHERE group_id=${g.id} AND user_id=${target.id}`;
+  res.json({ ok: true });
+}));
+
+app.delete('/api/groups/:id/members/:username', requireAuth(async (req, res) => {
+  const [g] = await sql`SELECT id, created_by_user_id FROM groups WHERE id=${req.params.id}`;
+  if (!g) return res.status(404).json({ error: 'Not found' });
+  const u = req.currentUser;
+  if (g.created_by_user_id !== u.id && u.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  const [target] = await sql`SELECT id FROM users WHERE username=${req.params.username}`;
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  await sql`DELETE FROM group_members WHERE group_id=${g.id} AND user_id=${target.id}`;
   res.json({ ok: true });
 }));
 

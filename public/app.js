@@ -1836,6 +1836,25 @@ async function renderGroupPage(groupId, container) {
       </div>
     </div>` : ''}
 
+    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:12px;">👥 Members (${(group.memberList||[]).length})</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${(group.memberList||[]).map(m => `
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:34px;height:34px;border-radius:50%;background:${m.avatar};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;overflow:hidden;flex-shrink:0;">
+                ${m.avatarUrl ? `<img src="${m.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(m.initials)}
+              </div>
+              <div style="font-size:13px;font-weight:600;color:var(--text-dark);">${escHtml(m.name)}</div>
+            </div>
+            ${(group.isAdmin || group.isCreator) && m.username !== currentUser?.username ? `
+              <button onclick="removeGroupMember('${group.id}','${m.username}')" style="padding:4px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:11px;font-weight:600;color:var(--coral);cursor:pointer;font-family:inherit;">Remove</button>
+            ` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
     <div class="group-compose-box" id="groupComposeBox">
       <div style="display:flex;align-items:flex-start;gap:12px;">
         <div style="width:38px;height:38px;border-radius:50%;background:${currentUser?.avatar || '#0077B6'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${currentUser?.initials || '?'}</div>
@@ -1969,6 +1988,12 @@ async function submitGroupPost(groupId) {
     await renderGroupPage(groupId, document.getElementById('sectionContent'));
     showToast('Posted to the group! 🎉');
   }
+}
+
+async function removeGroupMember(groupId, username) {
+  if (!confirm(`Remove ${username} from this group?`)) return;
+  const res = await fetch(`/api/groups/${groupId}/members/${username}`, { method: 'DELETE', credentials: 'include' });
+  if (res.ok) { await renderGroupPage(groupId, document.getElementById('sectionContent')); showToast('Member removed.'); }
 }
 
 async function pinGroupPost(groupId, postId) {
