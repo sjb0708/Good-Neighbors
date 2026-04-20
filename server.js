@@ -1578,7 +1578,7 @@ app.post('/api/notifications/read', requireAuth(async (req, res) => {
 
 app.get('/api/neighbors', async (req, res) => {
   try {
-    const rows = await sql`SELECT id, username, name, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address FROM users ORDER BY created_at DESC`;
+    const rows = await sql`SELECT id, username, name, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address FROM users WHERE role IN ('neighbor','business','realtor') ORDER BY created_at DESC`;
     res.json(rows.map(u => ({ id: u.id, username: u.username, name: u.name, avatar: u.avatar_hex, avatarUrl: u.avatar_url, initials: u.initials, verified: u.verified, yearsInNeighborhood: u.years_in_neighborhood, address: u.address })));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
