@@ -1284,13 +1284,13 @@ body {
   padding: 0 16px;
   font-size: 14px;
   font-family: 'Inter', sans-serif;
-  color: var(--text-light);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
+  color: var(--text-dark);
+  cursor: text;
+  outline: none;
   transition: all 0.2s;
-  user-select: none;
 }
+.create-post-input::placeholder { color: var(--text-light); }
+.create-post-input:focus { border-color: var(--ocean); background: white; }
 
 .create-post-card:hover .create-post-input { border-color: var(--ocean); background: white; }
 

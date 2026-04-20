@@ -326,13 +326,18 @@ async function renderFeed(container) {
   container.innerHTML = sectionHeaderHTML('feed');
   const createCard = document.createElement('div');
   createCard.className = 'create-post-card';
-  createCard.onclick = openCreatePost;
   createCard.innerHTML = `
-    <div class="avatar-post" style="background:${currentUser?.avatar || '#0077B6'};width:40px;height:40px;overflow:hidden;">
+    <div class="avatar-post" style="background:${currentUser?.avatar || '#0077B6'};width:40px;height:40px;overflow:hidden;flex-shrink:0;">
       ${currentUser?.avatarUrl ? `<img src="${currentUser.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (currentUser?.initials || 'ME')}
     </div>
-    <div class="create-post-input">What's happening in Costa Blanca Villas?</div>
+    <input class="create-post-input" id="feedQuickInput" type="text" placeholder="What's happening in Costa Blanca Villas?" autocomplete="off" />
   `;
+  createCard.querySelector('#feedQuickInput').addEventListener('focus', () => {
+    const val = document.getElementById('feedQuickInput')?.value.trim();
+    openCreatePost(null, val);
+    document.getElementById('feedQuickInput').blur();
+    document.getElementById('feedQuickInput').value = '';
+  });
   container.appendChild(createCard);
 
   const posts = await fetchJSON('/api/posts?section=feed');
@@ -2172,9 +2177,13 @@ function buildNotifCard(notif) {
 }
 
 // ─── Create Post Modal ───────────────────────────────────────────
-function openCreatePost(type) {
+function openCreatePost(type, prefill) {
   if (type) selectPostType(type);
   openModal('createPostModal');
+  if (prefill) {
+    const ta = document.getElementById('postContent');
+    if (ta) { ta.value = prefill; ta.focus(); }
+  }
 }
 
 function selectPostType(type, btnEl) {
