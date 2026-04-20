@@ -2078,9 +2078,15 @@ function openCreateGroupModal() {
         </div>
       </div>
       <div style="margin-bottom:14px;">
-        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Cover Photo URL <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
-        <input id="cgCover" type="url" placeholder="https://..." style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;" />
-        <div style="font-size:11px;color:var(--text-light);margin-top:4px;">Paste any image URL — it will appear as the group's cover photo.</div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Cover Photo <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;height:88px;border:1.5px dashed var(--border);border-radius:13px;cursor:pointer;background:#f8fafc;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--ocean)'" onmouseout="this.style.borderColor='var(--border)'">
+          <input type="file" accept="image/*" style="display:none;" onchange="previewGroupCover(this)">
+          <div id="cgCoverPreview" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+            <span style="font-size:22px;">🖼️</span>
+            <span style="font-size:11px;color:var(--text-mid);font-weight:600;">Upload cover photo</span>
+          </div>
+        </label>
+        <div style="font-size:11px;color:var(--text-light);margin-top:4px;">Recommended: 1200 × 400px (wide banner)</div>
       </div>
       <button onclick="submitCreateGroup()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Create Group</button>
     </div>
@@ -2089,6 +2095,7 @@ function openCreateGroupModal() {
 }
 
 let cgPhotoDataUrl = null;
+let cgCoverDataUrl = null;
 
 function previewGroupPhoto(input) {
   if (!input.files || !input.files[0]) return;
@@ -2103,6 +2110,19 @@ function previewGroupPhoto(input) {
   reader.readAsDataURL(input.files[0]);
 }
 
+function previewGroupCover(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    cgCoverDataUrl = e.target.result;
+    const preview = document.getElementById('cgCoverPreview');
+    if (preview) {
+      preview.innerHTML = `<img src="${cgCoverDataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:11px;">`;
+    }
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
 async function submitCreateGroup() {
   const name = document.getElementById('cgName')?.value.trim();
   if (!name) { showToast('Please enter a group name.'); return; }
@@ -2111,9 +2131,10 @@ async function submitCreateGroup() {
     description: document.getElementById('cgDesc')?.value.trim(),
     icon: cgPhotoDataUrl || '👥',
     privacy: document.getElementById('cgPrivacy')?.value || 'public',
-    coverPhoto: document.getElementById('cgCover')?.value.trim() || ''
+    coverPhoto: cgCoverDataUrl || ''
   };
   cgPhotoDataUrl = null;
+  cgCoverDataUrl = null;
   const res = await fetch('/api/groups', {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
