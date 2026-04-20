@@ -280,10 +280,12 @@ app.get('/api/auth/me', requireAuth(async (req, res) => {
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { fullName, username, password, role, address, businessName, businessCategory, bio } = req.body;
+    const { fullName, email, username, password, role, businessName, businessCategory } = req.body;
 
-    if (!fullName || !username || !password || !role || !address)
+    if (!fullName || !email || !username || !password || !role)
       return res.status(400).json({ error: 'Missing required fields.' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
     if (!/^[a-z0-9_]{3,20}$/.test(username))
       return res.status(400).json({ error: 'Username must be 3–20 lowercase letters, numbers, or underscores.' });
     if (password.length < 6)
@@ -291,10 +293,10 @@ app.post('/api/auth/register', async (req, res) => {
     if (!['neighbor','business'].includes(role))
       return res.status(400).json({ error: 'Invalid account type.' });
 
-    const existing = await sql`SELECT id FROM users WHERE username = ${username} UNION SELECT id FROM pending_registrations WHERE username = ${username} LIMIT 1`;
-    if (existing.length) return res.status(409).json({ error: 'That username is already taken.' });
+    const existing = await sql`SELECT id FROM users WHERE username = ${username} OR email = ${email} UNION SELECT id FROM pending_registrations WHERE username = ${username} OR email = ${email} LIMIT 1`;
+    if (existing.length) return res.status(409).json({ error: 'That username or email is already registered.' });
 
-    const banned = await sql`SELECT id FROM banned_users WHERE (username = ${username} OR (address IS NOT NULL AND LOWER(address) = LOWER(${address}))) AND lifted_at IS NULL LIMIT 1`;
+    const banned = await sql`SELECT id FROM banned_users WHERE username = ${username} AND lifted_at IS NULL LIMIT 1`;
     if (banned.length) return res.status(403).json({ error: 'This account is not eligible to register.' });
 
     const initials     = fullName.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -303,15 +305,28 @@ app.post('/api/auth/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
     const displayName  = role === 'business' ? (businessName || fullName) : fullName;
 
+    if (role === 'neighbor') {
+      // Residents are auto-approved
+      await sql`
+        INSERT INTO users
+          (username, email, password_hash, role, name, full_name, avatar_hex, initials, status)
+        VALUES
+          (${username}, ${email}, ${passwordHash}, ${role}, ${displayName}, ${fullName},
+           ${avatarHex}, ${initials}, 'active')
+      `;
+      return res.json({ ok: true, role: 'neighbor' });
+    }
+
+    // Businesses go into the pending queue
     await sql`
       INSERT INTO pending_registrations
-        (username, password_hash, role, name, full_name, address, business_name, business_category, bio, avatar_hex, initials)
+        (username, email, password_hash, role, name, full_name, business_name, business_category, avatar_hex, initials)
       VALUES
-        (${username}, ${passwordHash}, ${role}, ${displayName}, ${fullName}, ${address},
-         ${businessName || null}, ${businessCategory || null}, ${bio || ''}, ${avatarHex}, ${initials})
+        (${username}, ${email}, ${passwordHash}, ${role}, ${displayName}, ${fullName},
+         ${businessName || null}, ${businessCategory || null}, ${avatarHex}, ${initials})
     `;
 
-    res.json({ ok: true, message: 'Application submitted! The HOA team will review and approve your account within 24 hours.' });
+    res.json({ ok: true, message: 'Application submitted! The Costa Blanca Connect team will review your account within 24 hours.' });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 

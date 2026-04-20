@@ -616,7 +616,7 @@
     // ── Sign Up State ──
     let suStep = 0;
     let suRole = null;
-    const suStepCount = 3;
+    const suStepCount = 2;
 
     const ROLE_OPTIONS = [
       { id: 'neighbor', icon: '🏡', name: 'Resident / Neighbor', desc: 'Owner or renter living in Costa Blanca Villas' },
@@ -667,71 +667,61 @@
               </div>
             `).join('')}
           </div>
-          <p style="font-size:11.5px;color:#a0aec0;margin-top:14px;line-height:1.5;">Realtor accounts are by invitation only. All applications are reviewed and approved by the community admin.</p>
+          <p style="font-size:11.5px;color:#a0aec0;margin-top:14px;line-height:1.5;">Business accounts are reviewed and approved by the community admin.</p>
         `;
       } else if (suStep === 1) {
-        const isBiz = suRole === 'business' || suRole === 'realtor';
-        document.getElementById('suTitle').textContent = suRole === 'business' ? 'Business Details' : suRole === 'realtor' ? 'Realtor Details' : 'Your Details';
-        document.getElementById('suSubtitle').textContent = 'Tell us about yourself';
-        next.textContent = 'Continue →';
+        const isBiz = suRole === 'business';
+        document.getElementById('suTitle').textContent = isBiz ? 'Business Sign Up' : 'Create Your Account';
+        document.getElementById('suSubtitle').textContent = 'Enter your details below';
+        next.textContent = 'Sign Up';
         body.innerHTML = `
           <div class="su-error" id="suErr"></div>
           ${isBiz ? `
           <div class="su-field">
-            <label>${suRole==='business'?'Business Name':'Agency / Company Name'} *</label>
-            <input id="bizName" type="text" placeholder="${suRole==='business'?'e.g. Amar By La Playa':'e.g. Uncover Panama Real Estate'}" />
+            <label>Business Name *</label>
+            <input id="bizName" type="text" placeholder="e.g. Amar By La Playa" />
           </div>
-          ${suRole==='business'?'<div class="su-field"><label>Category *</label><select id="bizCat"><option value="">Select a category…</option>'+BIZ_CATEGORIES.map(c=>'<option>'+c+'</option>').join('')+'</select></div>':''}
+          <div class="su-field"><label>Category *</label><select id="bizCat"><option value="">Select a category…</option>${BIZ_CATEGORIES.map(c=>'<option>'+c+'</option>').join('')}</select></div>
           <div class="su-field"><label>Your Full Name *</label><input id="fullName" type="text" placeholder="Your personal name" /></div>
           ` : `
-          <div class="su-field"><label>Full Name *</label><input id="fullName" type="text" placeholder="e.g. Mike Hart" /></div>
+          <div class="su-field"><label>Full Name *</label><input id="fullName" type="text" placeholder="e.g. Maria Torres" /></div>
           `}
           <div class="su-field">
-            <label>${isBiz?'Business Address *':'Villa / Unit Address *'}</label>
-            <input id="address" type="text" placeholder="${isBiz?'Street address or area':'e.g. Villa 94, Costa Blanca Villas'}" />
+            <label>Email Address *</label>
+            <input id="suEmail" type="email" placeholder="your@email.com" autocomplete="email" />
           </div>
-          <div class="su-field">
-            <label>Short Bio <span style="color:#a0aec0;font-weight:400">(optional)</span></label>
-            <textarea id="bio" placeholder="Tell the community a little about yourself…"></textarea>
-          </div>
-        `;
-      } else if (suStep === 2) {
-        document.getElementById('suTitle').textContent = 'Create Your Login';
-        document.getElementById('suSubtitle').textContent = 'Choose a username and password';
-        next.textContent = 'Submit Application';
-        body.innerHTML = `
-          <div class="su-error" id="suErr"></div>
           <div class="su-field">
             <label>Username *</label>
-            <input id="username" type="text" placeholder="e.g. mikeh94" autocomplete="off" />
+            <input id="suUsername" type="text" placeholder="e.g. mariatorres" autocomplete="off" />
             <div style="font-size:11px;color:#a0aec0;margin-top:4px;">3–20 characters, lowercase letters, numbers, underscores only</div>
           </div>
           <div class="su-field-row">
             <div class="su-field" style="margin-bottom:0">
               <label>Password *</label>
-              <input id="password" type="password" placeholder="Min. 6 characters" />
+              <input id="suPassword" type="password" placeholder="Min. 6 characters" />
             </div>
             <div class="su-field" style="margin-bottom:0">
               <label>Confirm Password *</label>
-              <input id="confirmPw" type="password" placeholder="Repeat password" />
+              <input id="suConfirmPw" type="password" placeholder="Repeat password" />
             </div>
           </div>
-          <div style="background:rgba(0,119,182,0.06);border-radius:10px;padding:14px;margin-top:16px;font-size:12.5px;color:#4a6378;line-height:1.6;">
-            <strong style="color:#0077B6;">What happens next?</strong><br>
-            Your application will be reviewed by the Costa Blanca Connect team. You'll be notified within 24 hours once your account is approved. By submitting, you agree to our Member Agreement and Privacy Policy.
-          </div>
+          <div style="font-size:11px;color:#a0aec0;margin-top:12px;line-height:1.5;">By signing up you agree to our <a href="#" onclick="closeLegal();openLegal('tos');return false;" style="color:#0077B6;">Member Agreement</a> and <a href="#" onclick="closeLegal();openLegal('privacy');return false;" style="color:#0077B6;">Privacy Policy</a>.</div>
         `;
-      } else if (suStep === 3) {
+      } else if (suStep === 2) {
         // Success
         document.getElementById('suSteps').style.display = 'none';
         footer.style.display = 'none';
         document.getElementById('suTitle').textContent = '';
         document.getElementById('suSubtitle').textContent = '';
+        const isBizSuccess = suRole === 'business';
         body.innerHTML = `
           <div class="su-success">
-            <div class="su-success-icon">🎉</div>
-            <h3>Application Submitted!</h3>
-            <p>Thanks for joining the waitlist. The Costa Blanca Connect team will review your application and get back to you within <strong>24 hours</strong>.<br><br>Once approved, you'll receive your login credentials and can sign in right here.</p>
+            <div class="su-success-icon">${isBizSuccess ? '⏳' : '🎉'}</div>
+            <h3>${isBizSuccess ? 'Application Submitted!' : 'Welcome Aboard!'}</h3>
+            <p>${isBizSuccess
+              ? 'Your business application is under review. The Costa Blanca Connect team will get back to you within <strong>24 hours</strong>.'
+              : 'Your account has been created. You can sign in now with your username and password.'
+            }</p>
             <button class="su-btn-next" style="margin-top:24px;width:100%" onclick="closeSignUp()">Got It</button>
           </div>
         `;
@@ -761,40 +751,33 @@
         if (!suRole) { alert('Please select an account type.'); return; }
         suStep++; renderSuStep();
       } else if (suStep === 1) {
-        const isBiz = suRole === 'business' || suRole === 'realtor';
+        const isBiz = suRole === 'business';
         const fullName = document.getElementById('fullName')?.value.trim();
-        const address = document.getElementById('address')?.value.trim();
+        const email = document.getElementById('suEmail')?.value.trim();
+        const username = document.getElementById('suUsername')?.value.trim();
+        const password = document.getElementById('suPassword')?.value;
+        const confirm = document.getElementById('suConfirmPw')?.value;
+
         if (!fullName) { showSuErr('Please enter your name.'); return; }
-        if (!address) { showSuErr('Please enter your address.'); return; }
-        if (isBiz && suRole === 'business') {
-          const biz = document.getElementById('bizName')?.value.trim();
-          const cat = document.getElementById('bizCat')?.value;
-          if (!biz) { showSuErr('Please enter your business name.'); return; }
-          if (!cat) { showSuErr('Please select a business category.'); return; }
-        }
-        if (isBiz && suRole === 'realtor') {
-          const biz = document.getElementById('bizName')?.value.trim();
-          if (!biz) { showSuErr('Please enter your agency name.'); return; }
-        }
-        suStep++; renderSuStep();
-      } else if (suStep === 2) {
-        const username = document.getElementById('username')?.value.trim();
-        const password = document.getElementById('password')?.value;
-        const confirm = document.getElementById('confirmPw')?.value;
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showSuErr('Please enter a valid email address.'); return; }
         if (!username) { showSuErr('Please choose a username.'); return; }
         if (!/^[a-z0-9_]{3,20}$/.test(username)) { showSuErr('Username must be 3–20 lowercase letters, numbers, or underscores.'); return; }
         if (!password || password.length < 6) { showSuErr('Password must be at least 6 characters.'); return; }
         if (password !== confirm) { showSuErr('Passwords do not match.'); return; }
 
-        const next = document.getElementById('suNext');
-        next.textContent = 'Submitting…'; next.disabled = true;
+        if (isBiz) {
+          const biz = document.getElementById('bizName')?.value.trim();
+          const cat = document.getElementById('bizCat')?.value;
+          if (!biz) { showSuErr('Please enter your business name.'); return; }
+          if (!cat) { showSuErr('Please select a business category.'); return; }
+        }
+
+        const nextBtn = document.getElementById('suNext');
+        nextBtn.textContent = 'Creating account…'; nextBtn.disabled = true;
 
         try {
           const payload = {
-            fullName: document.getElementById('fullName')?.value.trim(),
-            username, password, role: suRole,
-            address: document.getElementById('address')?.value.trim(),
-            bio: document.getElementById('bio')?.value.trim() || '',
+            fullName, email, username, password, role: suRole,
             businessName: document.getElementById('bizName')?.value.trim() || null,
             businessCategory: document.getElementById('bizCat')?.value || null,
           };
@@ -804,11 +787,11 @@
             body: JSON.stringify(payload)
           });
           const data = await res.json();
-          if (!res.ok) { showSuErr(data.error || 'Something went wrong.'); next.textContent = 'Submit Application'; next.disabled = false; return; }
+          if (!res.ok) { showSuErr(data.error || 'Something went wrong.'); nextBtn.textContent = 'Sign Up'; nextBtn.disabled = false; return; }
           suStep++; renderSuStep();
         } catch {
           showSuErr('Connection error. Please try again.');
-          next.textContent = 'Submit Application'; next.disabled = false;
+          nextBtn.textContent = 'Sign Up'; nextBtn.disabled = false;
         }
       }
     }

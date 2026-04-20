@@ -342,6 +342,7 @@ CREATE TABLE IF NOT EXISTS access_requests (
 CREATE TABLE IF NOT EXISTS pending_registrations (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username            VARCHAR(20) UNIQUE NOT NULL,
+  email               VARCHAR(255),
   password_hash       TEXT        NOT NULL,
   role                VARCHAR(20) NOT NULL,
   name                VARCHAR(255) NOT NULL,
