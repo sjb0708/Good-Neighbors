@@ -16,6 +16,15 @@ const COOKIE_SECRET = process.env.COOKIE_SECRET || 'gn-secret-2026';
 app.use(cookieParser(COOKIE_SECRET));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Run migrations before any API request is handled
+let _migrationsDone = false;
+let _migrationsPromise = null;
+app.use('/api', (req, res, next) => {
+  if (_migrationsDone) return next();
+  if (!_migrationsPromise) _migrationsPromise = runMigrations().then(() => { _migrationsDone = true; });
+  _migrationsPromise.then(next).catch(() => next());
+});
+
 const upload       = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5  * 1024 * 1024 } });
 const uploadBanner = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8  * 1024 * 1024 } });
 
@@ -2006,9 +2015,6 @@ async function runMigrations() {
     await sql`UPDATE businesses b SET rating = COALESCE((SELECT ROUND(AVG(r.rating)::numeric,1) FROM business_reviews r WHERE r.business_id=b.id), 0), review_count = (SELECT COUNT(*) FROM business_reviews r WHERE r.business_id=b.id)`;
   } catch (e) { console.error('Migration error:', e.message); }
 }
-
-// Run migrations at module load so they execute on Vercel serverless too
-runMigrations().catch(e => console.error('Startup migration failed:', e.message));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
