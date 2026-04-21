@@ -105,6 +105,13 @@ async function loadSidebarWidgets() {
   // Nav badges — server-driven unread counts
   refreshUnreadBadges();
 
+  // Community stats
+  const stats = await fetchJSON('/api/community-stats');
+  if (stats) setTextSafe('activeThisWeek', stats.activeThisWeek);
+
+  // Live weather
+  loadWeather();
+
   // Sidebar stats
   const nbCount = document.getElementById('sidebarNeighbors');
   if (nbCount) nbCount.textContent = (neighbors || []).length;
@@ -171,6 +178,24 @@ async function loadSidebarWidgets() {
     } else {
       nnEl.innerHTML = '<div style="font-size:12px;color:var(--text-light)">No neighbors yet.</div>';
     }
+  }
+}
+
+async function loadWeather() {
+  const el = document.getElementById('weatherWidget');
+  if (!el) return;
+  try {
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=8.38&longitude=-80.28&current=temperature_2m,weathercode&temperature_unit=fahrenheit&timezone=America%2FPanama');
+    const d = await r.json();
+    const temp = Math.round(d.current.temperature_2m);
+    const code = d.current.weathercode;
+    const icons = { 0:'☀️', 1:'🌤️', 2:'⛅', 3:'☁️', 45:'🌫️', 48:'🌫️', 51:'🌦️', 53:'🌦️', 55:'🌧️', 61:'🌧️', 63:'🌧️', 65:'🌧️', 80:'🌦️', 81:'🌧️', 82:'⛈️', 95:'⛈️' };
+    const descs = { 0:'Sunny', 1:'Mostly Sunny', 2:'Partly Cloudy', 3:'Cloudy', 45:'Foggy', 48:'Foggy', 51:'Light Drizzle', 53:'Drizzle', 55:'Heavy Drizzle', 61:'Light Rain', 63:'Rain', 65:'Heavy Rain', 80:'Showers', 81:'Rain Showers', 82:'Heavy Showers', 95:'Thunderstorm' };
+    const icon = icons[code] || '🌡️';
+    const desc = descs[code] || 'Farallón, Panama';
+    el.innerHTML = `<span class="weather-icon">${icon}</span><div><div class="weather-temp">${temp}°F</div><div class="weather-desc">${desc} · Farallón, Panama</div></div>`;
+  } catch {
+    el.innerHTML = `<span class="weather-icon">☀️</span><div><div class="weather-temp">—</div><div class="weather-desc">Farallón, Panama</div></div>`;
   }
 }
 
@@ -1811,14 +1836,14 @@ async function markMarketSold(id) {
 async function cancelEvent(id) {
   if (!confirm('Mark this event as CANCELLED?')) return;
   const res = await fetch(`/api/events/${id}/cancel`, { method: 'PATCH', credentials: 'include' });
-  if (res.ok) { showToast('Event marked as cancelled.'); navigate('events'); }
+  if (res.ok) { showToast('Event marked as cancelled.'); navigate('events'); loadSidebarWidgets(); }
   else showToast('Could not cancel event.');
 }
 
 async function deleteEvent(id) {
   if (!confirm('Permanently delete this event?')) return;
   const res = await fetch(`/api/events/${id}`, { method: 'DELETE', credentials: 'include' });
-  if (res.ok) { showToast('Event deleted.'); navigate('events'); }
+  if (res.ok) { showToast('Event deleted.'); navigate('events'); loadSidebarWidgets(); }
   else { const d = await res.json().catch(() => ({})); showToast('Error: ' + (d.error || res.status)); }
 }
 
