@@ -22,7 +22,7 @@ let _migrationsPromise = null;
 app.use('/api', (req, res, next) => {
   if (_migrationsDone) return next();
   if (!_migrationsPromise) _migrationsPromise = runMigrations().then(() => { _migrationsDone = true; });
-  _migrationsPromise.then(next).catch(() => next());
+  _migrationsPromise.then(() => next()).catch(() => next());
 });
 
 const upload       = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5  * 1024 * 1024 } });
