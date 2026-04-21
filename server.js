@@ -1934,6 +1934,8 @@ app.post('/api/events', requireAuth(async (req, res) => {
     const { title, description, location, eventDate, eventTime, endTime, category, image } = req.body;
     if (!title || !eventDate) return res.status(400).json({ error: 'Title and date required' });
     const imageUrl = await storeImage(image, 'events');
+    // Ensure image_url column exists before inserting
+    await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS image_url TEXT`;
     const [ev] = await sql`
       INSERT INTO events (title, description, host_id, location, event_date, event_time, end_time, category, is_hoa_event, image_url)
       VALUES (${title}, ${description||''}, ${u.id}, ${location||'Costa Blanca Villas'}, ${eventDate}, ${eventTime||'TBD'}, ${endTime||''}, ${category||'Community'}, false, ${imageUrl})
@@ -1942,7 +1944,7 @@ app.post('/api/events', requireAuth(async (req, res) => {
     res.json({ id: ev.id, title: ev.title, description: ev.description, host: formatUser(u), location: ev.location, date: ev.event_date, time: ev.event_time, endTime: ev.end_time, category: ev.category, isHoaEvent: false, image: ev.image_url || null, rsvp: { going:0, maybe:0, cantGo:0 }, userRsvp: null, goingAvatars: [] });
   } catch (err) {
     console.error('POST /api/events error:', err.message);
-    res.status(500).json({ error: 'Could not create event: ' + err.message });
+    res.status(500).json({ error: err.message });
   }
 }));
 
@@ -2025,5 +2027,12 @@ app.get('/api/admin/run-migrations', requireAdmin(async (req, res) => {
   await runMigrations();
   res.json({ ok: true, message: 'Migrations complete' });
 }));
+
+app.get('/api/debug/events-schema', async (req, res) => {
+  try {
+    const cols = await sql`SELECT column_name FROM information_schema.columns WHERE table_name='events' ORDER BY ordinal_position`;
+    res.json({ columns: cols.map(c => c.column_name) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 module.exports = app;
