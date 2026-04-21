@@ -980,7 +980,11 @@ app.post('/api/posts', requireAuth(async (req, res) => {
   res.json(fullPost[0] || post);
 }));
 
-app.delete('/api/posts/:id', requireAdmin(async (req, res) => {
+app.delete('/api/posts/:id', requireAuth(async (req, res) => {
+  const [post] = await sql`SELECT author_id FROM posts WHERE id=${req.params.id}`;
+  if (!post) return res.status(404).json({ error: 'Not found' });
+  if (post.author_id !== req.currentUser.id && req.currentUser.role !== 'admin')
+    return res.status(403).json({ error: 'Not authorized' });
   await sql`DELETE FROM posts WHERE id=${req.params.id}`;
   res.json({ ok: true });
 }));
@@ -1060,6 +1064,15 @@ app.get('/api/posts/:id/comments', async (req, res) => {
     })));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
+
+app.delete('/api/posts/:id/comments/:commentId', requireAuth(async (req, res) => {
+  const [comment] = await sql`SELECT author_id FROM comments WHERE id=${req.params.commentId}`;
+  if (!comment) return res.status(404).json({ error: 'Not found' });
+  if (comment.author_id !== req.currentUser.id && req.currentUser.role !== 'admin')
+    return res.status(403).json({ error: 'Not authorized' });
+  await sql`DELETE FROM comments WHERE id=${req.params.commentId}`;
+  res.json({ ok: true });
+}));
 
 app.post('/api/posts/:id/comments', requireAuth(async (req, res) => {
   const { content } = req.body;
@@ -1853,6 +1866,72 @@ app.get('/api/profile/:username', async (req, res) => {
     res.json(formatUser(u));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
+
+app.patch('/api/profile', requireAuth(async (req, res) => {
+  const { name, bio, address, yearsInNeighborhood } = req.body;
+  const u = req.currentUser;
+  await sql`UPDATE users SET
+    name = COALESCE(NULLIF(${name||''},''), name),
+    bio = COALESCE(NULLIF(${bio||''},''), bio),
+    address = COALESCE(NULLIF(${address||''},''), address),
+    years_in_neighborhood = COALESCE(NULLIF(${yearsInNeighborhood||''},'')::int, years_in_neighborhood)
+    WHERE id = ${u.id}`;
+  res.json({ ok: true });
+}));
+
+app.post('/api/neighbors/:username/wave', requireAuth(async (req, res) => {
+  const [target] = await sql`SELECT id, name FROM users WHERE username=${req.params.username}`;
+  if (!target) return res.status(404).json({ error: 'Not found' });
+  if (target.id === req.currentUser.id) return res.status(400).json({ error: 'Cannot wave at yourself' });
+  await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
+    VALUES (${target.id}, 'wave', ${`${req.currentUser.name} waved at you! 👋`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials})`;
+  res.json({ ok: true });
+}));
+
+// ─── Transport (persisted) ────────────────────────────────────────────────────
+app.get('/api/transport/carts', async (req, res) => {
+  await sql`CREATE TABLE IF NOT EXISTS transport_carts (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), owner_id UUID REFERENCES users(id) ON DELETE CASCADE, make_model TEXT NOT NULL, seats INTEGER DEFAULT 4, rate TEXT, phone TEXT, notes TEXT, available BOOLEAN DEFAULT TRUE, created_at TIMESTAMPTZ DEFAULT NOW())`;
+  const rows = await sql`SELECT c.*, u.name AS owner_name, u.username AS owner_username, u.avatar_hex, u.initials FROM transport_carts c JOIN users u ON c.owner_id=u.id ORDER BY c.created_at DESC`;
+  res.json(rows);
+});
+
+app.post('/api/transport/carts', requireAuth(async (req, res) => {
+  await sql`CREATE TABLE IF NOT EXISTS transport_carts (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), owner_id UUID REFERENCES users(id) ON DELETE CASCADE, make_model TEXT NOT NULL, seats INTEGER DEFAULT 4, rate TEXT, phone TEXT, notes TEXT, available BOOLEAN DEFAULT TRUE, created_at TIMESTAMPTZ DEFAULT NOW())`;
+  const { makeModel, seats, rate, phone, notes } = req.body;
+  if (!makeModel) return res.status(400).json({ error: 'Cart description required' });
+  const [cart] = await sql`INSERT INTO transport_carts (owner_id, make_model, seats, rate, phone, notes) VALUES (${req.currentUser.id}, ${makeModel}, ${parseInt(seats)||4}, ${rate||''}, ${phone||''}, ${notes||''}) RETURNING *`;
+  res.json(cart);
+}));
+
+app.delete('/api/transport/carts/:id', requireAuth(async (req, res) => {
+  const [cart] = await sql`SELECT owner_id FROM transport_carts WHERE id=${req.params.id}`;
+  if (!cart) return res.status(404).json({ error: 'Not found' });
+  if (cart.owner_id !== req.currentUser.id && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  await sql`DELETE FROM transport_carts WHERE id=${req.params.id}`;
+  res.json({ ok: true });
+}));
+
+app.get('/api/transport/fares', async (req, res) => {
+  await sql`CREATE TABLE IF NOT EXISTS transport_fares (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), author_id UUID REFERENCES users(id) ON DELETE CASCADE, from_place TEXT NOT NULL, to_place TEXT NOT NULL, fare TEXT NOT NULL, transport_type TEXT DEFAULT 'taxi', notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`;
+  const rows = await sql`SELECT f.*, u.name AS author_name, u.username, u.avatar_hex, u.initials FROM transport_fares f JOIN users u ON f.author_id=u.id ORDER BY f.created_at DESC LIMIT 50`;
+  res.json(rows);
+});
+
+app.post('/api/transport/fares', requireAuth(async (req, res) => {
+  await sql`CREATE TABLE IF NOT EXISTS transport_fares (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), author_id UUID REFERENCES users(id) ON DELETE CASCADE, from_place TEXT NOT NULL, to_place TEXT NOT NULL, fare TEXT NOT NULL, transport_type TEXT DEFAULT 'taxi', notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`;
+  const { fromPlace, toPlace, fare, transportType, notes } = req.body;
+  if (!fromPlace || !toPlace || !fare) return res.status(400).json({ error: 'From, to, and fare required' });
+  const [row] = await sql`INSERT INTO transport_fares (author_id, from_place, to_place, fare, transport_type, notes) VALUES (${req.currentUser.id}, ${fromPlace}, ${toPlace}, ${fare}, ${transportType||'taxi'}, ${notes||''}) RETURNING *`;
+  res.json(row);
+}));
+
+app.delete('/api/transport/fares/:id', requireAuth(async (req, res) => {
+  const [fare] = await sql`SELECT author_id FROM transport_fares WHERE id=${req.params.id}`;
+  if (!fare) return res.status(404).json({ error: 'Not found' });
+  if (fare.author_id !== req.currentUser.id && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  await sql`DELETE FROM transport_fares WHERE id=${req.params.id}`;
+  res.json({ ok: true });
+}));
 
 app.post('/api/profile/avatar', upload.single('avatar'), requireAuth(async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file' });

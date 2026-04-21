@@ -1227,7 +1227,8 @@ async function renderProfile(container) {
         <i data-lucide="map-pin" style="width:13px;height:13px;"></i>
         ${user.address || 'Costa Blanca Villas'} · Farallón, Panama
       </div>
-      <div class="profile-bio">${user.bio || 'Love this neighborhood! Beach walks, farmer\'s market, and good vibes only.'}</div>
+      <div class="profile-bio">${user.bio || 'Tap Edit Profile to add a bio.'}</div>
+      <button onclick="openEditProfile()" style="margin-top:10px;padding:8px 18px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✏️ Edit Profile</button>
       <div class="profile-stats">
         <div class="profile-stat">
           <div class="profile-stat-val">${user.posts || 0}</div>
@@ -1260,6 +1261,64 @@ async function renderProfile(container) {
 
   userPosts.forEach(p => container.appendChild(buildPostCard(p)));
   lucide.createIcons();
+}
+
+function openEditProfile() {
+  const u = currentUser;
+  document.getElementById('editProfileModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'editProfileModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <h3 style="margin:0;font-size:18px;font-weight:800;">Edit Profile</h3>
+        <button onclick="document.getElementById('editProfileModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Full Name</label>
+          <input id="epName" value="${escHtml(u.name||'')}" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Bio</label>
+          <textarea id="epBio" rows="3" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;">${escHtml(u.bio||'')}</textarea>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Address / Villa Number</label>
+          <input id="epAddress" value="${escHtml(u.address||'')}" placeholder="e.g. Villa 42" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Years in Neighborhood</label>
+          <input id="epYears" type="number" min="0" max="50" value="${u.yearsInNeighborhood||0}" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+        </div>
+        <div id="epErr" style="display:none;color:var(--coral);font-size:13px;"></div>
+        <button onclick="submitEditProfile()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Save Changes</button>
+      </div>
+    </div>
+  `;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+async function submitEditProfile() {
+  const name = document.getElementById('epName')?.value.trim();
+  const bio = document.getElementById('epBio')?.value.trim();
+  const address = document.getElementById('epAddress')?.value.trim();
+  const yearsInNeighborhood = document.getElementById('epYears')?.value;
+  const errEl = document.getElementById('epErr');
+  if (!name) { errEl.textContent = 'Name is required.'; errEl.style.display = 'block'; return; }
+  const res = await fetch('/api/profile', {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, bio, address, yearsInNeighborhood })
+  });
+  if (!res.ok) { errEl.textContent = 'Could not save. Try again.'; errEl.style.display = 'block'; return; }
+  document.getElementById('editProfileModal')?.remove();
+  const fresh = await fetchJSON('/api/auth/me');
+  if (fresh) { currentUser = fresh; renderUserUI(); }
+  navigate('profile');
+  showToast('Profile updated!');
 }
 
 // ─── Settings ────────────────────────────────────────────────────
@@ -1410,6 +1469,7 @@ function buildPostCard(post) {
   const card = document.createElement('div');
   card.className = `post-card${post.type === 'safety' ? ' safety-card' + resolvedClass : ''}`;
   card.dataset.postId = post.id;
+  card.id = `post-${post.id}`;
 
   const totalReactions = Object.values(post.reactions || {}).reduce((a, b) => a + b, 0);
   const topReactions = getTopReactions(post.reactions);
@@ -1496,6 +1556,7 @@ function buildPostCard(post) {
         </button>
         ${canResolve ? `<button onclick="resolveAlert('${post.id}')" style="margin-left:auto;padding:6px 14px;background:#2A9D8F;color:white;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">✅ Mark Resolved</button>` : ''}
         ${post.severity === 'resolved' && post.resolvedBy ? `<span style="margin-left:auto;font-size:11.5px;color:#2A9D8F;font-weight:600;">✅ Resolved by ${escHtml(post.resolvedBy)}</span>` : ''}
+        ${(currentUser && (post.author?.id === currentUser.id || currentUser.role === 'admin')) ? `<button onclick="deletePost('${post.id}')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-light);font-size:12px;padding:4px 8px;border-radius:6px;" title="Delete post">🗑</button>` : ''}
       </div>
     </div>
 
@@ -1641,7 +1702,7 @@ async function toggleComments(postId, triggerEl) {
 
     if (comments && comments.length) {
       comments.forEach(c => {
-        inner.appendChild(buildCommentEl(c));
+        inner.appendChild(buildCommentEl(c, postId));
       });
     } else {
       inner.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-light);font-size:13px;">No comments yet. Be the first!</div>';
@@ -1692,7 +1753,7 @@ async function submitComment(postId) {
     if (inner) {
       const noComment = inner.querySelector('div[style*="text-align:center"]');
       if (noComment) noComment.remove();
-      inner.insertBefore(buildCommentEl(comment), inner.lastChild);
+      inner.insertBefore(buildCommentEl(comment, postId), inner.lastChild);
       lucide.createIcons();
     }
     refreshPoints();
@@ -1702,9 +1763,11 @@ async function submitComment(postId) {
   }
 }
 
-function buildCommentEl(c) {
+function buildCommentEl(c, postId) {
   const div = document.createElement('div');
   div.className = 'comment-item';
+  div.id = `comment-${c.id}`;
+  const canDelete = currentUser && (c.author?.id === currentUser.id || currentUser.role === 'admin');
   div.innerHTML = `
     <div class="avatar-comment" style="background:${c.author?.avatar || '#0077B6'}">
       ${c.author?.initials || '??'}
@@ -1712,10 +1775,26 @@ function buildCommentEl(c) {
     <div class="comment-bubble">
       <div class="comment-author">${escHtml(c.author?.name || 'Anonymous')}</div>
       <div class="comment-text">${escHtml(c.content)}</div>
-      <div class="comment-time">${relativeTime(c.createdAt)}</div>
+      <div class="comment-time">${relativeTime(c.createdAt)}${canDelete ? ` · <span style="cursor:pointer;color:var(--text-light)" onclick="deleteComment('${postId}','${c.id}')">Delete</span>` : ''}</div>
     </div>
   `;
   return div;
+}
+
+async function deletePost(postId) {
+  if (!confirm('Delete this post?')) return;
+  const res = await fetch(`/api/posts/${postId}`, { method: 'DELETE', credentials: 'include' });
+  if (res.ok) {
+    document.getElementById(`post-${postId}`)?.remove();
+    showToast('Post deleted.');
+  } else showToast('Could not delete post.');
+}
+
+async function deleteComment(postId, commentId) {
+  if (!confirm('Delete this comment?')) return;
+  const res = await fetch(`/api/posts/${postId}/comments/${commentId}`, { method: 'DELETE', credentials: 'include' });
+  if (res.ok) { document.getElementById(`comment-${commentId}`)?.remove(); showToast('Comment deleted.'); }
+  else showToast('Could not delete comment.');
 }
 
 // ─── Marketplace Card ────────────────────────────────────────────
@@ -1803,8 +1882,9 @@ function contactSeller(encodedData) {
           ${seller.username ? `<div style="font-size:12px;color:var(--text-mid);">@${escHtml(seller.username)}</div>` : ''}
         </div>
       </div>
-      <p style="font-size:13px;color:var(--text-mid);margin:0 0 16px;line-height:1.5;">To contact this seller, look them up in the <strong>Neighbors</strong> section or find them around the community.</p>
-      <button onclick="document.getElementById('contactSellerModal').remove()" style="width:100%;padding:11px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Got it</button>
+      ${seller.phone ? `<a href="tel:${seller.phone}" style="display:flex;align-items:center;gap:8px;padding:11px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;margin-bottom:10px;text-decoration:none;color:#166534;font-weight:700;font-size:14px;">📞 Call ${seller.phone}</a>` : ''}
+      ${seller.username ? `<button onclick="document.getElementById('contactSellerModal').remove();navigate('neighbors')" style="width:100%;padding:11px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;">View in Neighbors</button>` : ''}
+      <button onclick="document.getElementById('contactSellerModal').remove()" style="width:100%;padding:11px;background:var(--bg);color:var(--text-mid);border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">Close</button>
     </div>
   `;
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
@@ -2470,15 +2550,17 @@ function buildNeighborCard(neighbor) {
     <div class="neighbor-years">
       ${yearsText} in Costa Blanca Villas
     </div>
-    <button class="btn-wave-neighbor" onclick="waveAtNeighbor('${escHtml(neighbor.name).replace(/'/g, "\\'")}')">
+    <button class="btn-wave-neighbor" onclick="waveAtNeighbor('${neighbor.username}','${escHtml(neighbor.name).replace(/'/g, "\\'")}')">
       👋 Say Hi!
     </button>
   `;
   return card;
 }
 
-function waveAtNeighbor(name) {
-  showToast(`You waved at ${name}! 👋`);
+async function waveAtNeighbor(username, name) {
+  const res = await fetch(`/api/neighbors/${username}/wave`, { method: 'POST', credentials: 'include' });
+  if (res.ok) showToast(`You waved at ${name}! 👋`);
+  else showToast('Could not send wave.');
 }
 
 // ─── Group Card ──────────────────────────────────────────────────
@@ -3586,14 +3668,12 @@ async function renderTransport(container) {
 
   `;
 
-  renderTransportPosts();
+  renderCartListings();
+  renderTransportFares();
   if (window.lucide) lucide.createIcons();
 }
 
-// ─── Golf Cart Listings ───────────────────────────────────────────
-const cartListings = [];
-const transportPosts = [];
-
+// ─── Golf Cart & Transport (DB-backed) ───────────────────────────
 function openCartListingForm() {
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;';
@@ -3603,71 +3683,65 @@ function openCartListingForm() {
       <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;color:#0d1b2a;">List Your Golf Cart</h3>
       <p style="font-size:13px;color:#4a6378;margin-bottom:18px;">Let neighbors rent your cart. You handle the arrangement directly.</p>
       <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
-        <div>
-          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Cart description</label>
-          <input id="cartDesc" type="text" placeholder="e.g. 4-seater, 2023, good condition" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
-        </div>
+        <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Cart description</label>
+          <input id="cartDesc" type="text" placeholder="e.g. 4-seater, 2023, good condition" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div>
-            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Rate</label>
-            <input id="cartRate" type="text" placeholder="e.g. $25/day" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
-          </div>
-          <div>
-            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Contact</label>
-            <input id="cartContact" type="text" placeholder="WhatsApp or villa #" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
-          </div>
+          <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Rate</label>
+            <input id="cartRate" type="text" placeholder="e.g. $25/day" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
+          <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Contact</label>
+            <input id="cartContact" type="text" placeholder="WhatsApp or villa #" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
         </div>
-        <div>
-          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Availability</label>
-          <input id="cartAvail" type="text" placeholder="e.g. Weekends only, or contact to check" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
-        </div>
+        <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Notes</label>
+          <input id="cartNotes" type="text" placeholder="e.g. Weekends only" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
       </div>
       <div style="display:flex;gap:10px;">
         <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:11px;background:#f0f3f7;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">Cancel</button>
         <button onclick="submitCartListing(this)" style="flex:1;padding:11px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">Post Listing</button>
       </div>
-    </div>
-  `;
+    </div>`;
   document.body.appendChild(overlay);
 }
 
-function submitCartListing(btn) {
-  const desc = document.getElementById('cartDesc').value.trim();
-  const rate = document.getElementById('cartRate').value.trim();
-  const contact = document.getElementById('cartContact').value.trim();
-  const avail = document.getElementById('cartAvail').value.trim();
-  if (!desc || !contact) { showToast('Description and contact required'); return; }
-  cartListings.unshift({
-    id: 'cart' + Date.now(),
-    desc, rate, contact, avail,
-    postedBy: currentUser?.name || 'A neighbor',
-    avatar: currentUser?.avatar || '#0077B6',
-    initials: currentUser?.initials || '??',
-    postedAt: new Date().toISOString()
-  });
+async function submitCartListing(btn) {
+  const makeModel = document.getElementById('cartDesc')?.value.trim();
+  const rate = document.getElementById('cartRate')?.value.trim();
+  const phone = document.getElementById('cartContact')?.value.trim();
+  const notes = document.getElementById('cartNotes')?.value.trim();
+  if (!makeModel) { showToast('Cart description required'); return; }
+  btn.disabled = true;
+  const res = await fetch('/api/transport/carts', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ makeModel, rate, phone, notes }) });
   btn.closest('[style*=fixed]').remove();
-  renderCartListings();
-  showToast('Cart listing posted!');
+  if (res.ok) { await renderCartListings(); showToast('Cart listed!'); }
+  else showToast('Could not post listing.');
 }
 
-function renderCartListings() {
+async function renderCartListings() {
   const el = document.getElementById('cartListings');
   if (!el) return;
-  if (!cartListings.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:13.5px;">No carts listed yet — be the first to post yours!</div>'; return; }
-  el.innerHTML = cartListings.map(c => `
+  const carts = await fetchJSON('/api/transport/carts') || [];
+  if (!carts.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:13.5px;">No carts listed yet — be the first!</div>'; return; }
+  el.innerHTML = carts.map(c => `
     <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid var(--border);">
-      <div style="width:38px;height:38px;border-radius:10px;background:${c.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${c.initials}</div>
+      <div style="width:38px;height:38px;border-radius:10px;background:${c.avatar_hex||'#0077B6'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${c.initials||'?'}</div>
       <div style="flex:1;min-width:0;">
-        <div style="font-size:14px;font-weight:700;color:var(--text-dark);">🛺 ${escHtml(c.desc)}</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text-dark);">🛺 ${escHtml(c.make_model)}</div>
         <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap;">
           ${c.rate ? `<span style="font-size:12.5px;color:#16a34a;font-weight:700;">💵 ${escHtml(c.rate)}</span>` : ''}
-          ${c.avail ? `<span style="font-size:12.5px;color:var(--text-mid);">📅 ${escHtml(c.avail)}</span>` : ''}
+          ${c.notes ? `<span style="font-size:12.5px;color:var(--text-mid);">📝 ${escHtml(c.notes)}</span>` : ''}
         </div>
-        <div style="font-size:12.5px;color:var(--text-mid);margin-top:4px;">Posted by ${escHtml(c.postedBy)} · ${timeAgo(new Date(c.postedAt))}</div>
+        <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Posted by ${escHtml(c.owner_name)} · ${relativeTime(c.created_at)}</div>
       </div>
-      <a href="tel:${encodeURIComponent(c.contact)}" style="padding:8px 12px;background:var(--ocean);color:white;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;">📞 Contact</a>
-    </div>
-  `).join('');
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
+        ${c.phone ? `<a href="tel:${escHtml(c.phone)}" style="padding:7px 12px;background:var(--ocean);color:white;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;">📞 Contact</a>` : ''}
+        ${currentUser && (c.owner_id === currentUser.id || currentUser.role === 'admin') ? `<button onclick="deleteCart('${c.id}')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-light);">🗑 Remove</button>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+async function deleteCart(id) {
+  if (!confirm('Remove this listing?')) return;
+  const res = await fetch(`/api/transport/carts/${id}`, { method:'DELETE', credentials:'include' });
+  if (res.ok) { await renderCartListings(); showToast('Listing removed.'); }
 }
 
 function openTransportPost() {
@@ -3679,93 +3753,66 @@ function openTransportPost() {
       <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;color:#0d1b2a;">Post a Fare</h3>
       <p style="font-size:13px;color:#4a6378;margin-bottom:18px;">Share what you paid so neighbors know what to expect.</p>
       <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
-        <div>
-          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Transport type</label>
+        <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Transport type</label>
           <select id="tpType" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;">
-            <option value="Taxi">🚕 Taxi</option>
-            <option value="Bus">🚌 Bus</option>
-            <option value="Private Driver">🚗 Private Driver</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Route / destination</label>
-          <select id="tpRoute" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;">
-            <option value="To PTY (Tocumen)">✈️ To PTY — Tocumen International</option>
-            <option value="To RIH (Río Hato)">🛩️ To RIH — Río Hato Airport</option>
-            <option value="To Panama City">🌆 To Panama City</option>
-            <option value="To Albrook Bus Terminal">🚌 To Albrook Bus Terminal</option>
-            <option value="To Penonome">🛣️ To Penonomé</option>
-            <option value="Local / within Farallón">📍 Local / within Farallón</option>
-            <option value="Other">📝 Other (add in notes)</option>
-          </select>
-        </div>
+            <option value="Taxi">🚕 Taxi</option><option value="Bus">🚌 Bus</option><option value="Private Driver">🚗 Private Driver</option>
+          </select></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div>
-            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Cost</label>
-            <input id="tpCost" type="text" placeholder="e.g. $65" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
-          </div>
-          <div>
-            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Passengers</label>
-            <input id="tpPax" type="text" placeholder="e.g. 2 people" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
-          </div>
+          <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">From</label>
+            <input id="tpFrom" type="text" placeholder="e.g. Costa Blanca" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
+          <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">To</label>
+            <input id="tpTo" type="text" placeholder="e.g. PTY Airport" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
         </div>
-        <div>
-          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Notes (optional)</label>
-          <input id="tpNotes" type="text" placeholder="e.g. driver contact, took ~2.5 hrs, luggage included" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
-        </div>
+        <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Cost</label>
+          <input id="tpCost" type="text" placeholder="e.g. $65" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
+        <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Notes (optional)</label>
+          <input id="tpNotes" type="text" placeholder="e.g. driver contact, took ~2.5 hrs" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
       </div>
       <div style="display:flex;gap:10px;">
         <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:11px;background:#f0f3f7;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">Cancel</button>
         <button onclick="submitTransportPost(this)" style="flex:1;padding:11px;background:#f57c00;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">Post Fare</button>
       </div>
-    </div>
-  `;
+    </div>`;
   document.body.appendChild(overlay);
 }
 
-function submitTransportPost(btn) {
-  const type  = document.getElementById('tpType').value;
-  const route = document.getElementById('tpRoute').value;
-  const cost  = document.getElementById('tpCost').value.trim();
-  const pax   = document.getElementById('tpPax').value.trim();
-  const notes = document.getElementById('tpNotes').value.trim();
-  if (!cost) { showToast('Add a cost so neighbors know what to expect'); return; }
-  transportPosts.unshift({
-    id: 'tp' + Date.now(),
-    type, route, cost, pax, notes,
-    postedBy: currentUser?.name || 'A neighbor',
-    avatar: currentUser?.avatar || '#f57c00',
-    initials: currentUser?.initials || '??',
-    postedAt: new Date().toISOString()
-  });
+async function submitTransportPost(btn) {
+  const fromPlace = document.getElementById('tpFrom')?.value.trim();
+  const toPlace = document.getElementById('tpTo')?.value.trim();
+  const fare = document.getElementById('tpCost')?.value.trim();
+  const transportType = document.getElementById('tpType')?.value;
+  const notes = document.getElementById('tpNotes')?.value.trim();
+  if (!fromPlace || !toPlace || !fare) { showToast('From, to, and cost are required'); return; }
+  btn.disabled = true;
+  const res = await fetch('/api/transport/fares', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ fromPlace, toPlace, fare, transportType, notes }) });
   btn.closest('[style*=fixed]').remove();
-  renderTransportPosts();
-  showToast('Fare posted — thanks!');
+  if (res.ok) { await renderTransportFares(); showToast('Fare posted — thanks!'); }
+  else showToast('Could not post fare.');
 }
 
 const typeEmoji = { 'Taxi': '🚕', 'Bus': '🚌', 'Private Driver': '🚗' };
 
-function renderTransportPosts() {
+async function renderTransportFares() {
   const el = document.getElementById('transportPosts');
   if (!el) return;
-  if (!transportPosts.length) {
-    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:13.5px;">No fares posted yet — share what you paid!</div>';
-    return;
-  }
-  el.innerHTML = transportPosts.map(p => `
+  const fares = await fetchJSON('/api/transport/fares') || [];
+  if (!fares.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:13.5px;">No fares posted yet — share what you paid!</div>'; return; }
+  el.innerHTML = fares.map(p => `
     <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid var(--border);">
-      <div style="width:38px;height:38px;border-radius:10px;background:${p.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${p.initials}</div>
+      <div style="width:38px;height:38px;border-radius:10px;background:${p.avatar_hex||'#f57c00'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${p.initials||'?'}</div>
       <div style="flex:1;min-width:0;">
-        <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${typeEmoji[p.type] || '🚗'} ${escHtml(p.type)} — ${escHtml(p.route)}</div>
-        <div style="display:flex;gap:12px;margin-top:5px;flex-wrap:wrap;align-items:center;">
-          <span style="font-size:13.5px;color:#16a34a;font-weight:800;">💵 ${escHtml(p.cost)}</span>
-          ${p.pax ? `<span style="font-size:12.5px;color:var(--text-mid);">👥 ${escHtml(p.pax)}</span>` : ''}
-        </div>
-        ${p.notes ? `<div style="font-size:12.5px;color:var(--text-mid);margin-top:4px;">💬 ${escHtml(p.notes)}</div>` : ''}
-        <div style="font-size:11.5px;color:var(--text-light);margin-top:4px;">Posted by ${escHtml(p.postedBy)} · ${timeAgo(new Date(p.postedAt))}</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${typeEmoji[p.transport_type]||'🚗'} ${escHtml(p.from_place)} → ${escHtml(p.to_place)}</div>
+        <div style="margin-top:4px;"><span style="font-size:13.5px;color:#16a34a;font-weight:800;">💵 ${escHtml(p.fare)}</span></div>
+        ${p.notes ? `<div style="font-size:12.5px;color:var(--text-mid);margin-top:3px;">💬 ${escHtml(p.notes)}</div>` : ''}
+        <div style="font-size:11.5px;color:var(--text-light);margin-top:4px;">Posted by ${escHtml(p.author_name)} · ${relativeTime(p.created_at)}${currentUser && (p.author_id === currentUser.id || currentUser.role === 'admin') ? ` · <span style="cursor:pointer" onclick="deleteFare('${p.id}')">🗑 Remove</span>` : ''}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
+}
+
+async function deleteFare(id) {
+  if (!confirm('Remove this fare?')) return;
+  const res = await fetch(`/api/transport/fares/${id}`, { method:'DELETE', credentials:'include' });
+  if (res.ok) { await renderTransportFares(); showToast('Removed.'); }
 }
 
 // ─── Section Headers ─────────────────────────────────────────────
