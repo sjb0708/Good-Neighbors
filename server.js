@@ -2007,10 +2007,17 @@ async function runMigrations() {
   } catch (e) { console.error('Migration error:', e.message); }
 }
 
+// Run migrations at module load so they execute on Vercel serverless too
+runMigrations().catch(e => console.error('Startup migration failed:', e.message));
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-  await runMigrations();
+app.listen(PORT, () => {
   console.log(`Costa Blanca Connect running on http://localhost:${PORT}`);
 });
+
+app.get('/api/admin/run-migrations', requireAdmin(async (req, res) => {
+  await runMigrations();
+  res.json({ ok: true, message: 'Migrations complete' });
+}));
 
 module.exports = app;
