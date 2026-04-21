@@ -1103,7 +1103,7 @@ app.get('/api/events', async (req, res) => {
       id: e.id, title: e.title, description: e.description,
       host: { id: e.host_id, username: e.host_username, name: e.host_name, avatar: e.host_avatar, initials: e.host_initials, verified: e.host_verified },
       location: e.location, date: e.event_date, time: e.event_time, endTime: e.end_time,
-      category: e.category, isHoaEvent: e.is_hoa_event, image: e.image_url || null,
+      category: e.category, isHoaEvent: e.is_hoa_event, image: e.image_url || null, cancelled: e.cancelled || false,
       rsvp: { going: e.going_count, maybe: e.maybe_count, cantGo: e.cant_go_count },
       userRsvp: userRsvps[e.id] ? (userRsvps[e.id] === 'cant_go' ? 'cantGo' : userRsvps[e.id]) : null,
       goingAvatars: [],
@@ -1940,6 +1940,29 @@ app.post('/api/events', requireAuth(async (req, res) => {
   }
 }));
 
+app.patch('/api/events/:id/cancel', requireAuth(async (req, res) => {
+  const [ev] = await sql`SELECT host_id FROM events WHERE id=${req.params.id}`;
+  if (!ev) return res.status(404).json({ error: 'Not found' });
+  if (ev.host_id !== req.currentUser.id && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled BOOLEAN DEFAULT FALSE`;
+  await sql`UPDATE events SET cancelled=TRUE WHERE id=${req.params.id}`;
+  res.json({ ok: true });
+}));
+
+app.delete('/api/events/:id', requireAuth(async (req, res) => {
+  try {
+    const [ev] = await sql`SELECT host_id FROM events WHERE id=${req.params.id}`;
+    if (!ev) return res.status(404).json({ error: 'Not found' });
+    if (ev.host_id !== req.currentUser.id && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+    await sql`DELETE FROM event_rsvps WHERE event_id=${req.params.id}`;
+    await sql`DELETE FROM events WHERE id=${req.params.id}`;
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('DELETE /api/events error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+}));
+
 app.post('/api/hoa/events', requireAuth(async (req, res) => {
   const u = req.currentUser;
   if (u.role !== 'hoa') return res.status(403).json({ error: 'Not an HOA account' });
@@ -2007,8 +2030,45 @@ async function runMigrations() {
     await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS rating DECIMAL(2,1) DEFAULT 0`;
     await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS review_count INTEGER DEFAULT 0`;
     await sql`UPDATE businesses b SET rating = COALESCE((SELECT ROUND(AVG(r.rating)::numeric,1) FROM business_reviews r WHERE r.business_id=b.id), 0), review_count = (SELECT COUNT(*) FROM business_reviews r WHERE r.business_id=b.id)`;
+    await sql`CREATE TABLE IF NOT EXISTS user_section_reads (
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      section VARCHAR(50) NOT NULL,
+      last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, section)
+    )`;
   } catch (e) { console.error('Migration error:', e.message); }
 }
+
+// ─── Unread Counts ───────────────────────────────────────────────────────────
+app.get('/api/unread', requireAuth(async (req, res) => {
+  await sql`CREATE TABLE IF NOT EXISTS user_section_reads (user_id UUID REFERENCES users(id) ON DELETE CASCADE, section VARCHAR(50) NOT NULL, last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (user_id, section))`;
+  const userId = req.currentUser.id;
+  const sections = ['feed', 'safety', 'marketplace', 'events'];
+  const reads = await sql`SELECT section, last_seen_at FROM user_section_reads WHERE user_id = ${userId}`;
+  const readMap = Object.fromEntries(reads.map(r => [r.section, r.last_seen_at]));
+  // Initialize missing sections to NOW() so new users start at 0
+  for (const s of sections) {
+    if (!readMap[s]) {
+      await sql`INSERT INTO user_section_reads (user_id, section, last_seen_at) VALUES (${userId}, ${s}, NOW()) ON CONFLICT DO NOTHING`;
+      readMap[s] = new Date();
+    }
+  }
+  const [feed, safety, marketplace, events] = await Promise.all([
+    sql`SELECT COUNT(*)::int AS c FROM posts WHERE section='feed' AND (type IS NULL OR type != 'safety') AND created_at > ${readMap.feed} AND author_id != ${userId}`,
+    sql`SELECT COUNT(*)::int AS c FROM posts WHERE (section='safety' OR type='safety') AND COALESCE(severity,'medium') != 'resolved' AND created_at > ${readMap.safety} AND author_id != ${userId}`,
+    sql`SELECT COUNT(*)::int AS c FROM marketplace_items WHERE created_at > ${readMap.marketplace} AND seller_id != ${userId}`,
+    sql`SELECT COUNT(*)::int AS c FROM events WHERE created_at > ${readMap.events} AND host_id != ${userId} AND event_date >= CURRENT_DATE`,
+  ]);
+  res.json({ feed: feed[0].c, safety: safety[0].c, marketplace: marketplace[0].c, events: events[0].c });
+}));
+
+app.post('/api/sections/:section/read', requireAuth(async (req, res) => {
+  const allowed = ['feed', 'safety', 'marketplace', 'events', 'groups', 'realestate'];
+  const section = req.params.section;
+  if (!allowed.includes(section)) return res.status(400).json({ error: 'Unknown section' });
+  await sql`INSERT INTO user_section_reads (user_id, section, last_seen_at) VALUES (${req.currentUser.id}, ${section}, NOW()) ON CONFLICT (user_id, section) DO UPDATE SET last_seen_at = NOW()`;
+  res.json({ ok: true });
+}));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

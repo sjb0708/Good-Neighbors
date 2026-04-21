@@ -1447,6 +1447,16 @@ body {
   border-color: rgba(108,99,255,0.2);
 }
 
+.event-card.event-cancelled {
+  opacity: 0.7;
+  border-color: #dc354540;
+}
+
+.event-date-badge.cancelled .event-date-inner {
+  background: linear-gradient(135deg, #6c757d, #adb5bd);
+  box-shadow: none;
+}
+
 .event-date-badge {
   flex-shrink: 0;
   width: 56px;

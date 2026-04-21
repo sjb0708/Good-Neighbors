@@ -97,26 +97,13 @@ async function loadWhatsHappening() {
 }
 
 async function loadSidebarWidgets() {
-  const [events, neighbors, feedPosts, marketplaceItems, safetyPosts, realEstateListings] = await Promise.all([
+  const [events, neighbors] = await Promise.all([
     fetchJSON('/api/events'),
     fetchJSON('/api/neighbors'),
-    fetchJSON('/api/posts?section=feed'),
-    fetchJSON('/api/marketplace'),
-    fetchJSON('/api/posts?section=safety'),
-    fetchJSON('/api/realestate'),
   ]);
 
-  // Nav badges — only show if count > 0
-  function setBadge(id, count) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (count > 0) { el.textContent = count; el.style.display = ''; }
-    else el.style.display = 'none';
-  }
-  setBadge('badgeMarketplace', (marketplaceItems || []).length);
-  setBadge('badgeEvents', (events || []).filter(e => new Date(e.date || e.eventDate) >= new Date()).length);
-  setBadge('badgeSafety', (safetyPosts || []).filter(p => p.severity !== 'resolved').length);
-  setBadge('badgeRealestate', (realEstateListings || []).length);
+  // Nav badges — server-driven unread counts
+  refreshUnreadBadges();
 
   // Sidebar stats
   const nbCount = document.getElementById('sidebarNeighbors');
@@ -126,10 +113,10 @@ async function loadSidebarWidgets() {
   const nextEventEl = document.getElementById('nextEventCard');
   if (nextEventEl) {
     const upcoming = (events || [])
-      .filter(e => new Date(e.date || e.eventDate) >= new Date())
-      .sort((a, b) => new Date(a.date || a.eventDate) - new Date(b.date || b.eventDate))[0];
+      .filter(e => { const ds = (e.date || e.eventDate || '').substring(0,10); return ds && new Date(ds + 'T12:00:00') >= new Date(); })
+      .sort((a, b) => new Date((a.date||a.eventDate||'').substring(0,10)+'T12:00:00') - new Date((b.date||b.eventDate||'').substring(0,10)+'T12:00:00'))[0];
     if (upcoming) {
-      const d = new Date(upcoming.date || upcoming.eventDate);
+      const d = new Date((upcoming.date || upcoming.eventDate || '').substring(0,10) + 'T12:00:00');
       const month = d.toLocaleString('en', { month: 'short' }).toUpperCase();
       const day   = d.getDate();
       const going = upcoming.rsvpCounts?.going || 0;
@@ -149,7 +136,8 @@ async function loadSidebarWidgets() {
   // Trending Topics — most-reacted posts
   const trendingEl = document.getElementById('trendingTopicsList');
   if (trendingEl) {
-    const posts = (feedPosts || [])
+    const trendPosts = await fetchJSON('/api/posts?section=feed') || [];
+    const posts = trendPosts
       .filter(p => p.type !== 'sponsored')
       .map(p => ({ p, total: Object.values(p.reactions || {}).reduce((a, b) => a + b, 0) + (p.commentCount || 0) }))
       .sort((a, b) => b.total - a.total)
@@ -282,9 +270,35 @@ function pointsLevelLabel(pts) {
   return 'Newcomer';
 }
 
+// ─── Unread badge helpers ────────────────────────────────────────
+function setBadge(id, count) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (count > 0) { el.textContent = count; el.style.display = ''; }
+  else el.style.display = 'none';
+}
+
+async function refreshUnreadBadges() {
+  if (!currentUser) return;
+  const counts = await fetchJSON('/api/unread');
+  if (!counts) return;
+  setBadge('badgeFeed', counts.feed);
+  setBadge('badgeSafety', counts.safety);
+  setBadge('badgeMarketplace', counts.marketplace);
+  setBadge('badgeEvents', counts.events);
+}
+
+const TRACKED_SECTIONS = ['feed', 'safety', 'marketplace', 'events', 'groups', 'realestate'];
+
 // ─── Navigation ─────────────────────────────────────────────────
 function navigate(section) {
   currentSection = section;
+
+  // Mark section as read and clear its badge
+  if (currentUser && TRACKED_SECTIONS.includes(section)) {
+    fetch(`/api/sections/${section}/read`, { method: 'POST', credentials: 'include' });
+    setBadge('badge' + section.charAt(0).toUpperCase() + section.slice(1), 0);
+  }
 
   // Update nav active state (sidebar + mobile bottom nav)
   document.querySelectorAll('.nav-item, .mbn-item').forEach(el => {
@@ -1794,25 +1808,52 @@ async function markMarketSold(id) {
   }
 }
 
+async function cancelEvent(id) {
+  if (!confirm('Mark this event as CANCELLED?')) return;
+  const res = await fetch(`/api/events/${id}/cancel`, { method: 'PATCH', credentials: 'include' });
+  if (res.ok) { showToast('Event marked as cancelled.'); navigate('events'); }
+  else showToast('Could not cancel event.');
+}
+
+async function deleteEvent(id) {
+  if (!confirm('Permanently delete this event?')) return;
+  const res = await fetch(`/api/events/${id}`, { method: 'DELETE', credentials: 'include' });
+  if (res.ok) { showToast('Event deleted.'); navigate('events'); }
+  else { const d = await res.json().catch(() => ({})); showToast('Error: ' + (d.error || res.status)); }
+}
+
 // ─── Event Card ──────────────────────────────────────────────────
 function buildEventCard(ev) {
   const card = document.createElement('div');
-  card.className = 'event-card';
-  const dateObj = new Date(ev.date + 'T12:00:00');
+  card.className = 'event-card' + (ev.cancelled ? ' event-cancelled' : '');
+  const dateObj = new Date((ev.date || '').substring(0, 10) + 'T12:00:00');
   const month = dateObj.toLocaleString('en-US', { month: 'short' }).toUpperCase();
   const day = dateObj.getDate();
   const totalGoing = ev.rsvp?.going || 0;
+  const isOwner = currentUser && ev.host?.id === currentUser.id;
+  const isAdmin = currentUser?.role === 'admin';
 
   card.innerHTML = `
-    <div class="event-date-badge">
+    <div class="event-date-badge${ev.cancelled ? ' cancelled' : ''}">
       <div class="event-date-inner">
         <div class="event-month">${month}</div>
         <div class="event-day">${day}</div>
       </div>
     </div>
     <div class="event-body">
+      ${ev.cancelled ? `<div style="display:inline-block;background:#dc3545;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:0.5px;margin-bottom:8px;">CANCELLED</div>` : ''}
       ${ev.image ? `<img src="${ev.image}" alt="Event photo" style="width:100%;border-radius:8px;object-fit:cover;max-height:180px;display:block;margin-bottom:10px;cursor:zoom-in;" onclick="openLightbox('${ev.image}')">` : ''}
-      <div class="event-category-tag">${ev.category || 'Community'}</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div class="event-category-tag">${ev.category || 'Community'}</div>
+        ${(isOwner || isAdmin) ? `
+          <div style="position:relative;display:inline-block;">
+            <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'" style="background:none;border:none;cursor:pointer;padding:2px 6px;font-size:18px;color:var(--text-light);line-height:1;">⋯</button>
+            <div style="display:none;position:absolute;right:0;top:100%;background:#fff;border:1px solid #E5EBF2;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:100;min-width:150px;">
+              ${!ev.cancelled ? `<button onclick="cancelEvent('${ev.id}')" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;cursor:pointer;font-size:14px;color:#856404;">⚠ Cancel Event</button>` : ''}
+              <button onclick="deleteEvent('${ev.id}')" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;cursor:pointer;font-size:14px;color:#dc3545;">🗑 Delete Event</button>
+            </div>
+          </div>` : ''}
+      </div>
       <div class="event-title">${escHtml(ev.title)}</div>
       <div class="event-desc">${escHtml(ev.description)}</div>
       <div class="event-meta-row">
@@ -1868,15 +1909,12 @@ async function rsvpEvent(eventId, status, btn) {
 
     const row = document.getElementById(`rsvp-row-${eventId}`);
     if (row) {
-      // Get the event data from server
-      const events = await fetchJSON('/api/events');
-      const ev = events.find(e => e.id === eventId);
-      if (ev) {
-        const btns = row.querySelectorAll('.rsvp-btn');
-        btns[0].className = `rsvp-btn${data.userRsvp === 'going' ? ' going' : ''}`;
-        btns[1].className = `rsvp-btn${data.userRsvp === 'maybe' ? ' maybe' : ''}`;
-        btns[2].className = `rsvp-btn${data.userRsvp === 'cantGo' ? ' cantgo' : ''}`;
-      }
+      const btns = row.querySelectorAll('.rsvp-btn');
+      btns[0].className = `rsvp-btn${data.userRsvp === 'going' ? ' going' : ''}`;
+      btns[1].className = `rsvp-btn${data.userRsvp === 'maybe' ? ' maybe' : ''}`;
+      btns[2].className = `rsvp-btn${data.userRsvp === 'cantGo' ? ' cantgo' : ''}`;
+      const countEl = row.querySelector('.going-count');
+      if (countEl) countEl.textContent = `${data.rsvp?.going || 0} going`;
     }
 
     const msgs = { going: '🎉 You\'re going!', maybe: '🤔 Marked as maybe!', cantGo: 'Marked as can\'t go.' };
