@@ -16,14 +16,6 @@ const COOKIE_SECRET = process.env.COOKIE_SECRET || 'gn-secret-2026';
 app.use(cookieParser(COOKIE_SECRET));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Run migrations before any API request is handled
-let _migrationsDone = false;
-let _migrationsPromise = null;
-app.use('/api', (req, res, next) => {
-  if (_migrationsDone) return next();
-  if (!_migrationsPromise) _migrationsPromise = runMigrations().then(() => { _migrationsDone = true; });
-  _migrationsPromise.then(() => next()).catch(() => next());
-});
 
 const upload       = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5  * 1024 * 1024 } });
 const uploadBanner = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8  * 1024 * 1024 } });
