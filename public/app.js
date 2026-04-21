@@ -223,10 +223,7 @@ async function refreshPoints() {
       currentUser.points = fresh.points;
       setTextSafe('sidebarPoints', fresh.points);
     }
-    if (typeof fresh.posts === 'number') {
-      currentUser.posts = fresh.posts;
-      setTextSafe('sidebarPosts', fresh.posts);
-    }
+    if (typeof fresh.posts === 'number') currentUser.posts = fresh.posts;
   } catch {}
 }
 
@@ -255,7 +252,6 @@ function renderUserUI() {
   if (sidebarAv) sidebarAv.style.background = currentUser.avatar;
   setTextSafe('sidebarInitials', currentUser.initials);
   setTextSafe('sidebarName', currentUser.name);
-  setTextSafe('sidebarPosts', currentUser.posts);
   setTextSafe('sidebarNeighbors', currentUser.neighbors);
   setTextSafe('sidebarPoints', currentUser.points);
 
