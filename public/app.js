@@ -2749,27 +2749,48 @@ function removePostPhoto() {
   document.getElementById('postPhotoInput').value = '';
 }
 
-const locationOptions = [
-  'Villa 270 area', 'Villa 94 area', 'North Gate', 'South Gate',
-  'Beach Club', 'Golf Course', 'Pool Area', 'Playa Farallón',
-  'Main Entrance', 'Tennis Courts', 'Community Center'
-];
-
-function pickPostLocation(btn) {
+async function pickPostLocation(btn) {
   if (postLocationValue) { removePostLocation(); return; }
-  // Cycle through options on click
-  const idx = Math.floor(Math.random() * locationOptions.length);
-  postLocationValue = locationOptions[idx];
-  document.getElementById('postLocationText').textContent = postLocationValue;
-  const tag = document.getElementById('postLocationTag');
-  tag.style.display = 'flex';
-  if (window.lucide) lucide.createIcons();
-  btn.style.color = 'var(--ocean)';
+  if (!navigator.geolocation) { showToast('Location not supported on this device'); return; }
+
+  btn.textContent = '📍 Getting location…';
+  btn.disabled = true;
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+    try {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, {
+        headers: { 'Accept-Language': 'en' }
+      });
+      const data = await res.json();
+      const addr = data.address || {};
+      postLocationValue = addr.road
+        ? `${addr.road}${addr.suburb ? ', ' + addr.suburb : ''}${addr.city || addr.town || addr.village ? ', ' + (addr.city || addr.town || addr.village) : ''}`
+        : data.display_name?.split(',').slice(0, 2).join(',').trim() || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    } catch {
+      postLocationValue = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+    }
+    document.getElementById('postLocationText').textContent = postLocationValue;
+    const tag = document.getElementById('postLocationTag');
+    tag.style.display = 'flex';
+    if (window.lucide) lucide.createIcons();
+    btn.innerHTML = '<i data-lucide="map-pin" style="width:16px;height:16px"></i> Location';
+    btn.style.color = 'var(--ocean)';
+    btn.disabled = false;
+    if (window.lucide) lucide.createIcons();
+  }, err => {
+    showToast(err.code === 1 ? 'Location permission denied' : 'Could not get location');
+    btn.innerHTML = '<i data-lucide="map-pin" style="width:16px;height:16px"></i> Location';
+    btn.disabled = false;
+    if (window.lucide) lucide.createIcons();
+  }, { timeout: 8000 });
 }
 
 function removePostLocation() {
   postLocationValue = null;
   document.getElementById('postLocationTag').style.display = 'none';
+  const btn = document.getElementById('locationBtn');
+  if (btn) btn.style.color = '';
 }
 
 async function submitPost() {
