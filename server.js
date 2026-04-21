@@ -6,7 +6,7 @@ const cookieParser = require('cookie-parser');
 const path         = require('path');
 const crypto       = require('crypto');
 const multer       = require('multer');
-const nodemailer   = require('nodemailer');
+const { Resend }   = require('resend');
 const bcrypt       = require('bcrypt');
 const { sql }      = require('./db/client');
 
@@ -26,26 +26,12 @@ const POINTS = {
   marketplace_list: 5, safety_post: 8
 };
 
-// ─── Email (Gmail via nodemailer) ─────────────────────────────────────────────
-async function getEmailConfig() {
-  const rows = await sql`SELECT key, value FROM app_settings WHERE key IN ('gmail_user','gmail_pass')`;
-  const cfg  = {};
-  rows.forEach(r => { cfg[r.key] = r.value; });
-  return cfg;
-}
-
-async function buildTransporter() {
-  const cfg = await getEmailConfig();
-  if (!cfg.gmail_user || !cfg.gmail_pass) return null;
-  return nodemailer.createTransport({ service: 'gmail', auth: { user: cfg.gmail_user, pass: cfg.gmail_pass } });
-}
+// ─── Email (Resend) ───────────────────────────────────────────────────────────
+const resend = new Resend(process.env.RESEND_API_KEY || 're_3CTghUDW_7N13M3NHkgoKctGHjWLVCYr5');
 
 async function sendEmail({ to, subject, html }) {
-  const transporter = await buildTransporter();
-  if (!transporter) { console.warn('Email not configured — skipped'); return; }
-  const cfg = await getEmailConfig();
   try {
-    await transporter.sendMail({ from: `"Costa Blanca Connect" <${cfg.gmail_user}>`, to, subject, html });
+    await resend.emails.send({ from: 'Costa Blanca Connect <noreply@costablancaconnect.org>', to, subject, html });
   } catch (err) { console.error('sendEmail failed:', err.message); }
 }
 
@@ -262,8 +248,10 @@ app.post('/api/auth/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const ban = await sql`SELECT id FROM banned_users WHERE username = ${user.username} AND lifted_at IS NULL LIMIT 1`;
+    const ban = await sql`SELECT id FROM banned_users WHERE (username = ${user.username} OR (email IS NOT NULL AND LOWER(email) = LOWER(${user.email||''}))) AND lifted_at IS NULL LIMIT 1`;
     if (ban.length) return res.status(403).json({ error: 'banned', reason: 'Your account has been suspended.' });
+
+    if (!user.email_verified) return res.status(403).json({ error: 'unverified', reason: 'Please verify your email before logging in. Check your inbox for a confirmation link.' });
 
     const token     = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000);
@@ -284,7 +272,8 @@ app.post('/api/auth/logout', async (req, res) => {
 });
 
 app.get('/api/auth/me', requireAuth(async (req, res) => {
-  res.json(formatUser(req.currentUser));
+  const [pc] = await sql`SELECT COUNT(*)::int AS c FROM posts WHERE author_id = ${req.currentUser.id}`;
+  res.json({ ...formatUser(req.currentUser), posts: pc?.c || 0 });
 }));
 
 app.post('/api/auth/register', async (req, res) => {
@@ -305,7 +294,7 @@ app.post('/api/auth/register', async (req, res) => {
     const existing = await sql`SELECT id FROM users WHERE username = ${username} OR email = ${email} UNION SELECT id FROM pending_registrations WHERE username = ${username} OR email = ${email} LIMIT 1`;
     if (existing.length) return res.status(409).json({ error: 'That username or email is already registered.' });
 
-    const banned = await sql`SELECT id FROM banned_users WHERE username = ${username} AND lifted_at IS NULL LIMIT 1`;
+    const banned = await sql`SELECT id FROM banned_users WHERE (username = ${username} OR (email IS NOT NULL AND LOWER(email) = LOWER(${email}))) AND lifted_at IS NULL LIMIT 1`;
     if (banned.length) return res.status(403).json({ error: 'This account is not eligible to register.' });
 
     const initials     = fullName.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -314,36 +303,66 @@ app.post('/api/auth/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
     const displayName  = role === 'business' ? (businessName || fullName) : fullName;
 
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+
     if (role === 'neighbor') {
-      // Residents are auto-approved
-      await sql`
-        INSERT INTO users
-          (username, email, password_hash, role, name, full_name, avatar_hex, initials, status)
-        VALUES
-          (${username}, ${email}, ${passwordHash}, ${role}, ${displayName}, ${fullName},
-           ${avatarHex}, ${initials}, 'active')
+      const [newUser] = await sql`
+        INSERT INTO users (username, email, password_hash, role, name, full_name, avatar_hex, initials, email_verified)
+        VALUES (${username}, ${email}, ${passwordHash}, ${role}, ${displayName}, ${fullName}, ${avatarHex}, ${initials}, false)
+        RETURNING *
       `;
-      // Notify all existing neighbors about the new member
-      const allNeighbors = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND username != ${username}`;
-      if (allNeighbors.length) {
-        await Promise.all(allNeighbors.map(n =>
-          sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
-              VALUES (${n.id}, 'new_neighbor', ${`${displayName} just joined Costa Blanca Connect — say hello! 👋`}, ${avatarHex}, ${initials})`
-        ));
-      }
-      return res.json({ ok: true, role: 'neighbor' });
+      const verifyToken = crypto.randomBytes(32).toString('hex');
+      await sql`INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES (${newUser.id}, ${verifyToken}, ${new Date(Date.now() + 24 * 3600 * 1000)})`;
+      await sendEmail({
+        to: email,
+        subject: 'Confirm your Costa Blanca Connect account',
+        html: `
+          <div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
+            <h2 style="color:#0077B6;">Welcome to Costa Blanca Connect!</h2>
+            <p>Hi ${displayName},</p>
+            <p>Thanks for signing up! Please confirm your email address to activate your account.</p>
+            <a href="${appUrl}/verify-email?token=${verifyToken}" style="display:inline-block;background:#0077B6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:16px 0;">Confirm Email</a>
+            <p>This link expires in 24 hours.</p>
+            <hr style="border:none;border-top:1px solid #eee;margin-top:24px;">
+            <p style="color:#888;font-size:12px;">Costa Blanca Connect · Costa Blanca Villas, Farallón, Coclé, Panamá</p>
+          </div>
+        `
+      });
+      return res.json({ ok: true, role: 'neighbor', message: 'Check your email to confirm your account.' });
     }
 
-    // Businesses go into the pending queue
-    await sql`
-      INSERT INTO pending_registrations
-        (username, email, password_hash, role, name, full_name, business_name, business_category, avatar_hex, initials)
-      VALUES
-        (${username}, ${email}, ${passwordHash}, ${role}, ${displayName}, ${fullName},
-         ${businessName || null}, ${businessCategory || null}, ${avatarHex}, ${initials})
+    // Businesses — create account directly, require email verification (no admin approval)
+    const [newBiz] = await sql`
+      INSERT INTO users (username, email, password_hash, role, name, full_name, avatar_hex, initials, email_verified)
+      VALUES (${username}, ${email}, ${passwordHash}, ${role}, ${displayName}, ${fullName}, ${avatarHex}, ${initials}, false)
+      RETURNING *
     `;
-
-    res.json({ ok: true, message: 'Application submitted! The Costa Blanca Connect team will review your account within 24 hours.' });
+    if (businessName) {
+      const [biz] = await sql`
+        INSERT INTO businesses (name, category, description, claimed, claimed_by_user_id)
+        VALUES (${businessName}, ${businessCategory||null}, '', true, ${newBiz.id})
+        RETURNING id
+      `;
+      await sql`UPDATE users SET business_id=${biz.id} WHERE id=${newBiz.id}`;
+    }
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    await sql`INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES (${newBiz.id}, ${verifyToken}, ${new Date(Date.now() + 24 * 3600 * 1000)})`;
+    await sendEmail({
+      to: email,
+      subject: 'Confirm your Costa Blanca Connect business account',
+      html: `
+        <div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
+          <h2 style="color:#0077B6;">Welcome to Costa Blanca Connect!</h2>
+          <p>Hi ${displayName},</p>
+          <p>Thanks for registering your business! Please confirm your email to activate your account.</p>
+          <a href="${appUrl}/verify-email?token=${verifyToken}" style="display:inline-block;background:#0077B6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:16px 0;">Confirm Email</a>
+          <p>This link expires in 24 hours.</p>
+          <hr style="border:none;border-top:1px solid #eee;margin-top:24px;">
+          <p style="color:#888;font-size:12px;">Costa Blanca Connect · Costa Blanca Villas, Farallón, Coclé, Panamá</p>
+        </div>
+      `
+    });
+    res.json({ ok: true, role: 'business', message: 'Check your email to confirm your account.' });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
@@ -423,6 +442,65 @@ app.post('/api/auth/reset-password', async (req, res) => {
     await sql`DELETE FROM sessions WHERE user_id = ${rows[0].user_id}`;
 
     res.json({ ok: true, message: 'Password updated. Please log in.' });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+// Verify email
+app.get('/api/auth/verify-email', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ error: 'Invalid link.' });
+    const [row] = await sql`
+      SELECT evt.*, u.id AS uid, u.role, u.name, u.username, u.avatar_hex, u.initials
+      FROM email_verification_tokens evt
+      JOIN users u ON evt.user_id = u.id
+      WHERE evt.token = ${token} AND evt.expires_at > NOW() AND evt.used_at IS NULL
+      LIMIT 1
+    `;
+    if (!row) return res.status(400).json({ error: 'This link is invalid or has expired.' });
+    await sql`UPDATE users SET email_verified = true WHERE id = ${row.uid}`;
+    await sql`UPDATE email_verification_tokens SET used_at = NOW() WHERE id = ${row.id}`;
+    // For neighbors, notify existing members
+    if (row.role === 'neighbor') {
+      const allNeighbors = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${row.uid} AND email_verified = true`;
+      if (allNeighbors.length) {
+        await Promise.all(allNeighbors.map(n =>
+          sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
+              VALUES (${n.id}, 'new_neighbor', ${`${row.name} just joined Costa Blanca Connect — say hello! 👋`}, ${row.avatar_hex}, ${row.initials})`
+        ));
+      }
+    }
+    res.json({ ok: true, message: 'Email verified! You can now log in.' });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+// Resend verification email
+app.post('/api/auth/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email required.' });
+    const [user] = await sql`SELECT * FROM users WHERE LOWER(email) = LOWER(${email}) AND email_verified = false LIMIT 1`;
+    if (!user) return res.json({ ok: true }); // Don't reveal if email exists
+    await sql`DELETE FROM email_verification_tokens WHERE user_id = ${user.id}`;
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    await sql`INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES (${user.id}, ${verifyToken}, ${new Date(Date.now() + 24 * 3600 * 1000)})`;
+    await sendEmail({
+      to: user.email,
+      subject: 'Confirm your Costa Blanca Connect account',
+      html: `
+        <div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
+          <h2 style="color:#0077B6;">Confirm your email</h2>
+          <p>Hi ${user.name},</p>
+          <p>Click below to confirm your email and activate your account.</p>
+          <a href="${appUrl}/verify-email?token=${verifyToken}" style="display:inline-block;background:#0077B6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:16px 0;">Confirm Email</a>
+          <p>This link expires in 24 hours.</p>
+          <hr style="border:none;border-top:1px solid #eee;margin-top:24px;">
+          <p style="color:#888;font-size:12px;">Costa Blanca Connect · Costa Blanca Villas, Farallón, Coclé, Panamá</p>
+        </div>
+      `
+    });
+    res.json({ ok: true });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
@@ -537,8 +615,8 @@ app.post('/api/admin/users/:username/ban', requireAdmin(async (req, res) => {
   if (u.role === 'hoa') return res.status(400).json({ error: 'Cannot ban HOA accounts' });
 
   const [ban] = await sql`
-    INSERT INTO banned_users (user_id, username, name, address, avatar_hex, initials, original_role, reason, banned_by_user_id)
-    VALUES (${u.id}, ${u.username}, ${u.name}, ${u.address}, ${u.avatar_hex}, ${u.initials}, ${u.role}, ${reason || 'Violation of Member Agreement'}, ${req.currentUser.id})
+    INSERT INTO banned_users (user_id, username, email, name, address, avatar_hex, initials, original_role, reason, banned_by_user_id)
+    VALUES (${u.id}, ${u.username}, ${u.email||null}, ${u.name}, ${u.address}, ${u.avatar_hex}, ${u.initials}, ${u.role}, ${reason || 'Violation of Member Agreement'}, ${req.currentUser.id})
     RETURNING *
   `;
   await sql`DELETE FROM users WHERE id=${u.id}`;
@@ -553,7 +631,7 @@ app.post('/api/admin/banned/:id/unban', requireAdmin(async (req, res) => {
 app.get('/api/admin/banned', requireAdmin(async (req, res) => {
   const rows = await sql`SELECT * FROM banned_users WHERE lifted_at IS NULL ORDER BY banned_at DESC`;
   res.json(rows.map(r => ({
-    id: r.id, username: r.username, name: r.name, address: r.address,
+    id: r.id, username: r.username, email: r.email, name: r.name, address: r.address,
     avatar: r.avatar_hex, initials: r.initials, role: r.original_role,
     reason: r.reason, bannedAt: r.banned_at,
   })));
@@ -1024,7 +1102,7 @@ app.get('/api/events', async (req, res) => {
       id: e.id, title: e.title, description: e.description,
       host: { id: e.host_id, username: e.host_username, name: e.host_name, avatar: e.host_avatar, initials: e.host_initials, verified: e.host_verified },
       location: e.location, date: e.event_date, time: e.event_time, endTime: e.end_time,
-      category: e.category, isHoaEvent: e.is_hoa_event,
+      category: e.category, isHoaEvent: e.is_hoa_event, image: e.image_url || null,
       rsvp: { going: e.going_count, maybe: e.maybe_count, cantGo: e.cant_go_count },
       userRsvp: userRsvps[e.id] ? (userRsvps[e.id] === 'cant_go' ? 'cantGo' : userRsvps[e.id]) : null,
       goingAvatars: [],
@@ -1089,7 +1167,7 @@ function formatBusiness(b) {
     address: b.address, phone: b.phone, hours: b.hours, website: b.website,
     photos: b.photos||[], tags: b.tags||[], rating: parseFloat(b.rating)||0,
     reviewCount: b.review_count||0, recommendedBy: b.recommended_by||0,
-    claimed: b.claimed, faveYears: b.fave_years||[], faveThreshold: b.fave_threshold||30,
+    claimed: b.claimed,
     bannerUrl: b.banner_url||null, logoUrl: b.logo_url||null,
     addedByUserId: b.added_by_user_id||null, claimedByUserId: b.claimed_by_user_id||null,
   };
@@ -1205,13 +1283,15 @@ app.post('/api/businesses/:id/fave', requireAuth(async (req, res) => {
 }));
 
 app.post('/api/businesses/:id/recommend', requireAuth(async (req, res) => {
-  const { text } = req.body;
+  const { text, rating } = req.body;
   if (!text?.trim()) return res.status(400).json({ error: 'Text required' });
+  const stars = Math.min(5, Math.max(1, parseInt(rating) || 5));
   const [biz] = await sql`SELECT id FROM businesses WHERE id=${req.params.id}`;
   if (!biz) return res.status(404).json({ error: 'Not found' });
   const u = req.currentUser;
-  await sql`INSERT INTO business_reviews (business_id, author_id, rating, text) VALUES (${biz.id}, ${u.id}, 5, ${text.trim()})`;
-  await sql`UPDATE businesses SET recommended_by = recommended_by + 1 WHERE id=${biz.id}`;
+  await sql`INSERT INTO business_reviews (business_id, author_id, rating, text) VALUES (${biz.id}, ${u.id}, ${stars}, ${text.trim()})`;
+  const [avg] = await sql`SELECT ROUND(AVG(rating)::numeric, 1)::float AS avg, COUNT(*)::int AS cnt FROM business_reviews WHERE business_id=${biz.id}`;
+  await sql`UPDATE businesses SET recommended_by = recommended_by + 1, rating = ${avg.avg}, review_count = ${avg.cnt} WHERE id=${biz.id}`;
   res.json({ ok: true });
 }));
 
@@ -1758,8 +1838,8 @@ app.post('/api/notifications/read', requireAuth(async (req, res) => {
 
 app.get('/api/neighbors', async (req, res) => {
   try {
-    const rows = await sql`SELECT id, username, name, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address FROM users WHERE role IN ('neighbor','business','realtor') ORDER BY created_at DESC`;
-    res.json(rows.map(u => ({ id: u.id, username: u.username, name: u.name, avatar: u.avatar_hex, avatarUrl: u.avatar_url, initials: u.initials, verified: u.verified, yearsInNeighborhood: u.years_in_neighborhood, address: u.address })));
+    const rows = await sql`SELECT id, username, name, email, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, email_verified FROM users WHERE role IN ('neighbor','business','realtor') ORDER BY created_at DESC`;
+    res.json(rows.map(u => ({ id: u.id, username: u.username, name: u.name, email: u.email, avatar: u.avatar_hex, avatarUrl: u.avatar_url, initials: u.initials, verified: u.verified, yearsInNeighborhood: u.years_in_neighborhood, address: u.address, emailVerified: u.email_verified })));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
@@ -1840,15 +1920,21 @@ app.get('/api/hoa/posts', requireAuth(async (req, res) => {
 }));
 
 app.post('/api/events', requireAuth(async (req, res) => {
-  const u = req.currentUser;
-  const { title, description, location, eventDate, eventTime, endTime, category } = req.body;
-  if (!title || !eventDate) return res.status(400).json({ error: 'Title and date required' });
-  const [ev] = await sql`
-    INSERT INTO events (title, description, host_id, location, event_date, event_time, end_time, category, is_hoa_event)
-    VALUES (${title}, ${description||''}, ${u.id}, ${location||'Costa Blanca Villas'}, ${eventDate}, ${eventTime||'TBD'}, ${endTime||''}, ${category||'Community'}, false)
-    RETURNING *
-  `;
-  res.json({ id: ev.id, title: ev.title, description: ev.description, host: formatUser(u), location: ev.location, date: ev.event_date, time: ev.event_time, endTime: ev.end_time, category: ev.category, isHoaEvent: false, rsvp: { going:0, maybe:0, cantGo:0 }, userRsvp: null, goingAvatars: [] });
+  try {
+    const u = req.currentUser;
+    const { title, description, location, eventDate, eventTime, endTime, category, image } = req.body;
+    if (!title || !eventDate) return res.status(400).json({ error: 'Title and date required' });
+    const imageUrl = await storeImage(image, 'events');
+    const [ev] = await sql`
+      INSERT INTO events (title, description, host_id, location, event_date, event_time, end_time, category, is_hoa_event, image_url)
+      VALUES (${title}, ${description||''}, ${u.id}, ${location||'Costa Blanca Villas'}, ${eventDate}, ${eventTime||'TBD'}, ${endTime||''}, ${category||'Community'}, false, ${imageUrl})
+      RETURNING *
+    `;
+    res.json({ id: ev.id, title: ev.title, description: ev.description, host: formatUser(u), location: ev.location, date: ev.event_date, time: ev.event_time, endTime: ev.end_time, category: ev.category, isHoaEvent: false, image: ev.image_url || null, rsvp: { going:0, maybe:0, cantGo:0 }, userRsvp: null, goingAvatars: [] });
+  } catch (err) {
+    console.error('POST /api/events error:', err.message);
+    res.status(500).json({ error: 'Could not create event: ' + err.message });
+  }
 }));
 
 app.post('/api/hoa/events', requireAuth(async (req, res) => {
@@ -1903,6 +1989,21 @@ async function runMigrations() {
     await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS banner_url TEXT`;
     await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS logo_url TEXT`;
     await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS added_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL`;
+    await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS image_url TEXT`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE`;
+    await sql`UPDATE users SET email_verified = true WHERE email_verified = false AND created_at < NOW() - INTERVAL '1 minute'`;
+    await sql`ALTER TABLE banned_users ADD COLUMN IF NOT EXISTS email VARCHAR(255)`;
+    await sql`CREATE TABLE IF NOT EXISTS email_verification_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token TEXT UNIQUE NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS rating DECIMAL(2,1) DEFAULT 0`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS review_count INTEGER DEFAULT 0`;
+    await sql`UPDATE businesses b SET rating = COALESCE((SELECT ROUND(AVG(r.rating)::numeric,1) FROM business_reviews r WHERE r.business_id=b.id), 0), review_count = (SELECT COUNT(*) FROM business_reviews r WHERE r.business_id=b.id)`;
   } catch (e) { console.error('Migration error:', e.message); }
 }
 

@@ -48,6 +48,15 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token      TEXT UNIQUE NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at    TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ─── Posts ────────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS posts (
@@ -123,6 +132,7 @@ CREATE TABLE IF NOT EXISTS events (
   end_time     VARCHAR(20),
   category     VARCHAR(100) DEFAULT 'Community',
   is_hoa_event BOOLEAN      DEFAULT FALSE,
+  image_url    TEXT,
   created_at   TIMESTAMPTZ  DEFAULT NOW()
 );
 
@@ -304,6 +314,7 @@ CREATE TABLE IF NOT EXISTS banned_users (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id           UUID        REFERENCES users(id) ON DELETE SET NULL,
   username          VARCHAR(20),
+  email             VARCHAR(255),
   name              VARCHAR(255),
   address           VARCHAR(500),
   avatar_hex        VARCHAR(7),

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify Email · Costa Blanca Connect</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; background: #f0f4f8; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .card { background: white; border-radius: 20px; padding: 40px 32px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .icon { font-size: 52px; margin-bottom: 16px; }
+    h1 { font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 10px; }
+    p { font-size: 15px; color: #64748b; line-height: 1.6; }
+    .btn { display: inline-block; margin-top: 24px; padding: 12px 28px; background: #0077B6; color: white; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; }
+    .btn:hover { background: #005f8e; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon" id="icon">⏳</div>
+    <h1 id="title">Verifying your email…</h1>
+    <p id="message">Please wait a moment.</p>
+    <div id="btnWrap"></div>
+  </div>
+  <script>
+    async function verify() {
+      const token = new URLSearchParams(window.location.search).get('token');
+      if (!token) { showError('No verification token found.'); return; }
+      try {
+        const res = await fetch(`/api/auth/verify-email?token=${token}`);
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('icon').textContent = '✅';
+          document.getElementById('title').textContent = 'Email Verified!';
+          document.getElementById('message').textContent = 'Your account is now active. You can sign in.';
+          document.getElementById('btnWrap').innerHTML = '<a href="/" class="btn">Sign In</a>';
+        } else {
+          showError(data.error || 'Something went wrong.');
+        }
+      } catch { showError('Connection error. Please try again.'); }
+    }
+    function showError(msg) {
+      document.getElementById('icon').textContent = '❌';
+      document.getElementById('title').textContent = 'Verification Failed';
+      document.getElementById('message').textContent = msg;
+      document.getElementById('btnWrap').innerHTML = '<a href="/" class="btn">Back to Home</a>';
+    }
+    verify();
+  </script>
+</body>
+</html>

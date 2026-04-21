@@ -549,6 +549,9 @@
           <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" required />
         </div>
         <button type="submit" class="btn-login" id="loginBtn">Sign In</button>
+        <div style="text-align:right;margin-top:8px;">
+          <a href="#" class="forgot-link" onclick="openForgotPassword();return false;" style="font-size:13px;color:#0077B6;font-weight:600;text-decoration:none;">Forgot password?</a>
+        </div>
       </form>
 
 
@@ -623,7 +626,7 @@
       { id: 'business', icon: '🏪', name: 'Local Business', desc: 'Restaurant, contractor, or service serving the community' },
     ];
 
-    const BIZ_CATEGORIES = ['Restaurant & Dining','Real Estate','Home Services','Health & Wellness','Retail & Shopping','Transportation','Sports & Recreation','Professional Services','Other'];
+    const BIZ_CATEGORIES = ['Restaurant','Bar & Grill','Cafe & Bakery','Home Services','Handyman','Beauty & Wellness','Health & Medical','Transportation','Supermarket','Retail & Shopping','Real Estate','Sports & Fitness','Professional Services','Entertainment','Other'];
 
     function openSignUp() {
       suStep = 0; suRole = null;
@@ -667,7 +670,7 @@
               </div>
             `).join('')}
           </div>
-          <p style="font-size:11.5px;color:#a0aec0;margin-top:14px;line-height:1.5;">Business accounts are reviewed and approved by the community admin.</p>
+          <p style="font-size:11.5px;color:#a0aec0;margin-top:14px;line-height:1.5;">All accounts require email verification before signing in.</p>
         `;
       } else if (suStep === 1) {
         const isBiz = suRole === 'business';
@@ -713,15 +716,12 @@
         footer.style.display = 'none';
         document.getElementById('suTitle').textContent = '';
         document.getElementById('suSubtitle').textContent = '';
-        const isBizSuccess = suRole === 'business';
         body.innerHTML = `
           <div class="su-success">
-            <div class="su-success-icon">${isBizSuccess ? '⏳' : '🎉'}</div>
-            <h3>${isBizSuccess ? 'Application Submitted!' : 'Welcome Aboard!'}</h3>
-            <p>${isBizSuccess
-              ? 'Your business application is under review. The Costa Blanca Connect team will get back to you within <strong>24 hours</strong>.'
-              : 'Your account has been created. You can sign in now with your username and password.'
-            }</p>
+            <div class="su-success-icon">📧</div>
+            <h3>Check Your Email!</h3>
+            <p>We sent a confirmation link to your email address. Click it to activate your account, then sign in.</p>
+            <p style="font-size:12px;color:#a0aec0;margin-top:8px;">Didn't get it? Check your spam folder or <a href="#" onclick="resendVerification();return false;" style="color:#0077B6;">resend the email</a>.</p>
             <button class="su-btn-next" style="margin-top:24px;width:100%" onclick="closeSignUp()">Got It</button>
           </div>
         `;
@@ -737,6 +737,45 @@
     function showSuErr(msg) {
       const el = document.getElementById('suErr');
       if (el) { el.textContent = msg; el.classList.add('show'); }
+    }
+
+    let fpStep = 0; // 0=form, 1=sent
+
+    function openForgotPassword() {
+      fpStep = 0;
+      const overlay = document.createElement('div');
+      overlay.id = 'fpOverlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+      overlay.innerHTML = `
+        <div style="background:white;border-radius:20px;padding:32px 28px;width:360px;max-width:92vw;box-shadow:0 8px 40px rgba(0,0,0,0.18);">
+          <h2 style="margin:0 0 8px;font-size:20px;color:#1a2a3a;">Reset Password</h2>
+          <p id="fpMsg" style="font-size:14px;color:#4a6378;margin:0 0 20px;">Enter your email address and we'll send you a reset link.</p>
+          <input id="fpEmail" type="email" placeholder="Email address" style="width:100%;box-sizing:border-box;padding:11px 14px;border:1.5px solid #d1dce6;border-radius:10px;font-size:14px;font-family:inherit;margin-bottom:16px;" />
+          <div id="fpErr" style="display:none;color:#E63946;font-size:13px;margin-bottom:12px;"></div>
+          <button onclick="submitForgotPassword()" style="width:100%;padding:12px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Send Reset Link</button>
+          <button onclick="document.getElementById('fpOverlay').remove()" style="width:100%;padding:10px;background:none;border:none;font-size:14px;color:#4a6378;cursor:pointer;font-family:inherit;margin-top:8px;">Cancel</button>
+        </div>`;
+      document.body.appendChild(overlay);
+    }
+
+    async function submitForgotPassword() {
+      const email = document.getElementById('fpEmail')?.value.trim();
+      const errEl = document.getElementById('fpErr');
+      if (!email) { errEl.textContent = 'Please enter your email.'; errEl.style.display = 'block'; return; }
+      errEl.style.display = 'none';
+      await fetch('/api/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+      document.getElementById('fpMsg').textContent = 'If that email is registered, a reset link has been sent. Check your inbox.';
+      document.getElementById('fpEmail').style.display = 'none';
+      document.querySelector('#fpOverlay button').textContent = 'Done';
+      document.querySelector('#fpOverlay button').onclick = () => document.getElementById('fpOverlay').remove();
+    }
+
+    async function resendVerification() {
+      const emailInput = document.getElementById('suEmail') || document.getElementById('username');
+      const email = emailInput?.value?.trim();
+      if (!email) { alert('Enter your email address first.'); return; }
+      await fetch('/api/auth/resend-verification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+      alert('If that email is registered and unverified, a new confirmation link has been sent.');
     }
 
     function suPrev() {
@@ -1109,7 +1148,10 @@
         } else {
           const data = await res.json().catch(() => ({}));
           if (res.status === 403 && data.error === 'banned') {
-            err.textContent = `Your account has been suspended from Costa Blanca Connect. Reason: ${data.reason || 'Violation of Member Agreement'}. Please contact a platform administrator if you believe this is in error.`;
+            err.textContent = `Your account has been suspended. Reason: ${data.reason || 'Violation of Member Agreement'}.`;
+            err.style.lineHeight = '1.5';
+          } else if (res.status === 403 && data.error === 'unverified') {
+            err.innerHTML = `Please verify your email before signing in. <a href="#" onclick="resendVerification();return false;" style="color:#0077B6;">Resend confirmation email</a>`;
             err.style.lineHeight = '1.5';
           } else {
             err.textContent = 'Invalid username or password. Please try again.';

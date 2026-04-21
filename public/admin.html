@@ -162,10 +162,6 @@
       </button>
 
       <div class="nav-section-label">Members</div>
-      <button class="nav-item" onclick="showView('pending')" id="nav-pending">
-        <span class="icon">⏳</span> Pending Approvals
-        <span class="nav-badge" id="badge-pending" style="display:none">0</span>
-      </button>
       <button class="nav-item" onclick="showView('access')" id="nav-access">
         <span class="icon">📬</span> Access Requests
         <span class="nav-badge green" id="badge-access" style="display:none">0</span>
@@ -247,21 +243,9 @@
       <div class="view active" id="view-dashboard">
         <div class="stats-grid" id="statsGrid">
           <div class="stat-card"><div class="stat-label">Total Members</div><div class="stat-num" id="statMembers">—</div><div class="stat-sub">Active accounts</div></div>
-          <div class="stat-card warn"><div class="stat-label">Pending Approvals</div><div class="stat-num" id="statPending">—</div><div class="stat-sub">Awaiting review</div></div>
           <div class="stat-card good"><div class="stat-label">Access Requests</div><div class="stat-num" id="statAccess">—</div><div class="stat-sub">From landing page</div></div>
           <div class="stat-card alert"><div class="stat-label">Open Reports</div><div class="stat-num" id="statReports">—</div><div class="stat-sub">Needs review</div></div>
           <div class="stat-card"><div class="stat-label">Total Posts</div><div class="stat-num" id="statPosts">—</div><div class="stat-sub">Community feed</div></div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-header">
-            <div>
-              <h2>Recent Pending Approvals</h2>
-              <div class="panel-header-sub">Latest sign-up applications waiting for review</div>
-            </div>
-            <button class="topbar-refresh" onclick="showView('pending')">View All →</button>
-          </div>
-          <div id="dashPending"><div class="panel-empty">Loading…</div></div>
         </div>
 
         <div class="panel">
@@ -273,19 +257,6 @@
             <button class="topbar-refresh" onclick="showView('access')">View All →</button>
           </div>
           <div id="dashAccess"><div class="panel-empty">Loading…</div></div>
-        </div>
-      </div>
-
-      <!-- PENDING APPROVALS -->
-      <div class="view" id="view-pending">
-        <div class="panel">
-          <div class="panel-header">
-            <div>
-              <h2>Pending Approvals</h2>
-              <div class="panel-header-sub">Sign-up applications awaiting admin review</div>
-            </div>
-          </div>
-          <div id="pendingList"><div class="panel-empty">Loading…</div></div>
         </div>
       </div>
 
@@ -316,7 +287,7 @@
               <tr>
                 <th>Member</th>
                 <th>Username</th>
-                <th>Role</th>
+                <th>Email</th>
                 <th>Address</th>
                 <th>Actions</th>
               </tr>
@@ -452,30 +423,6 @@
               <button onclick="addHOAContact()" style="padding:10px 18px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;white-space:nowrap;">+ Add</button>
             </div>
             <div id="hoaContactsList"><div class="panel-empty">No contacts added yet.</div></div>
-          </div>
-        </div>
-
-        <!-- Email Config Panel (owner only) -->
-        <div class="panel" id="emailConfigPanel" style="display:none;">
-          <div class="panel-header">
-            <div>
-              <h2>⚙️ Email Settings</h2>
-              <div class="panel-header-sub">Gmail credentials used to send alert emails</div>
-            </div>
-          </div>
-          <div style="padding:0 20px 20px;">
-            <div id="emailConfigStatus" style="margin-bottom:14px;padding:10px 14px;border-radius:10px;background:#f0f9ff;font-size:13.5px;color:#0077B6;">Loading…</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-              <div>
-                <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Gmail Address</label>
-                <input id="gmailUser" type="email" placeholder="costablancavillaspanama@gmail.com" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
-              </div>
-              <div>
-                <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Gmail App Password <a href="https://myaccount.google.com/apppasswords" target="_blank" style="font-weight:400;color:#0077B6;font-size:11px;">Get one →</a></label>
-                <input id="gmailAppPassword" type="password" placeholder="xxxx xxxx xxxx xxxx" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
-              </div>
-            </div>
-            <button onclick="saveEmailConfig()" style="padding:11px 24px;background:#264653;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;">Save Email Settings</button>
           </div>
         </div>
 
@@ -694,7 +641,6 @@
 
   <script>
     let currentAdmin = null;
-    let allPending = [];
     let allClaims = [];
     let allAccess = [];
     let allMembers = [];
@@ -719,26 +665,13 @@
     }
 
     async function loadAll() {
-      await Promise.all([loadPending(), loadAccess(), loadMembers(), loadStats(), loadBanned(), loadReports(), loadHOAContacts(), loadAlertHistory(), loadCommunitySafety(), loadDecameronEmail(), loadClaims(), loadRealtors()]);
-      renderDashPending();
+      await Promise.all([loadAccess(), loadMembers(), loadStats(), loadBanned(), loadReports(), loadHOAContacts(), loadAlertHistory(), loadCommunitySafety(), loadDecameronEmail(), loadClaims(), loadRealtors()]);
       renderDashAccess();
       if (currentAdmin?.isOwner) {
         document.getElementById('ownerSection').style.display = 'block';
         loadTeam();
         loadManagedAccounts();
-        document.getElementById('emailConfigPanel').style.display = 'block';
-        loadEmailConfig();
       }
-    }
-
-    async function loadPending() {
-      const res = await fetch('/api/admin/pending', { credentials: 'include' });
-      allPending = res.ok ? await res.json() : [];
-      renderPending();
-      const b = document.getElementById('badge-pending');
-      b.textContent = allPending.length;
-      b.style.display = allPending.length ? 'block' : 'none';
-      document.getElementById('statPending').textContent = allPending.length;
     }
 
     async function loadAccess() {
@@ -770,7 +703,7 @@
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.getElementById('view-' + name).classList.add('active');
       document.getElementById('nav-' + name)?.classList.add('active');
-      const titles = { dashboard: 'Dashboard', pending: 'Pending Approvals', access: 'Access Requests', members: 'All Members', reports: 'Reports', banned: 'Banned Members', team: 'Admin Team', alerts: 'Security Alerts', managed: 'Managed Accounts', sponsored: 'Sponsored Posts', claims: 'Business Claims', realtors: 'Realtors' };
+      const titles = { dashboard: 'Dashboard', access: 'Access Requests', members: 'All Members', reports: 'Reports', banned: 'Banned Members', team: 'Admin Team', alerts: 'Security Alerts', managed: 'Managed Accounts', sponsored: 'Sponsored Posts', claims: 'Business Claims', realtors: 'Realtors' };
       document.getElementById('topbarTitle').textContent = titles[name] || name;
     }
 
@@ -780,41 +713,6 @@
       if (diff < 3600) return Math.floor(diff/60) + 'm ago';
       if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
       return Math.floor(diff/86400) + 'd ago';
-    }
-
-    function pendingRowHTML(p, actions = true) {
-      return `
-        <div class="pending-row" id="pr-${p.id}">
-          <div class="pending-avatar" style="background:${p.avatar}">${p.initials}</div>
-          <div class="pending-info">
-            <div class="pending-name">${p.name}</div>
-            <div class="pending-meta">
-              <span>@${p.username}</span>
-              <span>·</span><span>${p.address}</span>
-              ${p.businessCategory ? `<span>· ${p.businessCategory}</span>` : ''}
-              <span>· ${timeAgo(p.submittedAt)}</span>
-            </div>
-            ${p.bio ? `<div style="font-size:12px;color:var(--text-mid);margin-top:4px;">"${p.bio}"</div>` : ''}
-          </div>
-          <div class="pending-actions">
-            <span class="pending-tag ${ROLE_TAGS[p.role] || ''}">${ROLE_LABELS[p.role] || p.role}</span>
-            ${actions ? `
-              <button class="btn-approve" onclick="approve('${p.id}')">✓ Approve</button>
-              <button class="btn-reject" onclick="reject('${p.id}')">✕ Reject</button>
-            ` : ''}
-          </div>
-        </div>`;
-    }
-
-    function renderPending() {
-      const el = document.getElementById('pendingList');
-      el.innerHTML = allPending.length ? allPending.map(p => pendingRowHTML(p)).join('') : '<div class="panel-empty">✓ No pending approvals — all clear.</div>';
-    }
-
-    function renderDashPending() {
-      const el = document.getElementById('dashPending');
-      const slice = allPending.slice(0, 3);
-      el.innerHTML = slice.length ? slice.map(p => pendingRowHTML(p)).join('') : '<div class="panel-empty">✓ No pending approvals.</div>';
     }
 
     function renderAccess() {
@@ -856,8 +754,8 @@
             </div>
           </td>
           <td style="color:var(--text-light)">@${m.username}</td>
-          <td><span class="pending-tag ${ROLE_TAGS['neighbor']}">${ROLE_LABELS['neighbor']}</span></td>
-          <td style="color:var(--text-mid);font-size:13px">${m.address}</td>
+          <td style="color:var(--text-mid);font-size:13px">${m.email || '—'}${!m.emailVerified ? ' <span style="color:#e76f51;font-size:11px;font-weight:700;">UNVERIFIED</span>' : ''}</td>
+          <td style="color:var(--text-mid);font-size:13px">${m.address || '—'}</td>
           <td>
             ${m.username !== currentAdmin?.username ? `
               <div style="display:flex;gap:6px;">
@@ -887,7 +785,8 @@
             <div class="pending-name" style="color:#666">${b.name} <span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:4px;">BANNED</span></div>
             <div class="pending-meta">
               <span>@${b.username}</span>
-              <span>·</span><span>${b.address}</span>
+              ${b.email ? `<span>·</span><span>${b.email}</span>` : ''}
+              <span>·</span><span>${b.address || '—'}</span>
               <span>·</span><span>Banned ${timeAgo(b.bannedAt)}</span>
             </div>
             <div style="font-size:12px;color:#991b1b;margin-top:4px;">Reason: ${b.reason}</div>
@@ -1056,17 +955,6 @@
       else showToast(data.error || 'Error');
     }
 
-    async function approve(id) {
-      const res = await fetch(`/api/admin/pending/${id}/approve`, { method: 'POST', credentials: 'include' });
-      if (res.ok) { showToast('✓ Account approved and activated'); await loadAll(); }
-    }
-
-    async function reject(id) {
-      if (!confirm('Reject this application?')) return;
-      const res = await fetch(`/api/admin/pending/${id}/reject`, { method: 'POST', credentials: 'include' });
-      if (res.ok) { showToast('Application rejected'); await loadPending(); renderDashPending(); }
-    }
-
     async function dismissAccess(id) {
       const res = await fetch(`/api/admin/access-requests/${id}/dismiss`, { method: 'POST', credentials: 'include' });
       if (res.ok) { showToast('Dismissed'); await loadAccess(); renderDashAccess(); }
@@ -1132,31 +1020,6 @@
     async function removeHOAContact(id) {
       const res = await fetch('/api/admin/hoa-contacts/' + id, { method: 'DELETE', credentials: 'include' });
       if (res.ok) { hoaContacts = hoaContacts.filter(c => c.id !== id); renderHOAContacts(); showToast('Contact removed'); }
-    }
-
-    // ─── Email Config ─────────────────────────────────────────────────────────
-    async function loadEmailConfig() {
-      const res = await fetch('/api/admin/email-config', { credentials: 'include' });
-      if (!res.ok) return;
-      const cfg = await res.json();
-      const el = document.getElementById('emailConfigStatus');
-      if (cfg.configured) {
-        el.style.background = '#f0fdf4'; el.style.color = '#16a34a';
-        el.textContent = '✅ Email configured — sending from ' + cfg.user;
-      } else {
-        el.style.background = '#fff7ed'; el.style.color = '#c2410c';
-        el.textContent = '⚠️ Email not configured. Add Gmail credentials below to enable alert forwarding.';
-      }
-    }
-
-    async function saveEmailConfig() {
-      const gmailUser = document.getElementById('gmailUser').value.trim();
-      const gmailAppPassword = document.getElementById('gmailAppPassword').value.trim();
-      if (!gmailUser || !gmailAppPassword) { showToast('Both fields required'); return; }
-      const res = await fetch('/api/admin/email-config', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ gmailUser, gmailAppPassword }) });
-      const data = await res.json();
-      if (res.ok) { showToast('Email settings saved'); loadEmailConfig(); document.getElementById('gmailAppPassword').value = ''; }
-      else showToast(data.error || 'Error saving');
     }
 
     // ─── Security Alerts ─────────────────────────────────────────────────────

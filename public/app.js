@@ -218,9 +218,14 @@ async function checkAuth() {
 async function refreshPoints() {
   try {
     const fresh = await fetchJSON('/api/auth/me');
-    if (fresh && typeof fresh.points === 'number') {
+    if (!fresh) return;
+    if (typeof fresh.points === 'number') {
       currentUser.points = fresh.points;
       setTextSafe('sidebarPoints', fresh.points);
+    }
+    if (typeof fresh.posts === 'number') {
+      currentUser.posts = fresh.posts;
+      setTextSafe('sidebarPosts', fresh.posts);
     }
   } catch {}
 }
@@ -535,6 +540,22 @@ async function renderEvents(container) {
 function openCreateEventModal() {
   const existing = document.getElementById('createEventModal');
   if (existing) existing.remove();
+
+  const now = new Date();
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const selStyle = 'padding:9px 10px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:white;width:100%;box-sizing:border-box;';
+
+  // Month options
+  const monthOpts = months.map((m,i) => `<option value="${String(i+1).padStart(2,'0')}" ${i===now.getMonth()?'selected':''}>${m}</option>`).join('');
+  // Day options
+  const dayOpts = Array.from({length:31},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}" ${i+1===now.getDate()?'selected':''}>${i+1}</option>`).join('');
+  // Year options (current year + 2)
+  const yearOpts = [0,1,2].map(n=>`<option value="${now.getFullYear()+n}" ${n===0?'selected':''}>${now.getFullYear()+n}</option>`).join('');
+  // Hour options 1-12
+  const hourOpts = Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i+1===1?'selected':''}>${i+1}</option>`).join('');
+  // Minute options
+  const minOpts = ['00','15','30','45'].map(m=>`<option value="${m}">${m}</option>`).join('');
+
   const modal = document.createElement('div');
   modal.id = 'createEventModal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
@@ -544,28 +565,50 @@ function openCreateEventModal() {
         <h3 style="margin:0;font-size:17px;font-weight:800;">Create Event</h3>
         <button onclick="document.getElementById('createEventModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-light);">✕</button>
       </div>
+
       <div style="margin-bottom:12px;">
         <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">EVENT TITLE *</label>
         <input id="evTitle" type="text" placeholder="e.g. Beach Cleanup Day" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" />
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">DATE *</label>
-          <input id="evDate" type="date" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" />
-        </div>
-        <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">TIME</label>
-          <input id="evTime" type="time" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" />
+
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">DATE *</label>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1.2fr;gap:8px;">
+          <select id="evMonth" style="${selStyle}">${monthOpts}</select>
+          <select id="evDay" style="${selStyle}">${dayOpts}</select>
+          <select id="evYear" style="${selStyle}">${yearOpts}</select>
         </div>
       </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">TIME</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <select id="evHour" style="${selStyle}">${hourOpts}</select>
+          <select id="evMin" style="${selStyle}">${minOpts}</select>
+          <select id="evAmPm" style="${selStyle}"><option value="AM">AM</option><option value="PM" selected>PM</option></select>
+        </div>
+      </div>
+
       <div style="margin-bottom:12px;">
         <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">LOCATION</label>
         <input id="evLocation" type="text" placeholder="e.g. Costa Blanca Beach" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" />
       </div>
-      <div style="margin-bottom:18px;">
+
+      <div style="margin-bottom:12px;">
         <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">DESCRIPTION</label>
         <textarea id="evDesc" placeholder="Tell neighbors what this event is about…" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:none;height:80px;box-sizing:border-box;"></textarea>
       </div>
+
+      <div style="margin-bottom:18px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">PHOTO (OPTIONAL)</label>
+        <input id="evPhotoInput" type="file" accept="image/*" style="display:none;" onchange="attachEventPhoto(this)" />
+        <div id="evPhotoPreview" style="display:none;position:relative;margin-bottom:8px;">
+          <img id="evPhotoImg" src="" alt="Event photo" style="width:100%;border-radius:10px;object-fit:cover;max-height:200px;display:block;" />
+          <button onclick="removeEventPhoto()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);color:white;border:none;border-radius:50%;width:26px;height:26px;font-size:15px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+        <button onclick="document.getElementById('evPhotoInput').click()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-mid);">📷 Add Photo</button>
+      </div>
+
       <button onclick="submitCreateEvent()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Post Event</button>
       <div id="evErr" style="color:var(--coral);font-size:13px;margin-top:8px;display:none;"></div>
     </div>
@@ -573,28 +616,64 @@ function openCreateEventModal() {
   document.body.appendChild(modal);
 }
 
+let evPhotoDataUrl = null;
+
+function attachEventPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    evPhotoDataUrl = e.target.result;
+    document.getElementById('evPhotoImg').src = evPhotoDataUrl;
+    document.getElementById('evPhotoPreview').style.display = 'block';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function removeEventPhoto() {
+  evPhotoDataUrl = null;
+  document.getElementById('evPhotoPreview').style.display = 'none';
+  document.getElementById('evPhotoInput').value = '';
+}
+
 async function submitCreateEvent() {
   const title = document.getElementById('evTitle')?.value.trim();
-  const date = document.getElementById('evDate')?.value;
-  const time = document.getElementById('evTime')?.value;
+  const month = document.getElementById('evMonth')?.value;
+  const day = document.getElementById('evDay')?.value;
+  const year = document.getElementById('evYear')?.value;
+  const hour = document.getElementById('evHour')?.value;
+  const min = document.getElementById('evMin')?.value;
+  const ampm = document.getElementById('evAmPm')?.value;
   const location = document.getElementById('evLocation')?.value.trim();
   const description = document.getElementById('evDesc')?.value.trim();
   const errEl = document.getElementById('evErr');
   if (!title) { errEl.textContent = 'Please enter a title.'; errEl.style.display = 'block'; return; }
-  if (!date) { errEl.textContent = 'Please select a date.'; errEl.style.display = 'block'; return; }
-  const res = await fetch('/api/events', {
-    method: 'POST', credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, eventDate: date, eventTime: time, location, description })
-  });
-  if (res.ok) {
-    document.getElementById('createEventModal')?.remove();
-    await renderEvents(document.getElementById('sectionContent'));
-    showToast('Event created! 📅');
-  } else {
-    const d = await res.json();
-    errEl.textContent = d.error || 'Something went wrong.';
-    errEl.style.display = 'block';
+
+  const date = `${year}-${month}-${day}`;
+  let h24 = parseInt(hour);
+  if (ampm === 'PM' && h24 !== 12) h24 += 12;
+  if (ampm === 'AM' && h24 === 12) h24 = 0;
+  const time = `${String(h24).padStart(2,'0')}:${min}`;
+  const body = { title, eventDate: date, eventTime: time, location, description };
+  if (evPhotoDataUrl) body.image = evPhotoDataUrl;
+  evPhotoDataUrl = null;
+
+  try {
+    const res = await fetch('/api/events', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      document.getElementById('createEventModal')?.remove();
+      navigate('events');
+      showToast('Event created! 📅');
+    } else {
+      const d = await res.json().catch(() => ({}));
+      showToast('Error: ' + (d.error || `Server error ${res.status}`));
+    }
+  } catch (err) {
+    showToast('Could not connect to server. Please try again.');
+    console.error('submitCreateEvent error:', err);
   }
 }
 
@@ -603,7 +682,7 @@ async function renderSafety(container) {
   container.innerHTML = sectionHeaderHTML('safety');
 
   const btn = document.createElement('button');
-  btn.onclick = () => { openCreatePost('safety'); };
+  btn.onclick = () => { openSafetyReportModal(); };
   btn.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 20px;background:#E63946;color:white;border:none;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:16px;';
   btn.innerHTML = '🚨 Report Safety Alert';
   container.appendChild(btn);
@@ -621,32 +700,250 @@ async function renderSafety(container) {
   unique.forEach(post => container.appendChild(buildPostCard(post)));
 }
 
+const SAFETY_CATEGORIES = [
+  { id: 'Suspicious Activity', icon: '👁️', label: 'Suspicious Activity', color: '#E76F51' },
+  { id: 'Security',            icon: '🔒', label: 'Security',            color: '#E63946' },
+  { id: 'Lost Pet',            icon: '🐾', label: 'Lost Pet',            color: '#F4A261' },
+  { id: 'Lost Pet Found',      icon: '🐶', label: 'Pet Found',           color: '#2A9D8F' },
+  { id: 'Property Damage',     icon: '🏚️', label: 'Property Damage',     color: '#E76F51' },
+  { id: 'Facilities',          icon: '🔧', label: 'Facilities Issue',     color: '#457B9D' },
+  { id: 'Medical Emergency',   icon: '🚑', label: 'Medical Emergency',   color: '#E63946' },
+  { id: 'Fire',                icon: '🔥', label: 'Fire',                color: '#E63946' },
+  { id: 'Flooding',            icon: '🌊', label: 'Flooding',            color: '#0077B6' },
+  { id: 'Road Works',          icon: '🚧', label: 'Road Works',          color: '#F4A261' },
+  { id: 'Power Outage',        icon: '⚡', label: 'Power Outage',        color: '#E9C46A' },
+  { id: 'Water Outage',        icon: '💧', label: 'Water Outage',        color: '#48CAE4' },
+  { id: 'General Warning',     icon: '⚠️', label: 'General Warning',     color: '#F4A261' },
+];
+
+let safetySelectedCategory = null;
+let safetyPhotoDataUrl = null;
+
+function openSafetyReportModal() {
+  const existing = document.getElementById('safetyReportModal');
+  if (existing) existing.remove();
+  safetySelectedCategory = null;
+  safetyPhotoDataUrl = null;
+
+  const modal = document.createElement('div');
+  modal.id = 'safetyReportModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <h3 style="margin:0;font-size:17px;font-weight:800;">🚨 Report Safety Alert</h3>
+        <button onclick="document.getElementById('safetyReportModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-light);">✕</button>
+      </div>
+      <p style="font-size:13px;color:var(--text-mid);margin:0 0 16px;">Select a category to report:</p>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;">
+        ${SAFETY_CATEGORIES.map(c => `
+          <button id="safetycat-${c.id.replace(/\s/g,'_')}" onclick="selectSafetyCategory('${c.id}')"
+            style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border:2px solid var(--border);border-radius:12px;background:white;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            <span style="font-size:24px;">${c.icon}</span>
+            <span style="font-size:11px;font-weight:700;color:var(--text-dark);text-align:center;line-height:1.2;">${c.label}</span>
+          </button>
+        `).join('')}
+      </div>
+
+      <div id="safetyDetailSection" style="display:none;">
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">DESCRIPTION</label>
+          <textarea id="safetyDesc" placeholder="Describe what happened, where, and any other details…" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:none;height:90px;box-sizing:border-box;"></textarea>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">SEVERITY</label>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="safety-sev-btn active" data-sev="low" onclick="selectSafetySeverity('low',this)" style="flex:1;padding:9px;border:1.5px solid #2A9D8F;background:#2A9D8F18;color:#2A9D8F;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;">🟢 Low</button>
+            <button type="button" class="safety-sev-btn" data-sev="medium" onclick="selectSafetySeverity('medium',this)" style="flex:1;padding:9px;border:1.5px solid var(--border);background:white;color:var(--text-mid);border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;">🟡 Medium</button>
+            <button type="button" class="safety-sev-btn" data-sev="high" onclick="selectSafetySeverity('high',this)" style="flex:1;padding:9px;border:1.5px solid var(--border);background:white;color:var(--text-mid);border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;">🔴 High</button>
+          </div>
+        </div>
+        <div style="margin-bottom:18px;">
+          <input id="safetyPhotoInput" type="file" accept="image/*" style="display:none;" onchange="attachSafetyPhoto(this)" />
+          <div id="safetyPhotoPreview" style="display:none;position:relative;margin-bottom:8px;">
+            <img id="safetyPhotoImg" src="" alt="" style="width:100%;border-radius:10px;object-fit:cover;max-height:180px;display:block;" />
+            <button onclick="removeSafetyPhoto()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);color:white;border:none;border-radius:50%;width:26px;height:26px;font-size:15px;cursor:pointer;">✕</button>
+          </div>
+          <button onclick="document.getElementById('safetyPhotoInput').click()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-mid);">📷 Add Photo</button>
+        </div>
+        <button onclick="submitSafetyReport()" style="width:100%;padding:12px;background:#E63946;color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Post Alert</button>
+        <div id="safetyErr" style="color:var(--coral);font-size:13px;margin-top:8px;display:none;"></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+let selectedSafetySev = 'low';
+
+function selectSafetyCategory(catId) {
+  safetySelectedCategory = catId;
+  SAFETY_CATEGORIES.forEach(c => {
+    const btn = document.getElementById('safetycat-' + c.id.replace(/\s/g,'_'));
+    if (!btn) return;
+    if (c.id === catId) {
+      btn.style.borderColor = c.color;
+      btn.style.background = c.color + '18';
+    } else {
+      btn.style.borderColor = 'var(--border)';
+      btn.style.background = 'white';
+    }
+  });
+  document.getElementById('safetyDetailSection').style.display = 'block';
+}
+
+function selectSafetySeverity(sev, btn) {
+  selectedSafetySev = sev;
+  const colors = { low: '#2A9D8F', medium: '#F4A261', high: '#E63946' };
+  document.querySelectorAll('.safety-sev-btn').forEach(b => {
+    b.style.borderColor = 'var(--border)'; b.style.background = 'white'; b.style.color = 'var(--text-mid)';
+  });
+  btn.style.borderColor = colors[sev]; btn.style.background = colors[sev] + '18'; btn.style.color = colors[sev];
+}
+
+function attachSafetyPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    safetyPhotoDataUrl = e.target.result;
+    document.getElementById('safetyPhotoImg').src = safetyPhotoDataUrl;
+    document.getElementById('safetyPhotoPreview').style.display = 'block';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function removeSafetyPhoto() {
+  safetyPhotoDataUrl = null;
+  document.getElementById('safetyPhotoPreview').style.display = 'none';
+  document.getElementById('safetyPhotoInput').value = '';
+}
+
+async function submitSafetyReport() {
+  const desc = document.getElementById('safetyDesc')?.value.trim();
+  const errEl = document.getElementById('safetyErr');
+  if (!safetySelectedCategory) { errEl.textContent = 'Please select a category.'; errEl.style.display = 'block'; return; }
+  if (!desc) { errEl.textContent = 'Please add a description.'; errEl.style.display = 'block'; return; }
+  const body = { type: 'safety', section: 'safety', content: desc, alertType: safetySelectedCategory, severity: selectedSafetySev };
+  if (safetyPhotoDataUrl) body.image = safetyPhotoDataUrl;
+  const res = await fetch('/api/posts', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (res.ok) {
+    document.getElementById('safetyReportModal')?.remove();
+    await renderSafety(document.getElementById('sectionContent'));
+    showToast('Safety alert posted 🚨');
+  } else {
+    const d = await res.json();
+    errEl.textContent = d.error || 'Something went wrong.';
+    errEl.style.display = 'block';
+  }
+}
+
 // ─── Businesses ─────────────────────────────────────────────────
 
+
+const BIZ_CATEGORIES = [
+  { label: 'Restaurant',      icon: '🍽️' },
+  { label: 'Bar & Grill',     icon: '🍺' },
+  { label: 'Cafe & Bakery',   icon: '☕' },
+  { label: 'Home Services',   icon: '🔧' },
+  { label: 'Handyman',        icon: '🪛' },
+  { label: 'Beauty & Wellness', icon: '💅' },
+  { label: 'Health & Medical', icon: '🏥' },
+  { label: 'Transportation',  icon: '🚗' },
+  { label: 'Supermarket',     icon: '🛒' },
+  { label: 'Retail & Shopping', icon: '🛍️' },
+  { label: 'Real Estate',     icon: '🏠' },
+  { label: 'Sports & Fitness', icon: '⚽' },
+  { label: 'Professional Services', icon: '💼' },
+  { label: 'Entertainment',   icon: '🎉' },
+  { label: 'Other',           icon: '📌' },
+];
+
+let allBusinesses = [];
+let bizActiveCat = 'All';
+let bizSearchQuery = '';
 
 async function renderBusinesses(container) {
   container.innerHTML = '';
   currentBizId = null;
-  const topBar = document.createElement('div');
-  topBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;';
+
   const addBtnHtml = currentUser
     ? `<button onclick="openAddBusinessModal()" style="padding:9px 18px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Business</button>`
     : '';
+
+  const topBar = document.createElement('div');
+  topBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;';
   topBar.innerHTML = `<div><h2 style="font-size:19px;font-weight:800;color:var(--text-dark);margin:0;">Business Directory</h2><p style="font-size:13px;color:var(--text-light);margin:2px 0 0;">Local restaurants and services near Farallón</p></div>${addBtnHtml}`;
   container.appendChild(topBar);
-  const businesses = await fetchJSON('/api/businesses');
-  if (!businesses || !businesses.length) {
+
+  // Search bar
+  const searchWrap = document.createElement('div');
+  searchWrap.style.cssText = 'position:relative;margin-bottom:12px;';
+  searchWrap.innerHTML = `
+    <input id="bizSearch" type="text" placeholder="Search businesses…"
+      oninput="bizSearchQuery=this.value;renderBizList()"
+      style="width:100%;padding:10px 14px 10px 38px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;background:white;" />
+    <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;">🔍</span>`;
+  container.appendChild(searchWrap);
+
+  allBusinesses = await fetchJSON('/api/businesses') || [];
+
+  if (!allBusinesses.length) {
     container.insertAdjacentHTML('beforeend', emptyStateHTML('🏪', 'No businesses listed', 'Know a great local business? Recommend it!'));
     return;
   }
+
+  // Category chips — fixed predefined list
+  const chipWrap = document.createElement('div');
+  chipWrap.id = 'bizCatChips';
+  chipWrap.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;';
+  const allChips = [{ label: 'All', icon: '🏪' }, ...BIZ_CATEGORIES];
+  chipWrap.innerHTML = allChips.map(c => `
+    <button onclick="bizActiveCat='${c.label}';renderBizList()"
+      style="padding:7px 15px;border-radius:20px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;border:1.5px solid ${c.label==='All'?'var(--ocean)':'var(--border)'};background:${c.label==='All'?'var(--ocean)':'white'};color:${c.label==='All'?'white':'var(--text-mid)'};">
+      ${c.icon} ${c.label}
+    </button>`).join('');
+  container.appendChild(chipWrap);
+
   const list = document.createElement('div');
+  list.id = 'bizList';
   list.style.cssText = 'display:flex;flex-direction:column;gap:12px;';
-  businesses.forEach((biz, i) => {
+  container.appendChild(list);
+
+  bizActiveCat = 'All';
+  bizSearchQuery = '';
+  renderBizList();
+}
+
+function renderBizList() {
+  const list = document.getElementById('bizList');
+  if (!list) return;
+
+  // Update chip styles
+  document.querySelectorAll('#bizCatChips button').forEach(btn => {
+    const chipCat = [...BIZ_CATEGORIES, { label: 'All' }].find(c => btn.textContent.trim().includes(c.label));
+    const active = chipCat?.label === bizActiveCat;
+    btn.style.background = active ? 'var(--ocean)' : 'white';
+    btn.style.color = active ? 'white' : 'var(--text-mid)';
+    btn.style.borderColor = active ? 'var(--ocean)' : 'var(--border)';
+  });
+
+  const q = bizSearchQuery.toLowerCase();
+  const filtered = allBusinesses.filter(b => {
+    const catMatch = bizActiveCat === 'All' || b.category === bizActiveCat;
+    const searchMatch = !q || b.name?.toLowerCase().includes(q) || b.category?.toLowerCase().includes(q);
+    return catMatch && searchMatch;
+  });
+
+  list.innerHTML = '';
+  if (!filtered.length) {
+    list.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-mid);font-size:14px;">No businesses found.</div>`;
+    return;
+  }
+  filtered.forEach((biz, i) => {
     const card = buildBusinessListingCard(biz);
     card.style.animationDelay = `${i * 50}ms`;
     list.appendChild(card);
   });
-  container.appendChild(list);
 }
 
 function openAddBusinessModal() {
@@ -656,25 +953,70 @@ function openAddBusinessModal() {
   modal.id = 'addBizModal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
   modal.innerHTML = `
-    <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <div style="background:white;border-radius:16px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0;">
         <h3 style="margin:0;font-size:17px;font-weight:800;">Add Business</h3>
         <button onclick="document.getElementById('addBizModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
       </div>
-      ${['NAME *:abName:text:e.g. Costa Coffee','CATEGORY:abCategory:text:e.g. Restaurant','ADDRESS:abAddress:text:Street address','PHONE:abPhone:text:+34 xxx xxx xxx','HOURS:abHours:text:Mon–Fri 9am–6pm','WEBSITE:abWebsite:url:https://...'].map(f => {
-        const [label, id, type, placeholder] = f.split(':');
-        return `<div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">${label}</label><input id="${id}" type="${type}" placeholder="${placeholder}" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/></div>`;
-      }).join('')}
-      <div style="margin-bottom:18px;">
-        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">DESCRIPTION</label>
-        <textarea id="abDesc" placeholder="What does this business offer?" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:none;height:72px;box-sizing:border-box;"></textarea>
+
+      <!-- Banner picker -->
+      <div style="position:relative;height:120px;background:linear-gradient(135deg,var(--ocean),var(--seafoam));margin:16px 0 0;cursor:pointer;overflow:hidden;" id="abBannerPreview" onclick="document.getElementById('abBannerInput').click()">
+        <div id="abBannerPlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.85);gap:4px;">
+          <span style="font-size:22px;">🖼️</span>
+          <span style="font-size:12px;font-weight:600;">Add Banner Photo</span>
+        </div>
+        <input id="abBannerInput" type="file" accept="image/*" style="display:none;" onchange="previewAbBanner(this)"/>
       </div>
-      <button onclick="submitAddBusiness()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Add to Directory</button>
-      <div id="abErr" style="color:var(--coral);font-size:13px;margin-top:8px;display:none;"></div>
+
+      <!-- Logo picker overlapping banner -->
+      <div style="padding:0 24px;margin-top:-30px;position:relative;z-index:2;margin-bottom:12px;">
+        <div id="abLogoPreview" onclick="document.getElementById('abLogoInput').click()" style="width:64px;height:64px;border-radius:50%;background:white;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;font-size:11px;color:#6b7a8d;font-weight:600;text-align:center;line-height:1.3;">
+          <span>+ Logo</span>
+        </div>
+        <input id="abLogoInput" type="file" accept="image/*" style="display:none;" onchange="previewAbLogo(this)"/>
+      </div>
+
+      <div style="padding:0 24px 24px;">
+        <div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">NAME *</label><input id="abName" type="text" placeholder="e.g. Costa Coffee" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/></div>
+        <div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">CATEGORY</label><select id="abCategory" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;background:white;"><option value="">Select a category…</option>${BIZ_CATEGORIES.map(c=>`<option value="${c.label}">${c.icon} ${c.label}</option>`).join('')}</select></div>
+        ${['ADDRESS:abAddress:text:Street address','PHONE:abPhone:tel:+507 xxx xxxx','HOURS:abHours:text:Mon–Fri 9am–6pm','WEBSITE:abWebsite:url:https://...'].map(f => {
+          const [label, id, type, placeholder] = f.split(':');
+          return `<div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">${label}</label><input id="${id}" type="${type}" placeholder="${placeholder}" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/></div>`;
+        }).join('')}
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">DESCRIPTION</label>
+          <textarea id="abDesc" placeholder="What does this business offer?" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:none;height:80px;box-sizing:border-box;"></textarea>
+        </div>
+        <button onclick="submitAddBusiness()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Add to Directory</button>
+        <div id="abErr" style="color:var(--coral);font-size:13px;margin-top:8px;display:none;"></div>
+      </div>
     </div>
   `;
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
   document.body.appendChild(modal);
+}
+
+function previewAbBanner(input) {
+  if (!input.files?.[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('abBannerPreview');
+    prev.style.backgroundImage = `url(${e.target.result})`;
+    prev.style.backgroundSize = 'cover';
+    prev.style.backgroundPosition = 'center';
+    document.getElementById('abBannerPlaceholder').style.display = 'none';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function previewAbLogo(input) {
+  if (!input.files?.[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('abLogoPreview');
+    prev.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+  };
+  reader.readAsDataURL(input.files[0]);
 }
 
 async function submitAddBusiness() {
@@ -694,15 +1036,30 @@ async function submitAddBusiness() {
       description: document.getElementById('abDesc')?.value.trim() || '',
     })
   });
-  if (res.ok) {
-    document.getElementById('addBizModal').remove();
-    await renderBusinesses(document.getElementById('sectionContent'));
-    showToast('Business added to directory!');
-  } else {
+  if (!res.ok) {
     const d = await res.json();
     errEl.textContent = d.error || 'Something went wrong.';
     errEl.style.display = 'block';
+    return;
   }
+  const { business } = await res.json();
+
+  // Upload banner if selected
+  const bannerFile = document.getElementById('abBannerInput')?.files?.[0];
+  if (bannerFile && business?.id) {
+    const fd = new FormData(); fd.append('banner', bannerFile);
+    await fetch(`/api/businesses/${business.id}/banner`, { method: 'POST', body: fd, credentials: 'include' });
+  }
+  // Upload logo if selected
+  const logoFile = document.getElementById('abLogoInput')?.files?.[0];
+  if (logoFile && business?.id) {
+    const fd = new FormData(); fd.append('logo', logoFile);
+    await fetch(`/api/businesses/${business.id}/logo`, { method: 'POST', body: fd, credentials: 'include' });
+  }
+
+  document.getElementById('addBizModal').remove();
+  await renderBusinesses(document.getElementById('sectionContent'));
+  showToast('Business added to directory!');
 }
 
 // ─── Neighbors ──────────────────────────────────────────────────
@@ -1458,6 +1815,7 @@ function buildEventCard(ev) {
       </div>
     </div>
     <div class="event-body">
+      ${ev.image ? `<img src="${ev.image}" alt="Event photo" style="width:100%;border-radius:8px;object-fit:cover;max-height:180px;display:block;margin-bottom:10px;cursor:zoom-in;" onclick="openLightbox('${ev.image}')">` : ''}
       <div class="event-category-tag">${ev.category || 'Community'}</div>
       <div class="event-title">${escHtml(ev.title)}</div>
       <div class="event-desc">${escHtml(ev.description)}</div>
@@ -1679,7 +2037,6 @@ function buildBusinessListingCard(biz) {
   const fgColors = { 'Restaurant': '#E65100', 'Bar & Grill': '#880E4F', 'Transportation': '#1B5E20', 'default': '#0D47A1' };
   const bg = bgColors[biz.category] || bgColors.default;
   const fg = fgColors[biz.category] || fgColors.default;
-  const faveYears = biz.faveYears || [];
 
   const card = document.createElement('div');
   card.className = 'biz-listing-card';
@@ -1693,7 +2050,6 @@ function buildBusinessListingCard(biz) {
       <div class="biz-listing-name">
         ${escHtml(biz.name)}
         ${biz.claimed ? '<span class="biz-verified-badge">✓</span>' : '<span style="font-size:11px;font-weight:700;color:#92400E;background:#FEF3C7;border:1px solid #F59E0B;padding:2px 7px;border-radius:20px;">📋 Unclaimed</span>'}
-        ${faveYears.length ? '<span style="font-size:12px;color:#3A7D44;font-weight:600;">🏆 Neighborhood Fave</span>' : ''}
       </div>
       <div class="biz-listing-category">${escHtml(biz.category)}</div>
       <div class="biz-listing-rating">
@@ -1706,7 +2062,7 @@ function buildBusinessListingCard(biz) {
         ${(biz.tags || []).slice(0, 4).map(t => `<span class="biz-listing-tag">${t}</span>`).join('')}
       </div>
       <div class="biz-listing-footer">
-        <span class="biz-listing-fave-count">❤️ ${biz.currentYearFaves || biz.recommendedBy} neighbors faved this</span>
+        <span style="font-size:12px;color:var(--text-light);">${biz.reviewCount > 0 ? `${biz.reviewCount} review${biz.reviewCount !== 1 ? 's' : ''}` : 'No reviews yet'}</span>
         <button onclick="event.stopPropagation();openBusinessPage('${biz.id}')" style="padding:7px 16px;background:#3A7D44;color:white;border:none;border-radius:20px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">View Profile</button>
       </div>
     </div>
@@ -1730,16 +2086,7 @@ async function renderBusinessPage(bizId, container) {
   const bg = bgColors[biz.category] || bgColors.default;
   const photos = biz.photos || [];
   const reviews = biz.reviews || [];
-  const faveYears = biz.faveYears || [];
-  const currentYearFaves = biz.currentYearFaves || 0;
-  const faveThreshold = biz.faveThreshold || 30;
-  const userHasFaved = biz.userHasFaved || false;
-  const currentYear = new Date().getFullYear();
-  const alreadyWonThisYear = faveYears.includes(currentYear);
-  const pct = Math.min(100, Math.round((currentYearFaves / faveThreshold) * 100));
   const isPageOwner = currentUser && (currentUser.id === biz.claimedByUserId || currentUser.id === biz.addedByUserId || currentUser.role === 'admin');
-
-  const trophySVG = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4a2 2 0 0 1-2-2V5h4"/><path d="M18 9h2a2 2 0 0 0 2-2V5h-4"/><path d="M12 17v4"/><path d="M8 21h8"/><path d="M6 5h12v4a6 6 0 0 1-12 0V5Z"/></svg>`;
 
   const wrap = document.createElement('div');
   wrap.className = 'biz-page';
@@ -1762,35 +2109,34 @@ async function renderBusinessPage(bizId, container) {
         </div>
         <div style="padding-bottom:12px;padding-top:48px;"></div>
       </div>
-      <!-- Name + actions -->
-      <div style="display:flex;align-items:flex-start;gap:18px;padding:8px 24px 16px;">
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
-            <span style="font-size:22px;font-weight:800;color:var(--text-dark);">${escHtml(biz.name)}</span>
-            ${!biz.claimed ? '<span style="font-size:11px;font-weight:700;color:#92400E;background:#FEF3C7;border:1px solid #F59E0B;padding:2px 8px;border-radius:20px;">📋 Unclaimed</span>' : ''}
-            <span style="font-size:14px;font-weight:600;color:var(--text-light);">${biz.recommendedBy}</span>
-          </div>
-          <div style="font-size:14px;color:var(--ocean);font-weight:500;margin-bottom:14px;">${escHtml(biz.category)}</div>
-          <div class="biz-action-bar">
-            <button class="btn-biz-fave${userHasFaved ? ' faved' : ''}" id="bizFaveBtn-${biz.id}" onclick="toggleBizFave('${biz.id}')">${userHasFaved ? '⭐ Faved' : '⭐ Fave'}</button>
-            <button class="btn-biz-message" onclick="showToast('Messaging coming soon!')">💬 Message</button>
-            <div style="position:relative;">
-              <button class="btn-biz-more" onclick="toggleBizMoreMenu('${biz.id}')">⋯</button>
-              <div class="biz-more-dropdown" id="bizMoreMenu-${biz.id}" style="display:none;">
-                <div class="biz-more-item" onclick="showToast('${escHtml(biz.name)} muted.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔇</span><div><div class="biz-more-item-text">Mute</div><div class="biz-more-item-sub">Hide all posts from ${escHtml(biz.name)}</div></div></div>
-                <div class="biz-more-item" onclick="openReportModal('business','${biz.id}','${escHtml(biz.name).replace(/'/g,"\\'")}');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">⚑</span><div><div class="biz-more-item-text">Report</div><div class="biz-more-item-sub">Flag for review</div></div></div>
-              </div>
+      <!-- Name + category -->
+      <div style="padding:8px 24px 4px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
+          <span style="font-size:22px;font-weight:800;color:var(--text-dark);">${escHtml(biz.name)}</span>
+          ${!biz.claimed ? '<span style="font-size:11px;font-weight:700;color:#92400E;background:#FEF3C7;border:1px solid #F59E0B;padding:2px 8px;border-radius:20px;">📋 Unclaimed</span>' : ''}
+          <span style="font-size:14px;font-weight:600;color:var(--text-light);">${biz.recommendedBy}</span>
+        </div>
+        <div style="font-size:14px;color:var(--ocean);font-weight:500;margin-bottom:12px;">${escHtml(biz.category)}</div>
+      </div>
+      <!-- Action bar -->
+      <div style="padding:0 24px 12px;">
+        <div class="biz-action-bar">
+          <button class="btn-biz-message" onclick="switchBizTab('reviews');document.getElementById('bizReviewBox')?.focus();">✍️ Write a Review</button>
+          <div style="position:relative;">
+            <button class="btn-biz-more" onclick="toggleBizMoreMenu('${biz.id}')">⋯</button>
+            <div class="biz-more-dropdown" id="bizMoreMenu-${biz.id}" style="display:none;">
+              <div class="biz-more-item" onclick="showToast('${escHtml(biz.name)} muted.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔇</span><div><div class="biz-more-item-text">Mute</div><div class="biz-more-item-sub">Hide all posts from ${escHtml(biz.name)}</div></div></div>
+              <div class="biz-more-item" onclick="openReportModal('business','${biz.id}','${escHtml(biz.name).replace(/'/g,"\\'")}');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">⚑</span><div><div class="biz-more-item-text">Report</div><div class="biz-more-item-sub">Flag for review</div></div></div>
             </div>
           </div>
         </div>
+      </div>
       <!-- Description -->
       <div style="padding:0 24px 20px;font-size:14px;color:var(--text-mid);line-height:1.65;">${escHtml(biz.description)}</div>
       <!-- Claim banner (only if unclaimed) -->
       ${!biz.claimed ? `<div style="border-top:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;background:#FFFBEA;">
-        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#92400E;font-weight:600;">
-          📋 This business hasn't been claimed yet
-        </div>
-        <button onclick="openClaimModal('${biz.id}','${escHtml(biz.name).replace(/'/g,"\\'")}')" style="font-size:13px;font-weight:700;color:var(--ocean);background:none;border:none;cursor:pointer;font-family:inherit;">Claim this business →</button>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#92400E;font-weight:600;">📋 This business hasn't been claimed yet</div>
+        <button onclick="openClaimModal('${biz.id}','${escHtml(biz.name).replace(/'/g,"\\'")}');" style="font-size:13px;font-weight:700;color:var(--ocean);background:none;border:none;cursor:pointer;font-family:inherit;">Claim this business →</button>
       </div>` : ''}
     </div>
 
@@ -1800,7 +2146,7 @@ async function renderBusinessPage(bizId, container) {
       <div class="biz-page-main">
         <div class="biz-tab-bar">
           <button class="biz-tab active" onclick="switchBizTab('overview')">Overview</button>
-          <button class="biz-tab" onclick="switchBizTab('recommendations')">Recommendations</button>
+          <button class="biz-tab" onclick="switchBizTab('reviews')">Reviews (${reviews.length})</button>
           <button class="biz-tab" onclick="switchBizTab('photos')">Photos</button>
         </div>
 
@@ -1811,48 +2157,60 @@ async function renderBusinessPage(bizId, container) {
               ${photos.slice(0,4).map((url,i) => `<img src="${url}" alt="Photo" loading="lazy" style="flex:1;min-width:0;height:200px;object-fit:cover;${i===0?'border-radius:12px 0 0 12px;':''}${i===photos.length-1||i===3?'border-radius:0 12px 12px 0;':''}" />`).join('')}
             </div>` : ''}
 
-          <div class="biz-fave-section" id="bizFaveSection-${biz.id}">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-              <h3 style="margin:0;">Neighborhood Fave</h3>
+          <!-- Rating summary -->
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:24px;">
+              <div style="text-align:center;">
+                <div style="font-size:42px;font-weight:800;color:var(--text-dark);line-height:1;">${biz.rating}</div>
+                <div style="margin:6px 0 4px;">${buildStars(biz.rating)}</div>
+                <div style="font-size:12px;color:var(--text-light);">${biz.reviewCount} review${biz.reviewCount !== 1 ? 's' : ''}</div>
+              </div>
+              <div style="flex:1;">
+                ${[5,4,3,2,1].map(n => {
+                  const cnt = reviews.filter(r => Math.round(r.rating) === n).length;
+                  const pct = reviews.length ? Math.round((cnt/reviews.length)*100) : 0;
+                  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+                    <span style="font-size:12px;color:var(--text-light);width:8px;">${n}</span>
+                    <span style="font-size:11px;color:#F59E0B;">★</span>
+                    <div style="flex:1;height:6px;background:#E8EDF2;border-radius:20px;overflow:hidden;">
+                      <div style="height:100%;width:${pct}%;background:#F59E0B;border-radius:20px;"></div>
+                    </div>
+                    <span style="font-size:12px;color:var(--text-light);width:24px;text-align:right;">${cnt}</span>
+                  </div>`;
+                }).join('')}
+              </div>
             </div>
-            ${faveYears.length ? `
-            <div class="biz-fave-awards" style="margin-bottom:16px;">
-              ${faveYears.map(y => `
-                <div class="biz-fave-award">
-                  <div class="biz-fave-award-icon" style="color:#B8860B;">${trophySVG}</div>
-                  <div class="biz-fave-award-year">${y}</div>
-                </div>`).join('')}
-            </div>` : ''}
-            ${alreadyWonThisYear ? `
-            <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;background:#FFFBEA;border:1.5px solid #F6C90E;border-radius:10px;font-size:13px;font-weight:600;color:#7A5B00;">
-              🏆 ${currentYear} Neighborhood Fave Award earned!
-            </div>` : `
-            <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:14px 16px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                <span style="font-size:13px;font-weight:600;color:var(--text-dark);">Progress toward ${currentYear} Award</span>
-                <span style="font-size:13px;font-weight:700;color:var(--ocean);" id="bizFaveCount-${biz.id}">${currentYearFaves} / ${faveThreshold}</span>
-              </div>
-              <div style="background:#E8EDF2;border-radius:20px;height:8px;overflow:hidden;margin-bottom:8px;">
-                <div id="bizFaveBar-${biz.id}" style="height:100%;border-radius:20px;background:linear-gradient(90deg,#0077B6,#00B4D8);transition:width 0.4s ease;width:${pct}%;"></div>
-              </div>
-              <div style="font-size:12px;color:var(--text-light);">${faveThreshold - currentYearFaves} more fave${faveThreshold - currentYearFaves !== 1 ? 's' : ''} needed for the ${currentYear} Neighborhood Fave award</div>
-            </div>`}
           </div>
+          ${reviews.length > 0 ? `
+          <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:10px;">Recent Reviews</div>
+          ${reviews.slice(0,2).map(r => `
+            <div class="biz-rec-card">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <div style="width:36px;height:36px;border-radius:50%;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">${r.initials}</div>
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${escHtml(r.author)}</div>
+                  <div style="display:flex;align-items:center;gap:6px;">${buildStars(r.rating)}<span style="font-size:11px;color:var(--text-light);">${r.date}</span></div>
+                </div>
+              </div>
+              <div style="font-size:14px;color:var(--text-mid);line-height:1.6;">${escHtml(r.text)}</div>
+            </div>`).join('')}
+          ${reviews.length > 2 ? `<button onclick="switchBizTab('reviews')" style="width:100%;padding:10px;background:none;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;color:var(--ocean);cursor:pointer;font-family:inherit;margin-top:4px;">See all ${reviews.length} reviews →</button>` : ''}
+          ` : '<div style="background:white;border:1px solid var(--border);border-radius:14px;padding:30px;text-align:center;color:var(--text-light);font-size:14px;">No reviews yet — be the first!</div>'}
         </div>
 
-        <!-- Recommendations tab (hidden) -->
-        <div id="bizTab-recommendations" style="display:none;">
-          <div class="biz-rec-compose">
-            <div style="display:flex;align-items:center;gap:12px;">
-              <div style="width:38px;height:38px;border-radius:50%;background:${currentUser?.avatar||'#0077B6'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${currentUser?.initials||'?'}</div>
-              <div style="flex:1;position:relative;">
-                <input id="bizRecBox" type="text" placeholder="Add a recommendation..." style="width:100%;padding:11px 50px 11px 16px;border:1.5px solid var(--border);border-radius:30px;font-size:14px;font-family:inherit;outline:none;background:var(--bg);" />
-                <button onclick="submitBizRec('${biz.id}')" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:32px;height:32px;background:var(--ocean);color:white;border:none;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">→</button>
-              </div>
+        <!-- Reviews tab (hidden) -->
+        <div id="bizTab-reviews" style="display:none;">
+          <!-- Write a review compose -->
+          <div class="biz-rec-compose" style="margin-bottom:16px;">
+            <div style="font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:12px;">Write a Review</div>
+            <div style="display:flex;gap:6px;margin-bottom:12px;" id="bizStarPicker-${biz.id}">
+              ${[1,2,3,4,5].map(n => `<span data-star="${n}" onclick="setBizStar('${biz.id}',${n})" style="font-size:28px;cursor:pointer;color:#D1D5DB;transition:color 0.15s;">★</span>`).join('')}
             </div>
+            <textarea id="bizReviewBox" placeholder="Share your experience..." rows="3" style="width:100%;box-sizing:border-box;padding:11px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;outline:none;background:var(--bg);resize:none;margin-bottom:10px;"></textarea>
+            <button onclick="submitBizReview('${biz.id}')" style="padding:10px 24px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Post Review</button>
           </div>
-          <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:12px;">${reviews.length} Recommendation${reviews.length !== 1 ? 's' : ''}</div>
-          ${reviews.length === 0 ? '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:30px;text-align:center;color:var(--text-light);font-size:14px;">No recommendations yet — be the first!</div>' :
+          <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:12px;">${reviews.length} Review${reviews.length !== 1 ? 's' : ''}</div>
+          ${reviews.length === 0 ? '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:30px;text-align:center;color:var(--text-light);font-size:14px;">No reviews yet — be the first!</div>' :
             reviews.map(r => `
               <div class="biz-rec-card">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
@@ -1890,7 +2248,8 @@ async function renderBusinessPage(bizId, container) {
         <div class="biz-sidebar-card" style="text-align:center;">
           <div style="font-size:28px;font-weight:800;color:var(--text-dark);">${biz.rating}</div>
           <div style="display:flex;justify-content:center;margin:4px 0 6px;">${buildStars(biz.rating)}</div>
-          <div style="font-size:12px;color:var(--text-light);">${biz.reviewCount} reviews · ${biz.recommendedBy} faves</div>
+          <div style="font-size:12px;color:var(--text-light);">${biz.reviewCount} review${biz.reviewCount !== 1 ? 's' : ''}</div>
+          <button onclick="switchBizTab('reviews');document.getElementById('bizReviewBox')?.focus();" style="margin-top:10px;width:100%;padding:9px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✍️ Write a Review</button>
         </div>
       </div>
     </div>
@@ -1917,7 +2276,7 @@ async function uploadBizLogo(bizId, input) {
 }
 
 function switchBizTab(tabName) {
-  ['overview','recommendations','photos'].forEach(t => {
+  ['overview','reviews','photos'].forEach(t => {
     const el = document.getElementById(`bizTab-${t}`);
     if (el) el.style.display = t === tabName ? 'block' : 'none';
   });
@@ -1997,51 +2356,33 @@ async function submitClaim(btn, bizId) {
   }
 }
 
-async function toggleBizFave(bizId) {
-  const res = await fetch(`/api/businesses/${bizId}/fave`, { method: 'POST', credentials: 'include' });
-  if (!res.ok) return;
-  const data = await res.json();
+let bizReviewStars = {};
 
-  // Update fave button
-  const btn = document.getElementById(`bizFaveBtn-${bizId}`);
-  if (btn) {
-    btn.textContent = data.faved ? '⭐ Faved' : '⭐ Fave';
-    btn.classList.toggle('faved', data.faved);
-  }
-
-  // Update progress bar & count
-  const threshold = data.faveThreshold || 30;
-  const count = data.currentYearFaves || 0;
-  const pct = Math.min(100, Math.round((count / threshold) * 100));
-  const countEl = document.getElementById(`bizFaveCount-${bizId}`);
-  const barEl = document.getElementById(`bizFaveBar-${bizId}`);
-  if (countEl) countEl.textContent = `${count} / ${threshold}`;
-  if (barEl) barEl.style.width = `${pct}%`;
-
-  // If threshold just hit, reload the whole page to show award badge
-  const currentYear = new Date().getFullYear();
-  if (data.faveYears && data.faveYears.includes(currentYear) && barEl) {
-    await renderBusinessPage(bizId, document.getElementById('sectionContent'));
-    return;
-  }
-
-  showToast(data.faved ? 'Added to your faves! ⭐' : 'Removed from faves.');
+function setBizStar(bizId, n) {
+  bizReviewStars[bizId] = n;
+  const picker = document.getElementById(`bizStarPicker-${bizId}`);
+  if (!picker) return;
+  picker.querySelectorAll('span').forEach(s => {
+    s.style.color = parseInt(s.dataset.star) <= n ? '#F59E0B' : '#D1D5DB';
+  });
 }
 
-async function submitBizRec(bizId) {
-  const box = document.getElementById('bizRecBox');
+async function submitBizReview(bizId) {
+  const box = document.getElementById('bizReviewBox');
   const text = box?.value.trim();
-  if (!text) return;
+  const rating = bizReviewStars[bizId] || 0;
+  if (!rating) { showToast('Please select a star rating'); return; }
+  if (!text) { showToast('Please write something about your experience'); return; }
   const res = await fetch(`/api/businesses/${bizId}/recommend`, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text })
+    body: JSON.stringify({ text, rating })
   });
   if (res.ok) {
-    box.value = '';
+    delete bizReviewStars[bizId];
     await renderBusinessPage(bizId, document.getElementById('sectionContent'));
-    switchBizTab('recommendations');
-    showToast('Recommendation posted! ⭐');
+    switchBizTab('reviews');
+    showToast('Review posted! ⭐');
   }
 }
 
