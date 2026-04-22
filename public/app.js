@@ -3961,40 +3961,139 @@ function handleShare(postId) {
 }
 
 // ─── Avatar Upload ───────────────────────────────────────────────
+function openImageCropper(file, { aspectRatio, circular, onCrop }) {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;';
+
+    const PREVIEW_W = Math.min(window.innerWidth - 32, 520);
+    const PREVIEW_H = Math.round(PREVIEW_W / aspectRatio);
+
+    // State
+    let scale = Math.max(PREVIEW_W / img.naturalWidth, PREVIEW_H / img.naturalHeight);
+    let ox = (PREVIEW_W - img.naturalWidth * scale) / 2;
+    let oy = (PREVIEW_H - img.naturalHeight * scale) / 2;
+    let dragging = false, lastX = 0, lastY = 0;
+
+    const clamp = () => {
+      const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
+      ox = Math.min(0, Math.max(PREVIEW_W - w, ox));
+      oy = Math.min(0, Math.max(PREVIEW_H - h, oy));
+    };
+
+    const canvas = document.createElement('canvas');
+    canvas.width = PREVIEW_W; canvas.height = PREVIEW_H;
+    canvas.style.cssText = `width:${PREVIEW_W}px;height:${PREVIEW_H}px;display:block;cursor:grab;border-radius:${circular ? '50%' : '10px'};touch-action:none;`;
+
+    const draw = () => {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, PREVIEW_W, PREVIEW_H);
+      if (circular) { ctx.save(); ctx.beginPath(); ctx.arc(PREVIEW_W/2, PREVIEW_H/2, PREVIEW_W/2, 0, Math.PI*2); ctx.clip(); }
+      ctx.drawImage(img, ox, oy, img.naturalWidth * scale, img.naturalHeight * scale);
+      if (circular) ctx.restore();
+    };
+
+    // Drag
+    canvas.addEventListener('mousedown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; canvas.style.cursor = 'grabbing'; });
+    window.addEventListener('mousemove', e => { if (!dragging) return; ox += e.clientX - lastX; oy += e.clientY - lastY; lastX = e.clientX; lastY = e.clientY; clamp(); draw(); });
+    window.addEventListener('mouseup', () => { dragging = false; canvas.style.cursor = 'grab'; });
+
+    // Touch drag
+    let lastTouches = null;
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); lastTouches = e.touches; });
+    canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      if (e.touches.length === 1 && lastTouches?.length === 1) {
+        ox += e.touches[0].clientX - lastTouches[0].clientX;
+        oy += e.touches[0].clientY - lastTouches[0].clientY;
+      } else if (e.touches.length === 2 && lastTouches?.length === 2) {
+        const d0 = Math.hypot(lastTouches[0].clientX - lastTouches[1].clientX, lastTouches[0].clientY - lastTouches[1].clientY);
+        const d1 = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - canvas.getBoundingClientRect().left;
+        const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - canvas.getBoundingClientRect().top;
+        const factor = d1 / d0;
+        ox = cx - (cx - ox) * factor; oy = cy - (cy - oy) * factor;
+        scale *= factor;
+        scale = Math.max(Math.max(PREVIEW_W / img.naturalWidth, PREVIEW_H / img.naturalHeight), Math.min(scale, 5));
+      }
+      lastTouches = e.touches; clamp(); draw();
+    }, { passive: false });
+
+    // Scroll to zoom
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.08 : 0.93;
+      const cx = e.offsetX, cy = e.offsetY;
+      ox = cx - (cx - ox) * factor; oy = cy - (cy - oy) * factor;
+      scale = Math.max(Math.max(PREVIEW_W / img.naturalWidth, PREVIEW_H / img.naturalHeight), Math.min(scale * factor, 5));
+      clamp(); draw();
+    }, { passive: false });
+
+    draw();
+
+    overlay.innerHTML = `
+      <div style="color:white;font-size:15px;font-weight:700;margin-bottom:12px;">${circular ? 'Drag & scroll to reposition' : 'Drag & scroll to adjust cover'}</div>
+    `;
+    overlay.appendChild(canvas);
+    overlay.insertAdjacentHTML('beforeend', `
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button id="cropCancel" style="padding:10px 24px;background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>
+        <button id="cropSave" style="padding:10px 28px;background:#0077B6;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Save Photo</button>
+      </div>
+    `);
+
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#cropCancel').onclick = () => { URL.revokeObjectURL(url); overlay.remove(); };
+    overlay.querySelector('#cropSave').onclick = () => {
+      const out = document.createElement('canvas');
+      const OUTPUT = circular ? 400 : 1200;
+      const OUTPUT_H = circular ? 400 : Math.round(1200 / aspectRatio);
+      out.width = OUTPUT; out.height = OUTPUT_H;
+      const ctx = out.getContext('2d');
+      const scaleUp = OUTPUT / PREVIEW_W;
+      ctx.drawImage(img, ox * scaleUp, oy * scaleUp, img.naturalWidth * scale * scaleUp, img.naturalHeight * scale * scaleUp);
+      out.toBlob(blob => { URL.revokeObjectURL(url); overlay.remove(); onCrop(blob); }, 'image/jpeg', 0.92);
+    };
+  };
+  img.src = url;
+}
+
 async function uploadAvatar(input) {
   if (!input.files || !input.files[0]) return;
-  const formData = new FormData();
-  formData.append('avatar', input.files[0]);
-  showToast('Uploading…');
-  try {
-    const res = await fetch('/api/profile/avatar', { method: 'POST', body: formData, credentials: 'include' });
-    if (!res.ok) throw new Error();
-    const { avatarUrl } = await res.json();
-    currentUser.avatarUrl = avatarUrl;
-    // Update all avatar elements for current user
-    updateAvatarDisplays(avatarUrl);
-    showToast('Profile photo updated! ✓');
-  } catch {
-    showToast('Upload failed — try a smaller image');
-  }
+  openImageCropper(input.files[0], { aspectRatio: 1, circular: true, onCrop: async (blob) => {
+    const formData = new FormData();
+    formData.append('avatar', blob, 'avatar.jpg');
+    showToast('Uploading…');
+    try {
+      const res = await fetch('/api/profile/avatar', { method: 'POST', body: formData, credentials: 'include' });
+      if (!res.ok) throw new Error();
+      const { avatarUrl } = await res.json();
+      currentUser.avatarUrl = avatarUrl;
+      updateAvatarDisplays(avatarUrl);
+      showToast('Profile photo updated! ✓');
+    } catch { showToast('Upload failed — try a smaller image'); }
+  }});
 }
 
 async function uploadBanner(input) {
   if (!input.files || !input.files[0]) return;
-  const formData = new FormData();
-  formData.append('banner', input.files[0]);
-  showToast('Uploading…');
-  try {
-    const res = await fetch('/api/profile/banner', { method: 'POST', body: formData, credentials: 'include' });
-    if (!res.ok) throw new Error();
-    const { bannerUrl } = await res.json();
-    currentUser.bannerUrl = bannerUrl;
-    const banner = document.getElementById('profileBanner');
-    if (banner) { banner.style.background = `url(${bannerUrl}) center/cover no-repeat`; }
-    showToast('Cover photo updated! ✓');
-  } catch {
-    showToast('Upload failed — try a smaller image');
-  }
+  openImageCropper(input.files[0], { aspectRatio: 4, circular: false, onCrop: async (blob) => {
+    const formData = new FormData();
+    formData.append('banner', blob, 'banner.jpg');
+    showToast('Uploading…');
+    try {
+      const res = await fetch('/api/profile/banner', { method: 'POST', body: formData, credentials: 'include' });
+      if (!res.ok) throw new Error();
+      const { bannerUrl } = await res.json();
+      currentUser.bannerUrl = bannerUrl;
+      const banner = document.getElementById('profileBanner');
+      if (banner) { banner.style.background = `url(${bannerUrl}) center/cover no-repeat`; }
+      showToast('Cover photo updated! ✓');
+    } catch { showToast('Upload failed — try a smaller image'); }
+  }});
 }
 
 function avatarHTML(user, size = 40, cls = '') {
