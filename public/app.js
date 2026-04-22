@@ -4063,17 +4063,18 @@ function openImageCropper(file, { aspectRatio, circular, onCrop }) {
 async function uploadAvatar(input) {
   if (!input.files || !input.files[0]) return;
   openImageCropper(input.files[0], { aspectRatio: 1, circular: true, onCrop: async (blob) => {
+    if (!blob) { showToast('Could not process image — try a different file'); return; }
     const formData = new FormData();
     formData.append('avatar', blob, 'avatar.jpg');
     showToast('Uploading…');
     try {
       const res = await fetch('/api/profile/avatar', { method: 'POST', body: formData, credentials: 'include' });
-      if (!res.ok) throw new Error();
+      if (!res.ok) { const d = await res.json().catch(() => ({})); showToast(d.error || `Upload failed (${res.status})`); return; }
       const { avatarUrl } = await res.json();
       currentUser.avatarUrl = avatarUrl;
       updateAvatarDisplays(avatarUrl);
       showToast('Profile photo updated! ✓');
-    } catch { showToast('Upload failed — try a smaller image'); }
+    } catch (e) { showToast('Upload failed — ' + (e.message || 'network error')); }
   }});
 }
 
