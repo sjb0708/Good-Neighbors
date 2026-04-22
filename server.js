@@ -1563,28 +1563,31 @@ app.post('/api/realestate', requireAuth(async (req, res) => {
 
   let imageUrl = null;
   try {
-    const https = require('https'); const http = require('http');
+    const https = require('https'), http = require('http');
     const fetcher = externalUrl.startsWith('https') ? https : http;
+    const parseOgImage = (html) => {
+      const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+             || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+      return m ? m[1] : null;
+    };
     imageUrl = await new Promise((resolve) => {
+      let done = false;
+      const finish = (v) => { if (!done) { done = true; resolve(v); } };
       const req2 = fetcher.get(externalUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (r) => {
         let html = '';
         r.setEncoding('utf8');
-        r.on('data', chunk => { html += chunk; if (html.length > 50000) r.destroy(); });
-        r.on('end', () => {
-          const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-                 || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-          resolve(m ? m[1] : null);
-        });
-        r.on('error', () => resolve(null));
+        r.on('data', chunk => { html += chunk; if (html.length > 50000) { r.destroy(); finish(parseOgImage(html)); } });
+        r.on('end', () => finish(parseOgImage(html)));
+        r.on('error', () => finish(null));
       });
-      req2.on('error', () => resolve(null));
-      req2.setTimeout(5000, () => { req2.destroy(); resolve(null); });
+      req2.on('error', () => finish(null));
+      req2.setTimeout(5000, () => { req2.destroy(); finish(null); });
     });
   } catch { imageUrl = null; }
 
   const [listing] = await sql`
-    INSERT INTO real_estate_listings (type, title, price, image_url, external_url, posted_by_user_id)
-    VALUES (${type||'for_sale'}, ${title}, ${Number(price)||0}, ${imageUrl}, ${externalUrl}, ${u.id})
+    INSERT INTO real_estate_listings (type, title, price, image_url, external_url, description, location, agent_name, agent_phone, agent_email, features, bedrooms, bathrooms, sqft, posted_by_user_id)
+    VALUES (${type||'for_sale'}, ${title}, ${Number(price)||0}, ${imageUrl}, ${externalUrl}, ${''}, ${'Costa Blanca Villas, Farallón'}, ${'Uncover Panama'}, ${''}, ${''}, ${'[]'}, ${0}, ${0}, ${0}, ${u.id})
     RETURNING *
   `;
   res.json({ id: listing.id, type: listing.type, title: listing.title, price: parseFloat(listing.price)||0, image: listing.image_url, externalUrl: listing.external_url, listedAt: listing.created_at });
