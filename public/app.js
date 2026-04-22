@@ -301,7 +301,6 @@ function renderUserUI() {
   if (sidebarAv) sidebarAv.style.background = currentUser.avatar;
   setTextSafe('sidebarInitials', currentUser.initials);
   setTextSafe('sidebarName', currentUser.name);
-  setTextSafe('sidebarNeighbors', currentUser.neighbors);
   setTextSafe('sidebarPoints', currentUser.points);
 
   // Create post modal avatar
@@ -1365,7 +1364,7 @@ function renderSettings(container) {
   container.innerHTML = `
     <div class="profile-banner" style="background:linear-gradient(135deg,var(--ocean),var(--seafoam))">
       <div class="profile-avatar-wrap">
-        <div class="profile-avatar" style="background:${u.avatar}">${u.initials}</div>
+        <div class="profile-avatar" style="background:${u.avatar}">${u.avatarUrl ? `<img src="${u.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : u.initials}</div>
       </div>
     </div>
     <div class="profile-info" style="margin-bottom:16px;">
@@ -4021,6 +4020,9 @@ function updateAvatarDisplays(avatarUrl) {
   if (createAv) { createAv.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; }
   const createInit = document.getElementById('createInitials');
   if (createInit) createInit.textContent = '';
+  // Profile / settings page avatar
+  const profileAv = document.querySelector('.profile-avatar');
+  if (profileAv) { profileAv.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; }
 }
 
 // ─── Lightbox ────────────────────────────────────────────────────
