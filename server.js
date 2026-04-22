@@ -1272,7 +1272,8 @@ app.delete('/api/admin/businesses/:id', requireAdmin(async (req, res) => {
   res.json({ ok: true });
 }));
 
-app.post('/api/businesses/:id/banner', requireAuth(upload.single('banner'), async (req, res) => {
+app.post('/api/businesses/:id/banner', requireAuth(async (req, res) => {
+  await new Promise((resolve, reject) => upload.single('banner')(req, res, err => err ? reject(err) : resolve()));
   const [biz] = await sql`SELECT claimed_by_user_id, added_by_user_id FROM businesses WHERE id=${req.params.id}`;
   if (!biz) return res.status(404).json({ error: 'Not found' });
   const isOwner = biz.claimed_by_user_id === req.currentUser.id || biz.added_by_user_id === req.currentUser.id;
@@ -1284,7 +1285,8 @@ app.post('/api/businesses/:id/banner', requireAuth(upload.single('banner'), asyn
   res.json({ ok: true, bannerUrl: url });
 }));
 
-app.post('/api/businesses/:id/logo', requireAuth(upload.single('logo'), async (req, res) => {
+app.post('/api/businesses/:id/logo', requireAuth(async (req, res) => {
+  await new Promise((resolve, reject) => upload.single('logo')(req, res, err => err ? reject(err) : resolve()));
   const [biz] = await sql`SELECT claimed_by_user_id, added_by_user_id FROM businesses WHERE id=${req.params.id}`;
   if (!biz) return res.status(404).json({ error: 'Not found' });
   const isOwner = biz.claimed_by_user_id === req.currentUser.id || biz.added_by_user_id === req.currentUser.id;
