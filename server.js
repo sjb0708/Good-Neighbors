@@ -1936,12 +1936,68 @@ app.patch('/api/profile', requireAuth(async (req, res) => {
   res.json({ ok: true });
 }));
 
-app.post('/api/neighbors/:username/wave', requireAuth(async (req, res) => {
-  const [target] = await sql`SELECT id, name FROM users WHERE username=${req.params.username}`;
-  if (!target) return res.status(404).json({ error: 'Not found' });
-  if (target.id === req.currentUser.id) return res.status(400).json({ error: 'Cannot wave at yourself' });
-  await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
-    VALUES (${target.id}, 'wave', ${`${req.currentUser.name} waved at you! 👋`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials})`;
+// ─── Direct Messages ──────────────────────────────────────────────────────────
+
+async function ensureMessagingTables() {
+  await sql`CREATE TABLE IF NOT EXISTS conversations (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user1_id UUID REFERENCES users(id) ON DELETE CASCADE, user2_id UUID REFERENCES users(id) ON DELETE CASCADE, last_message_at TIMESTAMPTZ DEFAULT NOW(), created_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(user1_id, user2_id))`;
+  await sql`CREATE TABLE IF NOT EXISTS direct_messages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE, sender_id UUID REFERENCES users(id) ON DELETE CASCADE, content TEXT NOT NULL, read BOOLEAN DEFAULT false, created_at TIMESTAMPTZ DEFAULT NOW())`;
+}
+
+app.post('/api/conversations/:username', requireAuth(async (req, res) => {
+  await ensureMessagingTables();
+  const [other] = await sql`SELECT id FROM users WHERE username=${req.params.username}`;
+  if (!other) return res.status(404).json({ error: 'User not found' });
+  if (other.id === req.currentUser.id) return res.status(400).json({ error: 'Cannot message yourself' });
+  const u1 = req.currentUser.id < other.id ? req.currentUser.id : other.id;
+  const u2 = req.currentUser.id < other.id ? other.id : req.currentUser.id;
+  const [conv] = await sql`INSERT INTO conversations (user1_id, user2_id) VALUES (${u1}, ${u2}) ON CONFLICT (user1_id, user2_id) DO UPDATE SET last_message_at = conversations.last_message_at RETURNING id`;
+  res.json({ conversationId: conv.id });
+}));
+
+app.get('/api/conversations', requireAuth(async (req, res) => {
+  await ensureMessagingTables();
+  const userId = req.currentUser.id;
+  const rows = await sql`
+    SELECT c.id, c.last_message_at,
+      CASE WHEN c.user1_id = ${userId} THEN c.user2_id ELSE c.user1_id END AS partner_id,
+      u.name AS partner_name, u.username AS partner_username, u.avatar_hex AS partner_avatar,
+      u.avatar_url AS partner_avatar_url, u.initials AS partner_initials,
+      (SELECT content FROM direct_messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) AS last_message,
+      (SELECT COUNT(*)::int FROM direct_messages WHERE conversation_id = c.id AND sender_id != ${userId} AND read = false) AS unread_count
+    FROM conversations c
+    JOIN users u ON u.id = CASE WHEN c.user1_id = ${userId} THEN c.user2_id ELSE c.user1_id END
+    WHERE c.user1_id = ${userId} OR c.user2_id = ${userId}
+    ORDER BY c.last_message_at DESC
+  `;
+  res.json(rows.map(r => ({ id: r.id, partner: { id: r.partner_id, name: r.partner_name, username: r.partner_username, avatar: r.partner_avatar, avatarUrl: r.partner_avatar_url, initials: r.partner_initials }, lastMessage: r.last_message, unreadCount: r.unread_count, lastMessageAt: r.last_message_at })));
+}));
+
+app.get('/api/conversations/:id/messages', requireAuth(async (req, res) => {
+  await ensureMessagingTables();
+  const userId = req.currentUser.id;
+  const [conv] = await sql`SELECT id FROM conversations WHERE id=${req.params.id} AND (user1_id=${userId} OR user2_id=${userId})`;
+  if (!conv) return res.status(404).json({ error: 'Not found' });
+  const msgs = await sql`SELECT * FROM direct_messages WHERE conversation_id=${req.params.id} ORDER BY created_at ASC LIMIT 100`;
+  res.json(msgs.map(m => ({ id: m.id, senderId: m.sender_id, content: m.content, read: m.read, createdAt: m.created_at })));
+}));
+
+app.post('/api/conversations/:id/messages', requireAuth(async (req, res) => {
+  await ensureMessagingTables();
+  const userId = req.currentUser.id;
+  const { content } = req.body;
+  if (!content?.trim()) return res.status(400).json({ error: 'Message cannot be empty' });
+  const [conv] = await sql`SELECT * FROM conversations WHERE id=${req.params.id} AND (user1_id=${userId} OR user2_id=${userId})`;
+  if (!conv) return res.status(404).json({ error: 'Not found' });
+  const [msg] = await sql`INSERT INTO direct_messages (conversation_id, sender_id, content) VALUES (${req.params.id}, ${userId}, ${content.trim()}) RETURNING *`;
+  await sql`UPDATE conversations SET last_message_at = NOW() WHERE id=${req.params.id}`;
+  const partnerId = conv.user1_id === userId ? conv.user2_id : conv.user1_id;
+  await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id) VALUES (${partnerId}, 'message', ${`${req.currentUser.name} sent you a message`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials}, ${req.params.id})`;
+  res.json({ id: msg.id, senderId: msg.sender_id, content: msg.content, read: msg.read, createdAt: msg.created_at });
+}));
+
+app.post('/api/conversations/:id/read', requireAuth(async (req, res) => {
+  await ensureMessagingTables();
+  await sql`UPDATE direct_messages SET read=true WHERE conversation_id=${req.params.id} AND sender_id!=${req.currentUser.id}`;
   res.json({ ok: true });
 }));
 
@@ -2250,13 +2306,14 @@ app.get('/api/unread', requireAuth(async (req, res) => {
       readMap[s] = new Date();
     }
   }
-  const [feed, safety, marketplace, events] = await Promise.all([
+  const [feed, safety, marketplace, events, msgs] = await Promise.all([
     sql`SELECT COUNT(*)::int AS c FROM posts WHERE section='feed' AND (type IS NULL OR type != 'safety') AND created_at > ${readMap.feed} AND author_id != ${userId}`,
     sql`SELECT COUNT(*)::int AS c FROM posts WHERE (section='safety' OR type='safety') AND COALESCE(severity,'medium') != 'resolved' AND created_at > ${readMap.safety} AND author_id != ${userId}`,
     sql`SELECT COUNT(*)::int AS c FROM marketplace_items WHERE created_at > ${readMap.marketplace} AND seller_id != ${userId}`,
     sql`SELECT COUNT(*)::int AS c FROM events WHERE created_at > ${readMap.events} AND host_id != ${userId} AND event_date >= CURRENT_DATE`,
+    sql`SELECT COALESCE(SUM((SELECT COUNT(*)::int FROM direct_messages WHERE conversation_id=c.id AND sender_id!=${userId} AND read=false)),0)::int AS c FROM conversations c WHERE c.user1_id=${userId} OR c.user2_id=${userId}`.catch(() => [{ c: 0 }]),
   ]);
-  res.json({ feed: feed[0].c, safety: safety[0].c, marketplace: marketplace[0].c, events: events[0].c });
+  res.json({ feed: feed[0].c, safety: safety[0].c, marketplace: marketplace[0].c, events: events[0].c, messages: msgs[0]?.c || 0 });
 }));
 
 app.post('/api/sections/:section/read', requireAuth(async (req, res) => {

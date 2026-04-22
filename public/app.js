@@ -209,7 +209,7 @@ async function loadSidebarWidgets() {
             <div class="nn-name">${escHtml(n.name)}</div>
             <div class="nn-street">${escHtml(n.address || '')}</div>
           </div>
-          <button class="btn-wave">👋</button>
+          <button class="btn-msg-sm" onclick="startConversation('${n.username}')">Message</button>
         </div>`).join('');
     } else {
       nnEl.innerHTML = '<div style="font-size:12px;color:var(--text-light)">No neighbors yet.</div>';
@@ -346,6 +346,7 @@ async function refreshUnreadBadges() {
   setBadge('badgeSafety', counts.safety);
   setBadge('badgeMarketplace', counts.marketplace);
   setBadge('badgeEvents', counts.events);
+  setBadge('badgeMessages', counts.messages);
 }
 
 const TRACKED_SECTIONS = ['feed', 'safety', 'marketplace', 'events', 'groups', 'realestate'];
@@ -386,6 +387,7 @@ async function renderSection(section, container) {
     case 'businesses':  await renderBusinesses(container); break;
     case 'neighbors':   await renderNeighbors(container); break;
     case 'groups':      await renderGroups(container); break;
+    case 'messages':    await renderMessages(container); break;
     case 'notifications': await renderNotifications(container); break;
     case 'profile':     await renderProfile(container); break;
     case 'settings':    renderSettings(container); break;
@@ -2585,17 +2587,129 @@ function buildNeighborCard(neighbor) {
     <div class="neighbor-years">
       ${yearsText} in Costa Blanca Villas
     </div>
-    <button class="btn-wave-neighbor" onclick="waveAtNeighbor('${neighbor.username}','${escHtml(neighbor.name).replace(/'/g, "\\'")}')">
-      👋 Say Hi!
+    <button class="btn-wave-neighbor" onclick="startConversation('${neighbor.username}')">
+      💬 Message
     </button>
   `;
   return card;
 }
 
-async function waveAtNeighbor(username, name) {
-  const res = await fetch(`/api/neighbors/${username}/wave`, { method: 'POST', credentials: 'include' });
-  if (res.ok) showToast(`You waved at ${name}! 👋`);
-  else showToast('Could not send wave.');
+// ─── Direct Messages ─────────────────────────────────────────────
+let activeConversationId = null;
+
+async function renderMessages(container) {
+  container.innerHTML = sectionHeaderHTML('messages');
+  const conversations = await fetchJSON('/api/conversations') || [];
+
+  const layout = document.createElement('div');
+  layout.className = 'messages-layout';
+
+  const leftPanel = document.createElement('div');
+  leftPanel.className = 'conv-list-panel';
+  leftPanel.id = 'convListPanel';
+
+  if (!conversations.length) {
+    leftPanel.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-light);font-size:14px;">No conversations yet.<br>Go to Neighbors and hit Message to start one.</div>`;
+  } else {
+    conversations.forEach(conv => {
+      const item = document.createElement('div');
+      item.className = 'conv-item' + (conv.id === activeConversationId ? ' active' : '');
+      item.dataset.convId = conv.id;
+      item.innerHTML = `
+        <div class="conv-avatar" style="background:${conv.partner.avatar};overflow:hidden;">
+          ${conv.partner.avatarUrl ? `<img src="${conv.partner.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(conv.partner.initials)}
+        </div>
+        <div class="conv-info">
+          <div class="conv-name">${escHtml(conv.partner.name)}</div>
+          <div class="conv-preview">${conv.lastMessage ? escHtml(conv.lastMessage.slice(0, 50)) : 'Start a conversation'}</div>
+        </div>
+        ${conv.unreadCount > 0 ? `<div class="conv-unread">${conv.unreadCount}</div>` : ''}
+      `;
+      item.onclick = () => openConversationPanel(conv.id, conv.partner, layout);
+      leftPanel.appendChild(item);
+    });
+  }
+
+  const rightPanel = document.createElement('div');
+  rightPanel.className = 'chat-panel';
+  rightPanel.id = 'chatPanel';
+  rightPanel.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-light);font-size:14px;">Select a conversation</div>`;
+
+  layout.appendChild(leftPanel);
+  layout.appendChild(rightPanel);
+  container.appendChild(layout);
+
+  if (activeConversationId) {
+    const conv = conversations.find(c => c.id === activeConversationId);
+    if (conv) openConversationPanel(conv.id, conv.partner, layout);
+  } else if (conversations.length) {
+    openConversationPanel(conversations[0].id, conversations[0].partner, layout);
+  }
+}
+
+async function openConversationPanel(convId, partner, layout) {
+  activeConversationId = convId;
+  layout?.querySelectorAll('.conv-item').forEach(el => el.classList.toggle('active', el.dataset.convId === convId));
+  const panel = document.getElementById('chatPanel');
+  if (!panel) return;
+  fetch(`/api/conversations/${convId}/read`, { method: 'POST', credentials: 'include' });
+  const messages = await fetchJSON(`/api/conversations/${convId}/messages`) || [];
+  panel.innerHTML = `
+    <div class="chat-header">
+      <div class="chat-header-avatar" style="background:${partner.avatar};overflow:hidden;">
+        ${partner.avatarUrl ? `<img src="${partner.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(partner.initials)}
+      </div>
+      <div class="chat-header-name">${escHtml(partner.name)}</div>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      ${messages.map(m => buildMessageBubble(m)).join('')}
+      ${!messages.length ? '<div style="text-align:center;color:var(--text-light);font-size:13px;padding:24px;">Say hello!</div>' : ''}
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Send a message…" onkeydown="if(event.key==='Enter')sendDirectMessage('${convId}')">
+      <button class="chat-send-btn" onclick="sendDirectMessage('${convId}')">
+        <i data-lucide="send" style="width:16px;height:16px;"></i>
+      </button>
+    </div>
+  `;
+  lucide.createIcons();
+  const msgsEl = document.getElementById('chatMessages');
+  if (msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight;
+  document.getElementById('chatInput')?.focus();
+}
+
+function buildMessageBubble(msg) {
+  const isMine = msg.senderId === currentUser.id;
+  const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return `<div class="msg-row ${isMine ? 'mine' : 'theirs'}">
+    <div class="msg-bubble ${isMine ? 'mine' : 'theirs'}">${escHtml(msg.content)}</div>
+    <div class="msg-time">${time}</div>
+  </div>`;
+}
+
+async function sendDirectMessage(convId) {
+  const input = document.getElementById('chatInput');
+  if (!input) return;
+  const content = input.value.trim();
+  if (!content) return;
+  input.value = '';
+  try {
+    const res = await fetch(`/api/conversations/${convId}/messages`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }) });
+    if (!res.ok) return;
+    const msg = await res.json();
+    const msgsEl = document.getElementById('chatMessages');
+    if (msgsEl) { msgsEl.insertAdjacentHTML('beforeend', buildMessageBubble(msg)); msgsEl.scrollTop = msgsEl.scrollHeight; }
+  } catch {}
+}
+
+async function startConversation(username) {
+  try {
+    const res = await fetch(`/api/conversations/${username}`, { method: 'POST', credentials: 'include' });
+    if (!res.ok) return;
+    const { conversationId } = await res.json();
+    activeConversationId = conversationId;
+    navigate('messages');
+  } catch {}
 }
 
 // ─── Group Card ──────────────────────────────────────────────────
