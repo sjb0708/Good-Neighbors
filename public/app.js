@@ -157,7 +157,7 @@ async function loadSidebarWidgets() {
   const nextEventEl = document.getElementById('nextEventCard');
   if (nextEventEl) {
     const upcoming = (events || [])
-      .filter(e => { const ds = (e.date || e.eventDate || '').substring(0,10); return ds && new Date(ds + 'T12:00:00') >= new Date(); })
+      .filter(e => { const ds = (e.date || e.eventDate || '').substring(0,10); return ds && ds >= new Date().toISOString().substring(0,10); })
       .sort((a, b) => new Date((a.date||a.eventDate||'').substring(0,10)+'T12:00:00') - new Date((b.date||b.eventDate||'').substring(0,10)+'T12:00:00'))[0];
     if (upcoming) {
       const d = new Date((upcoming.date || upcoming.eventDate || '').substring(0,10) + 'T12:00:00');
@@ -168,7 +168,7 @@ async function loadSidebarWidgets() {
         <div class="next-event-date"><span class="nev-month">${month}</span><span class="nev-day">${day}</span></div>
         <div class="next-event-info">
           <div class="nev-title">${escHtml(upcoming.title)}</div>
-          <div class="nev-meta">${upcoming.time || upcoming.eventTime || ''} · ${escHtml(upcoming.location || '')}</div>
+          <div class="nev-meta">${(upcoming.time && upcoming.time !== 'null') ? upcoming.time + ' · ' : ''}${escHtml(upcoming.location || '')}</div>
           ${going ? `<div class="nev-going">🙋 ${going} going</div>` : ''}
         </div>`;
       nextEventEl.style.cursor = 'pointer';
@@ -2014,7 +2014,7 @@ function buildEventCard(ev) {
       <div class="event-meta-row">
         <div class="event-meta-item">
           <i data-lucide="clock" style="width:12px;height:12px"></i>
-          ${ev.time}${ev.endTime ? ` – ${ev.endTime}` : ''}
+          ${ev.time && ev.time !== 'null' ? ev.time : 'TBD'}${ev.endTime && ev.endTime !== 'null' ? ` – ${ev.endTime}` : ''}
         </div>
         <div class="event-meta-item">
           <i data-lucide="map-pin" style="width:12px;height:12px"></i>
