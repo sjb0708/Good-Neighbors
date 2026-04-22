@@ -1300,7 +1300,7 @@ async function renderProfile(container) {
       </div>
       <div class="profile-location">
         <i data-lucide="map-pin" style="width:13px;height:13px;"></i>
-        ${user.address || 'Costa Blanca Villas'} · Farallón, Panama
+        Costa Blanca Villas · <span style="color:var(--ocean);font-weight:600;">Verified</span>
       </div>
       <div class="profile-bio">${user.bio || 'Tap Edit Profile to add a bio.'}</div>
       <button onclick="openEditProfile()" style="margin-top:10px;padding:8px 18px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✏️ Edit Profile</button>
@@ -1407,7 +1407,7 @@ function renderSettings(container) {
     </div>
     <div class="profile-info" style="margin-bottom:16px;">
       <div class="profile-name">${u.name} <span class="badge-verified"><span style="font-size:10px">✓</span> Verified</span></div>
-      <div class="profile-location"><i data-lucide="map-pin" style="width:13px;height:13px"></i> ${u.address || 'Costa Blanca Villas'} · Farallón, Panama</div>
+      <div class="profile-location"><i data-lucide="map-pin" style="width:13px;height:13px"></i> Costa Blanca Villas · <span style="color:var(--ocean);font-weight:600;">Verified</span></div>
     </div>
 
     ${u.role === 'admin' ? `
