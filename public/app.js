@@ -2347,16 +2347,40 @@ async function renderBusinessPage(bizId, container) {
 
         <!-- Overview tab -->
         <div id="bizTab-overview">
-          ${photos.length ? `
-            <div style="display:flex;gap:6px;margin-bottom:20px;overflow:hidden;border-radius:12px;max-height:200px;">
-              ${photos.slice(0,4).map((url,i) => `<img src="${url}" alt="Photo" loading="lazy" style="flex:1;min-width:0;height:200px;object-fit:cover;${i===0?'border-radius:12px 0 0 12px;':''}${i===photos.length-1||i===3?'border-radius:0 12px 12px 0;':''}" />`).join('')}
-            </div>` : ''}
+
+          <!-- About -->
+          ${biz.description ? `
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">About</div>
+            <div style="font-size:15px;color:var(--text-dark);line-height:1.7;">${escHtml(biz.description)}</div>
+          </div>` : ''}
+
+          <!-- Details -->
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px;">Business Details</div>
+            ${biz.hours ? `<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:18px;flex-shrink:0;">🕐</span><div><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:2px;">Hours</div><div style="font-size:14px;color:var(--text-dark);font-weight:500;">${escHtml(biz.hours)}</div></div></div>` : ''}
+            ${biz.phone ? `<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:18px;flex-shrink:0;">📞</span><div><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:2px;">Phone</div><div style="font-size:14px;color:var(--text-dark);font-weight:500;">${escHtml(biz.phone)}</div></div></div>` : ''}
+            ${biz.address ? `<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:18px;flex-shrink:0;">📍</span><div><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:2px;">Location</div><div style="font-size:14px;color:var(--text-dark);font-weight:500;">${escHtml(biz.address)}</div></div></div>` : ''}
+            ${biz.website && biz.website !== '#' ? `<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:18px;flex-shrink:0;">🌐</span><div><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:2px;">Website</div><a href="${escHtml(biz.website)}" target="_blank" rel="noopener" style="font-size:14px;color:var(--ocean);font-weight:500;text-decoration:none;">${escHtml(biz.website)}</a></div></div>` : ''}
+            ${biz.instagramUrl ? `<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:18px;flex-shrink:0;">📸</span><div><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:2px;">Instagram</div><a href="${escHtml(biz.instagramUrl)}" target="_blank" rel="noopener" style="font-size:14px;color:#E1306C;font-weight:500;text-decoration:none;">${escHtml(biz.instagramUrl).replace('https://','')}</a></div></div>` : ''}
+            ${biz.facebookUrl ? `<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;"><span style="font-size:18px;flex-shrink:0;">👤</span><div><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:2px;">Facebook</div><a href="${escHtml(biz.facebookUrl)}" target="_blank" rel="noopener" style="font-size:14px;color:#1877F2;font-weight:500;text-decoration:none;">${escHtml(biz.facebookUrl).replace('https://','')}</a></div></div>` : ''}
+          </div>
+
+          <!-- Tags / Specialties -->
+          ${(biz.tags||[]).length ? `
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;">Specialties</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              ${(biz.tags||[]).map(t=>`<span style="background:#EFF6FF;color:#1D4ED8;font-size:13px;font-weight:600;padding:5px 14px;border-radius:20px;border:1px solid #BFDBFE;">${escHtml(t)}</span>`).join('')}
+            </div>
+          </div>` : ''}
 
           <!-- Rating summary -->
-          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:16px;">
-            <div style="display:flex;align-items:center;gap:24px;">
-              <div style="text-align:center;">
-                <div style="font-size:42px;font-weight:800;color:var(--text-dark);line-height:1;">${biz.rating}</div>
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px;">Ratings & Reviews</div>
+            <div style="display:flex;align-items:center;gap:24px;margin-bottom:16px;">
+              <div style="text-align:center;flex-shrink:0;">
+                <div style="font-size:48px;font-weight:800;color:var(--text-dark);line-height:1;">${biz.rating}</div>
                 <div style="margin:6px 0 4px;">${buildStars(biz.rating)}</div>
                 <div style="font-size:12px;color:var(--text-light);">${biz.reviewCount} review${biz.reviewCount !== 1 ? 's' : ''}</div>
               </div>
@@ -2364,33 +2388,48 @@ async function renderBusinessPage(bizId, container) {
                 ${[5,4,3,2,1].map(n => {
                   const cnt = reviews.filter(r => Math.round(r.rating) === n).length;
                   const pct = reviews.length ? Math.round((cnt/reviews.length)*100) : 0;
-                  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-                    <span style="font-size:12px;color:var(--text-light);width:8px;">${n}</span>
+                  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+                    <span style="font-size:12px;color:var(--text-light);width:8px;text-align:right;">${n}</span>
                     <span style="font-size:11px;color:#F59E0B;">★</span>
-                    <div style="flex:1;height:6px;background:#E8EDF2;border-radius:20px;overflow:hidden;">
-                      <div style="height:100%;width:${pct}%;background:#F59E0B;border-radius:20px;"></div>
+                    <div style="flex:1;height:7px;background:#F3F4F6;border-radius:20px;overflow:hidden;">
+                      <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#F59E0B,#FBBF24);border-radius:20px;transition:width .4s;"></div>
                     </div>
-                    <span style="font-size:12px;color:var(--text-light);width:24px;text-align:right;">${cnt}</span>
+                    <span style="font-size:12px;color:var(--text-light);width:20px;text-align:right;">${cnt}</span>
                   </div>`;
                 }).join('')}
               </div>
             </div>
-          </div>
-          ${reviews.length > 0 ? `
-          <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:10px;">Recent Reviews</div>
-          ${reviews.slice(0,2).map(r => `
-            <div class="biz-rec-card">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                <div style="width:36px;height:36px;border-radius:50%;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">${r.initials}</div>
-                <div>
-                  <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${escHtml(r.author)}</div>
-                  <div style="display:flex;align-items:center;gap:6px;">${buildStars(r.rating)}<span style="font-size:11px;color:var(--text-light);">${r.date}</span></div>
+            ${reviews.length > 0 ? `
+            <div style="border-top:1px solid var(--border);padding-top:16px;">
+              <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:12px;">Recent Reviews</div>
+              ${reviews.slice(0,2).map(r => `
+              <div style="padding:14px 0;border-bottom:1px solid var(--border);">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                  <div style="width:38px;height:38px;border-radius:50%;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${r.initials}</div>
+                  <div>
+                    <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${escHtml(r.author)}</div>
+                    <div style="display:flex;align-items:center;gap:6px;">${buildStars(r.rating)}<span style="font-size:11px;color:var(--text-light);">${r.date}</span></div>
+                  </div>
                 </div>
-              </div>
-              <div style="font-size:14px;color:var(--text-mid);line-height:1.6;">${escHtml(r.text)}</div>
-            </div>`).join('')}
-          ${reviews.length > 2 ? `<button onclick="switchBizTab('reviews')" style="width:100%;padding:10px;background:none;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;color:var(--ocean);cursor:pointer;font-family:inherit;margin-top:4px;">See all ${reviews.length} reviews →</button>` : ''}
-          ` : '<div style="background:white;border:1px solid var(--border);border-radius:14px;padding:30px;text-align:center;color:var(--text-light);font-size:14px;">No reviews yet — be the first!</div>'}
+                <div style="font-size:14px;color:var(--text-mid);line-height:1.65;">${escHtml(r.text)}</div>
+                ${r.photo ? `<img src="${r.photo}" style="margin-top:10px;max-height:160px;width:100%;object-fit:cover;border-radius:10px;cursor:pointer;" onclick="window.open('${r.photo}','_blank')">` : ''}
+              </div>`).join('')}
+              ${reviews.length > 2 ? `<button onclick="switchBizTab('reviews')" style="margin-top:12px;width:100%;padding:10px;background:none;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;color:var(--ocean);cursor:pointer;font-family:inherit;">See all ${reviews.length} reviews →</button>` : ''}
+            </div>` : `<div style="border-top:1px solid var(--border);padding-top:20px;text-align:center;color:var(--text-light);font-size:14px;">No reviews yet — be the first!</div>`}
+          </div>
+
+          <!-- Photos preview (link to tab) -->
+          ${photos.length ? `
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.08em;text-transform:uppercase;">Photos</div>
+              <button onclick="switchBizTab('photos')" style="font-size:12px;font-weight:600;color:var(--ocean);background:none;border:none;cursor:pointer;font-family:inherit;">See all →</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+              ${photos.slice(0,3).map(url=>`<img src="${url}" loading="lazy" onclick="switchBizTab('photos')" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;">`).join('')}
+            </div>
+          </div>` : ''}
+
         </div>
 
         <!-- Reviews tab (hidden) -->
@@ -2511,23 +2550,20 @@ async function renderBusinessPage(bizId, container) {
       <!-- Right sidebar -->
       <div class="biz-page-sidebar">
         <div class="biz-sidebar-card">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);">
-            <span style="font-size:18px;">🍽️</span>
-            <span style="font-size:13px;font-weight:600;color:var(--text-mid);">${escHtml(biz.category)} · ${(biz.tags||[]).slice(0,2).join(' · ')}</span>
-          </div>
-          <div class="biz-sidebar-row"><span class="biz-sidebar-icon">📞</span><span>${escHtml(biz.phone)}</span></div>
-          <div class="biz-sidebar-row"><span class="biz-sidebar-icon">🕐</span><span>${escHtml(biz.hours)}</span></div>
-          <div class="biz-sidebar-row"><span class="biz-sidebar-icon">📍</span><span>${escHtml(biz.address)}</span></div>
-          <div class="biz-sidebar-row"><span class="biz-sidebar-icon">🧭</span><span style="color:var(--ocean);cursor:pointer;font-weight:600;" onclick="showToast('Opening directions...')">Get directions</span></div>
-          ${biz.website && biz.website !== '#' ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">🔗</span><a href="${escHtml(biz.website)}" target="_blank" rel="noopener" style="color:var(--ocean);text-decoration:none;">Website</a></div>` : ''}
-          ${biz.instagramUrl ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">📸</span><a href="${escHtml(biz.instagramUrl)}" target="_blank" rel="noopener" style="color:#E1306C;text-decoration:none;font-weight:600;">Instagram</a></div>` : ''}
-          ${biz.facebookUrl ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">👤</span><a href="${escHtml(biz.facebookUrl)}" target="_blank" rel="noopener" style="color:#1877F2;text-decoration:none;font-weight:600;">Facebook</a></div>` : ''}
+          <div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px;">Contact & Info</div>
+          ${biz.phone ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">📞</span><span style="font-size:14px;">${escHtml(biz.phone)}</span></div>` : ''}
+          ${biz.hours ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">🕐</span><span style="font-size:14px;">${escHtml(biz.hours)}</span></div>` : ''}
+          ${biz.address ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">📍</span><span style="font-size:14px;">${escHtml(biz.address)}</span></div>` : ''}
+          <div class="biz-sidebar-row"><span class="biz-sidebar-icon">🧭</span><span style="color:var(--ocean);cursor:pointer;font-weight:600;font-size:14px;" onclick="showToast('Opening directions...')">Get directions</span></div>
+          ${biz.website && biz.website !== '#' ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">🌐</span><a href="${escHtml(biz.website)}" target="_blank" rel="noopener" style="color:var(--ocean);text-decoration:none;font-size:14px;">Website</a></div>` : ''}
+          ${biz.instagramUrl ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">📸</span><a href="${escHtml(biz.instagramUrl)}" target="_blank" rel="noopener" style="color:#E1306C;text-decoration:none;font-weight:600;font-size:14px;">Instagram</a></div>` : ''}
+          ${biz.facebookUrl ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">👤</span><a href="${escHtml(biz.facebookUrl)}" target="_blank" rel="noopener" style="color:#1877F2;text-decoration:none;font-weight:600;font-size:14px;">Facebook</a></div>` : ''}
         </div>
         <div class="biz-sidebar-card" style="text-align:center;">
-          <div style="font-size:28px;font-weight:800;color:var(--text-dark);">${biz.rating}</div>
-          <div style="display:flex;justify-content:center;margin:4px 0 6px;">${buildStars(biz.rating)}</div>
-          <div style="font-size:12px;color:var(--text-light);">${biz.reviewCount} review${biz.reviewCount !== 1 ? 's' : ''}</div>
-          <button onclick="switchBizTab('reviews');document.getElementById('bizReviewBox')?.focus();" style="margin-top:10px;width:100%;padding:9px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✍️ Write a Review</button>
+          <div style="font-size:36px;font-weight:800;color:var(--text-dark);line-height:1;">${biz.rating}</div>
+          <div style="display:flex;justify-content:center;margin:6px 0 4px;">${buildStars(biz.rating)}</div>
+          <div style="font-size:13px;color:var(--text-light);margin-bottom:14px;">${biz.reviewCount} review${biz.reviewCount !== 1 ? 's' : ''}</div>
+          <button onclick="switchBizTab('reviews');document.getElementById('bizReviewBox')?.focus();" style="width:100%;padding:10px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✍️ Write a Review</button>
         </div>
       </div>
     </div>
