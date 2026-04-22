@@ -288,13 +288,35 @@ function renderUserUI() {
       topbarAvatar.style.outline = '2px solid #48CAE4';
       topbarAvatar.style.outlineOffset = '2px';
     }
+    const topInit = document.getElementById('topbarInitials');
+    if (currentUser.avatarUrl && currentUser.role !== 'admin') {
+      topbarAvatar.style.backgroundImage = `url("${currentUser.avatarUrl}")`;
+      topbarAvatar.style.backgroundSize = 'cover';
+      topbarAvatar.style.backgroundPosition = 'center';
+      if (topInit) topInit.style.display = 'none';
+    } else {
+      topbarAvatar.style.backgroundImage = '';
+      if (topInit) topInit.style.display = '';
+    }
   }
-  setTextSafe('topbarInitials', currentUser.role === 'admin' ? '🛡' : currentUser.initials);
+  setTextSafe('topbarInitials', currentUser.role === 'admin' ? '🛡' : (currentUser.avatarUrl ? '' : currentUser.initials));
 
   // Dropdown
   const dropAvatar = document.getElementById('dropdownAvatar');
-  if (dropAvatar) dropAvatar.style.background = currentUser.avatar;
-  setTextSafe('dropdownInitials', currentUser.initials);
+  if (dropAvatar) {
+    dropAvatar.style.background = currentUser.avatar;
+    const dropInit = document.getElementById('dropdownInitials');
+    if (currentUser.avatarUrl) {
+      dropAvatar.style.backgroundImage = `url("${currentUser.avatarUrl}")`;
+      dropAvatar.style.backgroundSize = 'cover';
+      dropAvatar.style.backgroundPosition = 'center';
+      if (dropInit) dropInit.style.display = 'none';
+    } else {
+      dropAvatar.style.backgroundImage = '';
+      if (dropInit) dropInit.style.display = '';
+    }
+  }
+  setTextSafe('dropdownInitials', currentUser.avatarUrl ? '' : currentUser.initials);
   setTextSafe('dropdownName', currentUser.name);
 
   // Sidebar
