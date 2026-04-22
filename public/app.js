@@ -44,8 +44,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadWhatsHappening();
   loadSidebarWidgets();
   initMobile();
-  navigate(currentUser?.role === 'realtor' ? 'realestate' : 'feed');
+  if (currentUser?.role === 'realtor') {
+    navigate('realestate');
+  } else if (currentUser?.role === 'business') {
+    const biz = await fetchJSON('/api/my-business');
+    if (biz?.id) { navigate('businesses'); setTimeout(() => openBusinessPage(biz.id), 300); }
+    else navigate('businesses');
+  } else {
+    navigate('feed');
+    showWelcomeIfNew();
+  }
 });
+
+function showWelcomeIfNew() {
+  if (!currentUser) return;
+  const key = `welcomed_${currentUser.id}`;
+  if (localStorage.getItem(key)) return;
+  localStorage.setItem(key, '1');
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:20px;width:min(420px,100%);padding:32px 28px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
+      <div style="font-size:48px;margin-bottom:12px;">👋</div>
+      <h2 style="font-size:22px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Welcome to Costa Blanca Connect!</h2>
+      <p style="font-size:14px;color:var(--text-mid);line-height:1.6;margin-bottom:24px;">Your neighborhood community app. Stay connected with neighbors, find local services, report safety concerns, and more.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;text-align:left;margin-bottom:24px;">
+        ${[['📰','Feed','Share updates, ask questions, connect with neighbors'],['🛒','Marketplace','Buy & sell within the community'],['📅','Events','See what\'s happening in Costa Blanca Villas'],['🏪','Businesses','Find local services & support community businesses'],['🚨','Safety','Report and stay informed about safety concerns']].map(([icon,name,desc]) =>
+          `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f8fafc;border-radius:10px;">
+            <span style="font-size:20px;">${icon}</span>
+            <div><div style="font-size:13px;font-weight:700;color:var(--text-dark);">${name}</div><div style="font-size:12px;color:var(--text-light);">${desc}</div></div>
+          </div>`).join('')}
+      </div>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;padding:13px;background:var(--ocean);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Let's Go! 🏖️</button>
+    </div>
+  `;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
 
 function initMobile() {
   if (window.innerWidth > 700) return;

@@ -1240,6 +1240,12 @@ app.post('/api/businesses/:id/logo', requireAuth(upload.single('logo'), async (r
   res.json({ ok: true, logoUrl: url });
 }));
 
+app.get('/api/my-business', requireAuth(async (req, res) => {
+  const [biz] = await sql`SELECT id FROM businesses WHERE claimed_by_user_id=${req.currentUser.id} OR added_by_user_id=${req.currentUser.id} LIMIT 1`;
+  if (!biz) return res.status(404).json({ error: 'No business found' });
+  res.json({ id: biz.id });
+}));
+
 app.get('/api/businesses', async (req, res) => {
   try {
     const user  = await getUser(req);
