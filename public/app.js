@@ -1479,7 +1479,6 @@ function buildPostCard(post) {
 
   card.innerHTML = `
     <div class="post-card-inner">
-      ${post.isOfficial ? `<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#FFF3CD;border-bottom:1px solid #FFCA28;font-size:12px;font-weight:700;color:#856404;margin:-12px -12px 10px -12px;border-radius:12px 12px 0 0;">⚡ OFFICIAL ALERT · ${escHtml(post.author?.name || '')}</div>` : ''}
       ${post.alertType ? `<div class="alert-badge ${post.severity === 'resolved' ? 'resolved' : (post.severity || 'medium')}">${post.severity === 'resolved' ? '✅ Resolved' : `⚠ ${post.alertType}`}</div>` : ''}
       ${post.price !== undefined ? `
         <span class="price-tag${post.free || post.price === 0 ? ' free' : ''}">
