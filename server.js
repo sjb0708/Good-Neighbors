@@ -1278,6 +1278,16 @@ app.get('/api/my-business', requireAuth(async (req, res) => {
   res.json({ id: biz.id });
 }));
 
+app.get('/api/businesses/search', async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q || q.length < 2) return res.json([]);
+    const like = '%' + q + '%';
+    const rows = await sql`SELECT id, name, category, address, claimed FROM businesses WHERE name ILIKE ${like} ORDER BY claimed ASC, name ASC LIMIT 8`;
+    res.json(rows.map(b => ({ id: b.id, name: b.name, category: b.category, address: b.address, claimed: b.claimed })));
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
 app.get('/api/businesses', async (req, res) => {
   try {
     const user  = await getUser(req);
@@ -1467,20 +1477,6 @@ app.post('/api/business/reviews/:id/reply', requireAuth(async (req, res) => {
 
 // ─── Business search (public) ─────────────────────────────────────────────────
 
-app.get('/api/businesses/search', async (req, res) => {
-  try {
-    const q = (req.query.q || '').trim();
-    if (!q || q.length < 2) return res.json([]);
-    const rows = await sql`
-      SELECT id, name, category, address, claimed
-      FROM businesses
-      WHERE name ILIKE ${'%' + q + '%'}
-      ORDER BY claimed ASC, name ASC
-      LIMIT 8
-    `;
-    res.json(rows.map(b => ({ id: b.id, name: b.name, category: b.category, address: b.address, claimed: b.claimed })));
-  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
-});
 
 // ─── Business claim codes ─────────────────────────────────────────────────────
 
@@ -2471,8 +2467,9 @@ app.post('/api/sections/:section/read', requireAuth(async (req, res) => {
 }));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Costa Blanca Connect running on http://localhost:${PORT}`);
+  await runMigrations();
 });
 
 app.get('/api/admin/run-migrations', requireAdmin(async (req, res) => {
