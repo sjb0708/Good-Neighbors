@@ -2401,6 +2401,14 @@ async function renderBusinessPage(bizId, container) {
               ${[1,2,3,4,5].map(n => `<span data-star="${n}" onclick="setBizStar('${biz.id}',${n})" style="font-size:28px;cursor:pointer;color:#D1D5DB;transition:color 0.15s;">★</span>`).join('')}
             </div>
             <textarea id="bizReviewBox" placeholder="Share your experience..." rows="3" style="width:100%;box-sizing:border-box;padding:11px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;outline:none;background:var(--bg);resize:none;margin-bottom:10px;"></textarea>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ocean);font-weight:600;cursor:pointer;">
+                📷 Add Photo
+                <input type="file" accept="image/*" id="bizReviewPhoto" style="display:none;" onchange="previewReviewPhoto(this)">
+              </label>
+              <span id="bizReviewPhotoName" style="font-size:12px;color:var(--text-light);"></span>
+            </div>
+            <img id="bizReviewPhotoPreview" style="display:none;max-height:140px;border-radius:10px;margin-bottom:10px;object-fit:cover;" />
             <button onclick="submitBizReview('${biz.id}')" style="padding:10px 24px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Post Review</button>
           </div>
           <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:12px;">${reviews.length} Review${reviews.length !== 1 ? 's' : ''}</div>
@@ -2415,14 +2423,20 @@ async function renderBusinessPage(bizId, container) {
                   </div>
                 </div>
                 <div style="font-size:14px;color:var(--text-mid);line-height:1.65;">${escHtml(r.text)}</div>
+                ${r.photo ? `<img src="${r.photo}" style="margin-top:10px;max-height:200px;width:100%;object-fit:cover;border-radius:10px;cursor:pointer;" onclick="window.open('${r.photo}','_blank')">` : ''}
                 ${r.ownerReply ? `<div style="margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:10px;font-size:13px;color:var(--text-mid);border-left:3px solid var(--ocean);"><span style="font-weight:700;color:var(--text-dark);">Owner replied:</span> ${escHtml(r.ownerReply)}</div>` : ''}
               </div>`).join('')}
         </div>
 
         <!-- Photos tab (hidden) -->
         <div id="bizTab-photos" style="display:none;">
-          ${photos.length ? `<div class="biz-photo-grid">${photos.map(url => `<img src="${url}" alt="Business photo" loading="lazy" />`).join('')}</div>`
-            : '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:40px;text-align:center;color:var(--text-light);">No photos yet.</div>'}
+          ${(() => {
+            const reviewPhotos = reviews.filter(r => r.photo).map(r => ({ url: r.photo, caption: r.author }));
+            const allPhotos = [...photos.map(url => ({ url, caption: '' })), ...reviewPhotos];
+            return allPhotos.length
+              ? `<div class="biz-photo-grid">${allPhotos.map(p => `<img src="${p.url}" alt="${escHtml(p.caption)}" loading="lazy" title="${p.caption ? 'Photo by ' + escHtml(p.caption) : ''}" onclick="window.open('${p.url}','_blank')" style="cursor:pointer;" />`).join('')}</div>`
+              : '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:40px;text-align:center;color:var(--text-light);">No photos yet. Be the first to add one in your review!</div>';
+          })()}
         </div>
 
         <!-- Posts tab (hidden) -->
@@ -2633,16 +2647,38 @@ function setBizStar(bizId, n) {
   });
 }
 
+function previewReviewPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('bizReviewPhotoName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const preview = document.getElementById('bizReviewPhotoPreview');
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
 async function submitBizReview(bizId) {
   const box = document.getElementById('bizReviewBox');
   const text = box?.value.trim();
   const rating = bizReviewStars[bizId] || 0;
   if (!rating) { showToast('Please select a star rating'); return; }
   if (!text) { showToast('Please write something about your experience'); return; }
+  const photoInput = document.getElementById('bizReviewPhoto');
+  let image = '';
+  if (photoInput?.files[0]) {
+    image = await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.readAsDataURL(photoInput.files[0]);
+    });
+  }
   const res = await fetch(`/api/businesses/${bizId}/recommend`, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, rating })
+    body: JSON.stringify({ text, rating, image })
   });
   if (res.ok) {
     delete bizReviewStars[bizId];

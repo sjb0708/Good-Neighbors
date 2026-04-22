@@ -1344,6 +1344,7 @@ app.get('/api/businesses/:id', async (req, res) => {
       reviews: reviews.map(r => ({
         id: r.id, author: r.author_name, avatar: r.avatar_hex, initials: r.initials,
         rating: r.rating, text: r.text, date: timeAgo(r.created_at),
+        photo: r.photo_url || null,
         ownerReply: r.owner_reply_text ? { text: r.owner_reply_text, date: r.owner_reply_date } : undefined,
       })),
     });
@@ -1382,13 +1383,15 @@ app.post('/api/businesses/:id/fave', requireAuth(async (req, res) => {
 }));
 
 app.post('/api/businesses/:id/recommend', requireAuth(async (req, res) => {
-  const { text, rating } = req.body;
+  const { text, rating, image } = req.body;
   if (!text?.trim()) return res.status(400).json({ error: 'Text required' });
   const stars = Math.min(5, Math.max(1, parseInt(rating) || 5));
   const [biz] = await sql`SELECT id FROM businesses WHERE id=${req.params.id}`;
   if (!biz) return res.status(404).json({ error: 'Not found' });
   const u = req.currentUser;
-  await sql`INSERT INTO business_reviews (business_id, author_id, rating, text) VALUES (${biz.id}, ${u.id}, ${stars}, ${text.trim()})`;
+  await sql`ALTER TABLE business_reviews ADD COLUMN IF NOT EXISTS photo_url TEXT`;
+  const photoUrl = await storeImage(image, 'reviews');
+  await sql`INSERT INTO business_reviews (business_id, author_id, rating, text, photo_url) VALUES (${biz.id}, ${u.id}, ${stars}, ${text.trim()}, ${photoUrl})`;
   const [avg] = await sql`SELECT ROUND(AVG(rating)::numeric, 1)::float AS avg, COUNT(*)::int AS cnt FROM business_reviews WHERE business_id=${biz.id}`;
   await sql`UPDATE businesses SET recommended_by = recommended_by + 1, rating = ${avg.avg}, review_count = ${avg.cnt} WHERE id=${biz.id}`;
   res.json({ ok: true });
