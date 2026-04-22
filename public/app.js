@@ -2314,6 +2314,7 @@ async function renderBusinessPage(bizId, container) {
       <div style="padding:0 24px 12px;">
         <div class="biz-action-bar">
           <button class="btn-biz-message" onclick="switchBizTab('reviews');document.getElementById('bizReviewBox')?.focus();">✍️ Write a Review</button>
+          <button class="btn-biz-fave ${biz.userHasFaved ? 'faved' : ''}" id="faveBtn-${biz.id}" onclick="toggleBizFave('${biz.id}')">❤️ <span id="faveBtnLabel-${biz.id}">${biz.userHasFaved ? 'Faved' : 'Fave'}</span></button>
           <div style="position:relative;">
             <button class="btn-biz-more" onclick="toggleBizMoreMenu('${biz.id}')">⋯</button>
             <div class="biz-more-dropdown" id="bizMoreMenu-${biz.id}" style="display:none;">
@@ -2565,6 +2566,25 @@ function switchBizTab(tabName) {
 function toggleBizMoreMenu(bizId) {
   const menu = document.getElementById(`bizMoreMenu-${bizId}`);
   if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+async function toggleBizFave(bizId) {
+  const btn = document.getElementById(`faveBtn-${bizId}`);
+  const label = document.getElementById(`faveBtnLabel-${bizId}`);
+  if (!btn) return;
+  const wasFaved = btn.classList.contains('faved');
+  try {
+    const res = await fetchJSON(`/api/businesses/${bizId}/fave`, { method: 'POST' });
+    if (res.faved) {
+      btn.classList.add('faved');
+      if (label) label.textContent = 'Faved';
+    } else {
+      btn.classList.remove('faved');
+      if (label) label.textContent = 'Fave';
+    }
+  } catch (e) {
+    showToast('Could not update fave. Please try again.');
+  }
 }
 
 function openClaimModal(bizId, bizName) {
