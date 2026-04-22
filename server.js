@@ -1618,10 +1618,10 @@ app.get('/api/search', async (req, res) => {
   const like = `%${q}%`;
   try {
     const [posts, businesses, events, neighbors] = await Promise.all([
-      sql`SELECT id, content FROM posts WHERE content ILIKE ${like} ORDER BY created_at DESC LIMIT 5`,
+      sql`SELECT id, content, type, section FROM posts WHERE content ILIKE ${like} OR type ILIKE ${like} OR section ILIKE ${like} ORDER BY created_at DESC LIMIT 5`,
       sql`SELECT id, name, category FROM businesses WHERE name ILIKE ${like} OR category ILIKE ${like} ORDER BY name LIMIT 5`,
-      sql`SELECT id, title FROM events WHERE title ILIKE ${like} ORDER BY date DESC LIMIT 5`,
-      sql`SELECT id, name FROM users WHERE name ILIKE ${like} AND role='resident' ORDER BY name LIMIT 5`,
+      sql`SELECT id, title FROM events WHERE title ILIKE ${like} OR description ILIKE ${like} ORDER BY event_date DESC LIMIT 5`,
+      sql`SELECT id, name, username FROM users WHERE (name ILIKE ${like} OR username ILIKE ${like}) AND role IN ('neighbor','admin') ORDER BY name LIMIT 5`,
     ]);
     res.json({
       posts: posts.map(r => ({ id: r.id, content: r.content?.substring(0, 80) })),
