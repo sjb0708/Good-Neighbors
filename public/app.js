@@ -3963,7 +3963,7 @@ const sectionMeta = {
   events: { title: 'Events', desc: 'What\'s coming up in Costa Blanca Villas & Farallón', emoji: '📅' },
   safety: { title: 'Safety & Alerts', desc: 'Stay informed about safety in Costa Blanca Villas', emoji: '🛡️' },
   businesses: { title: 'Business Directory', desc: 'Local restaurants and services near Farallón', emoji: '🍽️' },
-  neighbors: { title: 'My Neighbors', desc: '312 verified residents in Costa Blanca Villas', emoji: '👋' },
+  neighbors: { title: 'My Neighbors', desc: 'Verified residents in Costa Blanca Villas', emoji: '👋' },
   groups: { title: 'Groups', desc: 'Connect with neighbors who share your interests', emoji: '👥' },
   notifications: { title: 'Notifications', desc: 'Stay up to date on what matters', emoji: '🔔' },
   profile: { title: 'My Profile', desc: 'Your Costa Blanca Villas profile', emoji: '👤' },
