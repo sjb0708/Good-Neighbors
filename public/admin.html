@@ -602,32 +602,53 @@
 
   <!-- Realtors View -->
   <div class="view" id="view-realtors" style="padding:0 24px 24px;">
+    <!-- Add Realtor Form -->
     <div class="panel" style="margin-bottom:20px;">
       <div class="panel-header">
         <div>
-          <h2>🏠 Realtor Accounts</h2>
-          <div class="panel-header-sub">Accounts with the <strong>realtor</strong> role can post and delete real estate listings. All other users are blocked at the server level.</div>
+          <h2>🏠 Add Realtor Account</h2>
+          <div class="panel-header-sub">Create a login for a real estate agent — share the credentials directly with them</div>
         </div>
-        <button onclick="showView('managed')" style="padding:9px 18px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;">+ Add Realtor</button>
+      </div>
+      <div style="padding:0 20px 20px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Agent Name *</label>
+            <input id="rlName" type="text" placeholder="e.g. Maria Garcia" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
+          </div>
+          <div>
+            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Email Address</label>
+            <input id="rlEmail" type="email" placeholder="e.g. agent@realestate.com" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Username *</label>
+            <input id="rlUsername" type="text" placeholder="e.g. maria-garcia" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
+          </div>
+          <div>
+            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Password *</label>
+            <input id="rlPassword" type="text" placeholder="Set a strong password" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
+          </div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Bio</label>
+          <textarea id="rlBio" rows="2" placeholder="e.g. Licensed real estate agent specializing in Costa Blanca Villas…" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;resize:vertical;box-sizing:border-box;"></textarea>
+        </div>
+        <div id="rlError" style="display:none;color:#E63946;font-size:13px;margin-bottom:12px;"></div>
+        <button onclick="createRealtorAccount()" style="padding:11px 24px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;">+ Add Realtor</button>
+      </div>
+    </div>
+
+    <!-- Realtor List -->
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>🏠 Realtor Accounts</h2>
+          <div class="panel-header-sub">Accounts with the <strong>realtor</strong> role can post and delete real estate listings</div>
+        </div>
       </div>
       <div id="realtorsList"><div class="panel-empty">Loading…</div></div>
-    </div>
-    <div class="panel">
-      <div class="panel-header"><div><h2>How it works</h2></div></div>
-      <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:10px;">
-        <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f0f9ff;border-radius:10px;border:1px solid #bae6fd;">
-          <span style="font-size:20px;">1️⃣</span>
-          <div><div style="font-size:13.5px;font-weight:700;color:#0d1b2a;margin-bottom:2px;">Only realtors can post listings</div><div style="font-size:13px;color:#4a6378;">The server blocks all POST and DELETE requests to /api/realestate for any user without role = "realtor" or "admin".</div></div>
-        </div>
-        <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;">
-          <span style="font-size:20px;">2️⃣</span>
-          <div><div style="font-size:13.5px;font-weight:700;color:#0d1b2a;margin-bottom:2px;">Realtors land on the listings page</div><div style="font-size:13px;color:#4a6378;">When a realtor logs in they go directly to the Real Estate section and see the "Add Listing" button. Regular neighbors never see it.</div></div>
-        </div>
-        <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#fff7ed;border-radius:10px;border:1px solid #fed7aa;">
-          <span style="font-size:20px;">3️⃣</span>
-          <div><div style="font-size:13.5px;font-weight:700;color:#0d1b2a;margin-bottom:2px;">To add a new realtor</div><div style="font-size:13px;color:#4a6378;">Use Managed Accounts → set Account Type to "🏠 Realtor" → share the credentials with the agent.</div></div>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -1289,11 +1310,36 @@
     }
 
     // ── Realtors ─────────────────────────────────────────────────────────────
+    async function createRealtorAccount() {
+      const displayName = document.getElementById('rlName').value.trim();
+      const email = document.getElementById('rlEmail').value.trim();
+      const username = document.getElementById('rlUsername').value.trim();
+      const password = document.getElementById('rlPassword').value.trim();
+      const bio = document.getElementById('rlBio').value.trim();
+      const errEl = document.getElementById('rlError');
+      errEl.style.display = 'none';
+
+      if (!displayName || !username || !password) { errEl.textContent = 'Agent name, username, and password are required.'; errEl.style.display = 'block'; return; }
+      if (!/^[a-z0-9_-]{3,30}$/.test(username)) { errEl.textContent = 'Username: 3–30 lowercase letters, numbers, hyphens, underscores.'; errEl.style.display = 'block'; return; }
+
+      const res = await fetch('/api/admin/create-account', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName, role: 'realtor', username, password, email, bio }) });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent = data.error || 'Error creating account'; errEl.style.display = 'block'; return; }
+
+      document.getElementById('rlName').value = '';
+      document.getElementById('rlEmail').value = '';
+      document.getElementById('rlUsername').value = '';
+      document.getElementById('rlPassword').value = '';
+      document.getElementById('rlBio').value = '';
+      showToast(`Realtor @${data.user.username} created — share credentials securely`);
+      loadRealtors();
+    }
+
     async function loadRealtors() {
       const res = await fetch('/api/admin/realtors', { credentials: 'include' });
       const realtors = res.ok ? await res.json() : [];
       const el = document.getElementById('realtorsList');
-      if (!realtors.length) { el.innerHTML = '<div class="panel-empty">No realtor accounts yet. Use Managed Accounts to create one.</div>'; return; }
+      if (!realtors.length) { el.innerHTML = '<div class="panel-empty">No realtor accounts yet.</div>'; return; }
       el.innerHTML = realtors.map(r => `
         <div style="display:flex;align-items:center;gap:14px;padding:16px 20px;border-top:1px solid var(--border);">
           <div style="width:44px;height:44px;border-radius:12px;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white;flex-shrink:0;">${r.initials}</div>
