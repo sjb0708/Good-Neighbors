@@ -1539,16 +1539,14 @@ app.patch('/api/marketplace/:id/sold', requireAuth(async (req, res) => {
 
 app.get('/api/realestate', async (req, res) => {
   try {
+    await sql`ALTER TABLE real_estate_listings ADD COLUMN IF NOT EXISTS external_url TEXT`;
     const { type } = req.query;
     const rows = type
       ? await sql`SELECT * FROM real_estate_listings WHERE type=${type} ORDER BY created_at DESC`
       : await sql`SELECT * FROM real_estate_listings ORDER BY created_at DESC`;
     res.json(rows.map(r => ({
-      id: r.id, type: r.type, title: r.title, price: parseFloat(r.price),
-      priceUnit: r.price_unit, bedrooms: r.bedrooms, bathrooms: r.bathrooms, sqft: r.sqft,
-      description: r.description, location: r.location, image: r.image_url,
-      features: r.features||[], agentName: r.agent_name, agentPhone: r.agent_phone, agentEmail: r.agent_email,
-      listedAt: r.created_at,
+      id: r.id, type: r.type, title: r.title, price: parseFloat(r.price)||0,
+      image: r.image_url, externalUrl: r.external_url, listedAt: r.created_at,
     })));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
@@ -1556,16 +1554,15 @@ app.get('/api/realestate', async (req, res) => {
 app.post('/api/realestate', requireAuth(async (req, res) => {
   const u = req.currentUser;
   if (u.role !== 'admin' && u.role !== 'realtor') return res.status(403).json({ error: 'Realtor or admin only' });
-  const { title, type, price, priceUnit, bedrooms, bathrooms, sqft, description, location, features, agentName, agentPhone, agentEmail, image } = req.body;
-  if (!title || !type || !price) return res.status(400).json({ error: 'Required fields missing' });
-  const featArr  = Array.isArray(features) ? features : (features ? String(features).split(',').map(f=>f.trim()).filter(Boolean) : []);
-  const imageUrl = image || `https://picsum.photos/seed/${Date.now()}/600/380`;
+  const { title, type, price, image, externalUrl } = req.body;
+  if (!title || !externalUrl) return res.status(400).json({ error: 'Title and URL are required' });
+  await sql`ALTER TABLE real_estate_listings ADD COLUMN IF NOT EXISTS external_url TEXT`;
   const [listing] = await sql`
-    INSERT INTO real_estate_listings (type, title, price, price_unit, bedrooms, bathrooms, sqft, description, location, image_url, features, agent_name, agent_phone, agent_email, posted_by_user_id)
-    VALUES (${type}, ${title}, ${Number(price)}, ${priceUnit||null}, ${Number(bedrooms)||0}, ${Number(bathrooms)||0}, ${Number(sqft)||0}, ${description||''}, ${location||'Costa Blanca Villas, Farallón'}, ${imageUrl}, ${JSON.stringify(featArr)}, ${agentName||'Agent'}, ${agentPhone||''}, ${agentEmail||''}, ${u.id})
+    INSERT INTO real_estate_listings (type, title, price, image_url, external_url, posted_by_user_id)
+    VALUES (${type||'for_sale'}, ${title}, ${Number(price)||0}, ${image||null}, ${externalUrl}, ${u.id})
     RETURNING *
   `;
-  res.json({ id: listing.id, type: listing.type, title: listing.title, price: parseFloat(listing.price), priceUnit: listing.price_unit, bedrooms: listing.bedrooms, bathrooms: listing.bathrooms, sqft: listing.sqft, description: listing.description, location: listing.location, image: listing.image_url, features: listing.features, agentName: listing.agent_name, agentPhone: listing.agent_phone, agentEmail: listing.agent_email, listedAt: listing.created_at });
+  res.json({ id: listing.id, type: listing.type, title: listing.title, price: parseFloat(listing.price)||0, image: listing.image_url, externalUrl: listing.external_url, listedAt: listing.created_at });
 }));
 
 app.delete('/api/realestate/:id', requireAuth(async (req, res) => {

@@ -460,67 +460,29 @@
       <div class="modal-body">
         <div class="add-listing-form">
           <div>
+            <label class="form-label">Listing URL * <span style="color:var(--text-light);font-weight:400">(paste link from uncoverpanama.com)</span></label>
+            <input type="url" id="rlUrl" class="form-input" placeholder="https://uncoverpanama.com/listings/..." />
+          </div>
+          <div>
             <label class="form-label">Property Title *</label>
             <input type="text" id="rlTitle" class="form-input" placeholder="e.g. Ocean View Villa — Costa Blanca" />
           </div>
           <div class="form-row-2">
             <div>
-              <label class="form-label">Listing Type *</label>
+              <label class="form-label">Type</label>
               <select id="rlType" class="form-input">
                 <option value="for_sale">For Sale</option>
                 <option value="for_rent">For Rent</option>
               </select>
             </div>
             <div>
-              <label class="form-label">Price * (USD)</label>
+              <label class="form-label">Price (USD)</label>
               <input type="number" id="rlPrice" class="form-input" placeholder="285000" />
             </div>
           </div>
-          <div class="form-row-2">
-            <div>
-              <label class="form-label">Price Unit (rentals)</label>
-              <select id="rlPriceUnit" class="form-input">
-                <option value="night">Per Night</option>
-                <option value="week" selected>Per Week</option>
-                <option value="month">Per Month</option>
-              </select>
-            </div>
-            <div>
-              <label class="form-label">Location</label>
-              <input type="text" id="rlLocation" class="form-input" placeholder="Costa Blanca Villas, Farallón" />
-            </div>
-          </div>
-          <div class="form-row-2">
-            <div>
-              <label class="form-label">Bedrooms</label>
-              <input type="number" id="rlBeds" class="form-input" placeholder="3" min="0" />
-            </div>
-            <div>
-              <label class="form-label">Bathrooms</label>
-              <input type="number" id="rlBaths" class="form-input" placeholder="3" min="0" />
-            </div>
-          </div>
-          <div class="form-row-2">
-            <div>
-              <label class="form-label">Square Feet</label>
-              <input type="number" id="rlSqft" class="form-input" placeholder="2100" min="0" />
-            </div>
-            <div>
-              <label class="form-label">Agent Name</label>
-              <input type="text" id="rlAgent" class="form-input" placeholder="María Rodríguez" />
-            </div>
-          </div>
           <div>
-            <label class="form-label">Agent Phone</label>
-            <input type="text" id="rlPhone" class="form-input" placeholder="+507 6622-8810" />
-          </div>
-          <div>
-            <label class="form-label">Features (comma-separated)</label>
-            <input type="text" id="rlFeatures" class="form-input" placeholder="Private Pool, Ocean View, Fully Furnished" />
-          </div>
-          <div>
-            <label class="form-label">Description</label>
-            <textarea id="rlDesc" class="form-input" rows="3" placeholder="Describe the property..." style="resize:vertical;min-height:80px;"></textarea>
+            <label class="form-label">Image URL <span style="color:var(--text-light);font-weight:400">(optional)</span></label>
+            <input type="url" id="rlImage" class="form-input" placeholder="https://..." />
           </div>
           <button class="re-btn-submit-listing" onclick="submitListing()">
             Add Listing

@@ -3446,59 +3446,31 @@ function buildRealEstateCard(listing) {
   const card = document.createElement('div');
   card.className = 're-card';
   const isRent = listing.type === 'for_rent';
-  const priceLabel = isRent
-    ? `$${listing.price.toLocaleString()}/${listing.priceUnit || 'week'}`
-    : `$${listing.price.toLocaleString()}`;
   const typeBadge = isRent ? 'For Rent' : 'For Sale';
   const typeCls = isRent ? 'for-rent' : 'for-sale';
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'realtor';
+  const priceLabel = listing.price ? `$${Number(listing.price).toLocaleString()}` : '';
+  const externalUrl = listing.externalUrl || 'https://www.uncoverpanamarealestate.com';
+  const imgSrc = listing.image || 'https://www.uncoverpanamarealestate.com/wp-content/uploads/2022/01/uncover-panama-logo.png';
 
   card.innerHTML = `
     <div class="re-card-img-wrap">
-      <img src="${listing.image}" alt="${escHtml(listing.title)}" class="re-card-img"
-        onclick="openLightbox('${listing.image}')"
-        onerror="this.style.objectFit='contain';this.style.padding='20px';this.style.background='var(--bg)'">
-      <div class="re-price-badge">${priceLabel}</div>
+      <img src="${imgSrc}" alt="${escHtml(listing.title)}" class="re-card-img"
+        onerror="this.src='https://www.uncoverpanamarealestate.com/wp-content/uploads/2022/01/uncover-panama-logo.png';this.style.objectFit='contain';this.style.padding='20px';this.style.background='var(--bg)'">
+      ${priceLabel ? `<div class="re-price-badge">${priceLabel}</div>` : ''}
       <div class="re-type-badge ${typeCls}">${typeBadge}</div>
     </div>
     <div class="re-card-body">
       <div class="re-card-title">${escHtml(listing.title)}</div>
-      <div class="re-card-location">
-        <i data-lucide="map-pin" style="width:12px;height:12px;color:var(--coral)"></i>
-        ${escHtml(listing.location)}
+      <div class="re-card-location" style="margin-bottom:4px;">
+        <i data-lucide="building-2" style="width:12px;height:12px;color:var(--coral)"></i>
+        Uncover Panama Real Estate
       </div>
-      <div class="re-stats">
-        <div class="re-stat">
-          <span class="re-stat-val">${listing.bedrooms}</span>
-          <span class="re-stat-lbl">Beds</span>
-        </div>
-        <div class="re-stat">
-          <span class="re-stat-val">${listing.bathrooms}</span>
-          <span class="re-stat-lbl">Baths</span>
-        </div>
-        <div class="re-stat">
-          <span class="re-stat-val">${listing.sqft.toLocaleString()}</span>
-          <span class="re-stat-lbl">Sq Ft</span>
-        </div>
-        <div class="re-stat">
-          <span class="re-stat-val" style="font-size:11px">${relativeTime(listing.listedAt)}</span>
-          <span class="re-stat-lbl">Listed</span>
-        </div>
-      </div>
-      <div class="re-features">
-        ${(listing.features || []).slice(0, 4).map(f => `<span class="re-feature-tag">✓ ${escHtml(f)}</span>`).join('')}
-      </div>
-      <div class="re-agent">
-        <i data-lucide="user" style="width:12px;height:12px"></i>
-        ${escHtml(listing.agentName)}
-      </div>
+      <div style="font-size:11px;color:var(--text-light);margin-bottom:12px;">${relativeTime(listing.listedAt)}</div>
       <div class="re-card-actions">
-        <button class="re-btn-contact" onclick="contactREAgent('${escHtml(listing.agentName).replace(/'/g,"\\'")}','${listing.agentPhone}','${listing.agentEmail||''}')">
-          📞 Contact Agent
-        </button>
-        <a href="https://www.uncoverpanamarealestate.com" target="_blank" rel="noopener" class="re-btn-view">
+        <a href="${externalUrl}" target="_blank" rel="noopener" class="re-btn-view" style="flex:1;text-align:center;">
           <i data-lucide="external-link" style="width:13px;height:13px"></i>
-          View
+          View Full Listing
         </a>
         ${isAdmin ? `<button class="re-btn-delete" onclick="deleteListing('${listing.id}',this)" title="Remove listing">🗑️</button>` : ''}
       </div>
@@ -3549,8 +3521,7 @@ async function deleteListing(id, btn) {
 }
 
 function openAddListingModal() {
-  // Clear form
-  ['rlTitle','rlPrice','rlLocation','rlBeds','rlBaths','rlSqft','rlFeatures','rlDesc','rlAgent','rlPhone'].forEach(id => {
+  ['rlUrl','rlTitle','rlPrice','rlImage'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -3559,10 +3530,9 @@ function openAddListingModal() {
 
 async function submitListing() {
   const get = id => document.getElementById(id)?.value?.trim() || '';
+  const url = get('rlUrl');
   const title = get('rlTitle');
-  const type = get('rlType') || 'for_sale';
-  const price = get('rlPrice');
-  if (!title || !price) { showToast('Please fill in Title and Price'); return; }
+  if (!url || !title) { showToast('URL and Title are required'); return; }
 
   try {
     const res = await fetch('/api/realestate', {
@@ -3570,21 +3540,16 @@ async function submitListing() {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        title, type, price: Number(price),
-        priceUnit: get('rlPriceUnit') || 'week',
-        bedrooms: Number(get('rlBeds')) || 0,
-        bathrooms: Number(get('rlBaths')) || 0,
-        sqft: Number(get('rlSqft')) || 0,
-        description: get('rlDesc'),
-        location: get('rlLocation') || 'Costa Blanca Villas, Farallón',
-        features: get('rlFeatures').split(',').map(f => f.trim()).filter(Boolean),
-        agentName: get('rlAgent') || 'Uncover Panama',
-        agentPhone: get('rlPhone') || '+507 6622-8810'
+        externalUrl: url,
+        title,
+        type: get('rlType') || 'for_sale',
+        price: Number(get('rlPrice')) || 0,
+        image: get('rlImage') || null
       })
     });
     if (!res.ok) throw new Error();
     closeModal('addListingModal');
-    showToast('New listing added! 🏡');
+    showToast('Listing added! 🏡');
     await loadRealEstateGrid('all');
     document.querySelectorAll('.re-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
   } catch {
