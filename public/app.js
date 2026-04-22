@@ -1579,7 +1579,7 @@ function buildPostCard(post) {
           </div>
           <div class="post-author-info">
             <div class="post-author-name">
-              ${escHtml(post.author?.name || 'Anonymous')}
+              ${post.businessId ? `<span style="cursor:pointer;color:var(--ocean);" onclick="openBusinessPage('${post.businessId}')">${escHtml(post.author?.name || 'Anonymous')}</span>` : escHtml(post.author?.name || 'Anonymous')}
               ${post.author?.role === 'admin' ? '<span style="display:inline-flex;align-items:center;justify-content:center;background:#0077B6;color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:1px 5px;margin-left:4px;letter-spacing:0.3px;">ADMIN</span>' : ''}
               ${post.author?.verified ? '<span class="verified-check">✓</span>' : ''}
             </div>
