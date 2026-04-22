@@ -1273,24 +1273,39 @@ app.delete('/api/admin/businesses/:id', requireAdmin(async (req, res) => {
 }));
 
 app.post('/api/businesses/:id/banner', requireAuth(async (req, res) => {
+  const u = req.currentUser;
   const [biz] = await sql`SELECT claimed_by_user_id, added_by_user_id FROM businesses WHERE id=${req.params.id}`;
   if (!biz) return res.status(404).json({ error: 'Not found' });
-  const isOwner = biz.claimed_by_user_id === req.currentUser.id || biz.added_by_user_id === req.currentUser.id;
-  if (!isOwner && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
-  const { dataUrl } = req.body;
-  if (!dataUrl) return res.status(400).json({ error: 'No image data' });
+  const isOwner = biz.claimed_by_user_id === u.id || biz.added_by_user_id === u.id || u.business_id === req.params.id;
+  if (!isOwner && u.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  // Accept either JSON base64 or multipart file
+  let dataUrl;
+  if (req.body?.dataUrl) {
+    dataUrl = req.body.dataUrl;
+  } else {
+    await new Promise((resolve, reject) => upload.single('banner')(req, res, err => err ? reject(err) : resolve()));
+    if (!req.file) return res.status(400).json({ error: 'No image data' });
+    dataUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+  }
   const url = await storeImage(dataUrl, 'biz-banner');
   await sql`UPDATE businesses SET banner_url=${url} WHERE id=${req.params.id}`;
   res.json({ ok: true, bannerUrl: url });
 }));
 
 app.post('/api/businesses/:id/logo', requireAuth(async (req, res) => {
+  const u = req.currentUser;
   const [biz] = await sql`SELECT claimed_by_user_id, added_by_user_id FROM businesses WHERE id=${req.params.id}`;
   if (!biz) return res.status(404).json({ error: 'Not found' });
-  const isOwner = biz.claimed_by_user_id === req.currentUser.id || biz.added_by_user_id === req.currentUser.id;
-  if (!isOwner && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
-  const { dataUrl } = req.body;
-  if (!dataUrl) return res.status(400).json({ error: 'No image data' });
+  const isOwner = biz.claimed_by_user_id === u.id || biz.added_by_user_id === u.id || u.business_id === req.params.id;
+  if (!isOwner && u.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  let dataUrl;
+  if (req.body?.dataUrl) {
+    dataUrl = req.body.dataUrl;
+  } else {
+    await new Promise((resolve, reject) => upload.single('logo')(req, res, err => err ? reject(err) : resolve()));
+    if (!req.file) return res.status(400).json({ error: 'No image data' });
+    dataUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+  }
   const url = await storeImage(dataUrl, 'biz-logo');
   await sql`UPDATE businesses SET logo_url=${url} WHERE id=${req.params.id}`;
   res.json({ ok: true, logoUrl: url });
