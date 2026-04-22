@@ -1462,22 +1462,50 @@ app.post('/api/business/post', requireAuth(async (req, res) => {
 app.put('/api/business/profile', requireAuth(async (req, res) => {
   const u = req.currentUser;
   if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
-  const { name, description, hours, phone, address, tags } = req.body;
+  const { name, description, hours, phone, address, tags, website, instagramUrl, facebookUrl } = req.body;
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS instagram_url TEXT`;
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS facebook_url TEXT`;
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS website TEXT`;
   const tagsArr = tags ? (Array.isArray(tags) ? tags : tags.split(',').map(t=>t.trim()).filter(Boolean)) : undefined;
   const [biz] = await sql`
     UPDATE businesses SET
-      name        = COALESCE(${name||null},        name),
-      description = COALESCE(${description||null}, description),
-      hours       = COALESCE(${hours||null},       hours),
-      phone       = COALESCE(${phone||null},       phone),
-      address     = COALESCE(${address||null},     address),
-      tags        = COALESCE(${tagsArr?JSON.stringify(tagsArr):null}::jsonb, tags),
-      updated_at  = NOW()
+      name          = COALESCE(${name||null},        name),
+      description   = COALESCE(${description||null}, description),
+      hours         = COALESCE(${hours||null},       hours),
+      phone         = COALESCE(${phone||null},       phone),
+      address       = COALESCE(${address||null},     address),
+      tags          = COALESCE(${tagsArr?JSON.stringify(tagsArr):null}::jsonb, tags),
+      website       = COALESCE(${website||null},     website),
+      instagram_url = COALESCE(${instagramUrl||null}, instagram_url),
+      facebook_url  = COALESCE(${facebookUrl||null},  facebook_url),
+      updated_at    = NOW()
     WHERE id=${u.business_id}
     RETURNING *
   `;
   if (name) await sql`UPDATE users SET name=${name} WHERE id=${u.id}`;
   res.json(formatBusiness(biz));
+}));
+
+app.post('/api/business/photos', requireAuth(async (req, res) => {
+  const u = req.currentUser;
+  if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
+  const { image } = req.body;
+  if (!image) return res.status(400).json({ error: 'No image provided' });
+  const photoUrl = await storeImage(image);
+  const [biz] = await sql`SELECT photos FROM businesses WHERE id=${u.business_id}`;
+  const photos = [...(biz?.photos || []), photoUrl];
+  await sql`UPDATE businesses SET photos=${JSON.stringify(photos)}::jsonb WHERE id=${u.business_id}`;
+  res.json({ photos });
+}));
+
+app.delete('/api/business/photos/:index', requireAuth(async (req, res) => {
+  const u = req.currentUser;
+  if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
+  const idx = parseInt(req.params.index);
+  const [biz] = await sql`SELECT photos FROM businesses WHERE id=${u.business_id}`;
+  const photos = (biz?.photos || []).filter((_, i) => i !== idx);
+  await sql`UPDATE businesses SET photos=${JSON.stringify(photos)}::jsonb WHERE id=${u.business_id}`;
+  res.json({ photos });
 }));
 
 app.get('/api/business/posts', requireAuth(async (req, res) => {
