@@ -1433,7 +1433,7 @@ app.post('/api/business/post', requireAuth(async (req, res) => {
     ]);
     await sql`
       INSERT INTO events (title, description, host_id, location, event_date, event_time, end_time, category, is_hoa_event, image_url, business_id)
-      VALUES (${eventTitle}, ${content}, ${u.id}, ${eventLocation||'Costa Blanca Villas'}, ${eventDate}, ${eventTime||null}, null, 'Business Event', false, ${imageUrl}, ${biz.id})
+      VALUES (${eventTitle}, ${content}, ${u.id}, ${eventLocation||'Costa Blanca Villas'}, ${eventDate}, ${eventTime||null}, null, 'Official Business', false, ${imageUrl}, ${biz.id})
       RETURNING *
     `;
     // Also insert a feed post so it shows in the neighborhood feed
