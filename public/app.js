@@ -3649,6 +3649,13 @@ function openCartListingForm() {
       <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;color:#0d1b2a;">List Your Golf Cart</h3>
       <p style="font-size:13px;color:#4a6378;margin-bottom:18px;">Let neighbors rent your cart. You handle the arrangement directly.</p>
       <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+        <div>
+          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Photo</label>
+          <div id="cartImgPreview" onclick="document.getElementById('cartImgInput').click()" style="width:100%;height:130px;border-radius:10px;border:2px dashed #dde4ed;background:#f8fafc;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;font-size:12.5px;color:#94a3b8;font-weight:600;">
+            📷 Tap to add photo
+          </div>
+          <input id="cartImgInput" type="file" accept="image/*" style="display:none;" onchange="previewCartImage(this)" />
+        </div>
         <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Cart description</label>
           <input id="cartDesc" type="text" placeholder="e.g. 4-seater, 2023, good condition" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -3668,6 +3675,17 @@ function openCartListingForm() {
   document.body.appendChild(overlay);
 }
 
+function previewCartImage(input) {
+  if (!input.files?.[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('cartImgPreview');
+    prev.style.cssText = prev.style.cssText + ';padding:0;border-style:solid;';
+    prev.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
 async function submitCartListing(btn) {
   const makeModel = document.getElementById('cartDesc')?.value.trim();
   const rate = document.getElementById('cartRate')?.value.trim();
@@ -3675,7 +3693,14 @@ async function submitCartListing(btn) {
   const notes = document.getElementById('cartNotes')?.value.trim();
   if (!makeModel) { showToast('Cart description required'); return; }
   btn.disabled = true;
-  const res = await fetch('/api/transport/carts', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ makeModel, rate, phone, notes }) });
+
+  let image = null;
+  const file = document.getElementById('cartImgInput')?.files?.[0];
+  if (file) {
+    image = await new Promise(r => { const fr = new FileReader(); fr.onload = e => r(e.target.result); fr.readAsDataURL(file); });
+  }
+
+  const res = await fetch('/api/transport/carts', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ makeModel, rate, phone, notes, image }) });
   btn.closest('[style*=fixed]').remove();
   if (res.ok) { await renderCartListings(); showToast('Cart listed!'); }
   else showToast('Could not post listing.');
@@ -3687,7 +3712,9 @@ async function renderCartListings() {
   const carts = await fetchJSON('/api/transport/carts') || [];
   if (!carts.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:13.5px;">No carts listed yet — be the first!</div>'; return; }
   el.innerHTML = carts.map(c => `
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid var(--border);">
+    <div style="background:#f8fafc;border-radius:12px;border:1px solid var(--border);overflow:hidden;">
+      ${c.image_url ? `<img src="${c.image_url}" style="width:100%;height:160px;object-fit:cover;display:block;">` : ''}
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;">
       <div style="width:38px;height:38px;border-radius:10px;background:${c.avatar_hex||'#0077B6'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${c.initials||'?'}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:700;color:var(--text-dark);">🛺 ${escHtml(c.make_model)}</div>
@@ -3701,7 +3728,7 @@ async function renderCartListings() {
         ${c.phone ? `<a href="tel:${escHtml(c.phone)}" style="padding:7px 12px;background:var(--ocean);color:white;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;">📞 Contact</a>` : ''}
         ${currentUser && (c.owner_id === currentUser.id || currentUser.role === 'admin') ? `<button onclick="deleteCart('${c.id}')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-light);">🗑 Remove</button>` : ''}
       </div>
-    </div>`).join('');
+    </div></div>`).join('');
 }
 
 async function deleteCart(id) {

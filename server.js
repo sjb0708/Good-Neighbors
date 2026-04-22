@@ -1944,9 +1944,11 @@ app.get('/api/transport/carts', async (req, res) => {
 
 app.post('/api/transport/carts', requireAuth(async (req, res) => {
   await sql`CREATE TABLE IF NOT EXISTS transport_carts (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), owner_id UUID REFERENCES users(id) ON DELETE CASCADE, make_model TEXT NOT NULL, seats INTEGER DEFAULT 4, rate TEXT, phone TEXT, notes TEXT, available BOOLEAN DEFAULT TRUE, created_at TIMESTAMPTZ DEFAULT NOW())`;
-  const { makeModel, seats, rate, phone, notes } = req.body;
+  await sql`ALTER TABLE transport_carts ADD COLUMN IF NOT EXISTS image_url TEXT`;
+  const { makeModel, seats, rate, phone, notes, image } = req.body;
   if (!makeModel) return res.status(400).json({ error: 'Cart description required' });
-  const [cart] = await sql`INSERT INTO transport_carts (owner_id, make_model, seats, rate, phone, notes) VALUES (${req.currentUser.id}, ${makeModel}, ${parseInt(seats)||4}, ${rate||''}, ${phone||''}, ${notes||''}) RETURNING *`;
+  const imageUrl = await storeImage(image, 'carts');
+  const [cart] = await sql`INSERT INTO transport_carts (owner_id, make_model, seats, rate, phone, notes, image_url) VALUES (${req.currentUser.id}, ${makeModel}, ${parseInt(seats)||4}, ${rate||''}, ${phone||''}, ${notes||''}, ${imageUrl||null}) RETURNING *`;
   res.json(cart);
 }));
 
