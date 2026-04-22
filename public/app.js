@@ -2034,7 +2034,7 @@ function buildEventCard(ev) {
         </div>
         <div class="event-meta-item">
           <i data-lucide="user" style="width:12px;height:12px"></i>
-          ${escHtml(ev.host?.name || 'Organizer')}
+          ${ev.businessId ? `<span style="color:var(--ocean);cursor:pointer;font-weight:600;" onclick="openBusinessPage('${ev.businessId}')">${escHtml(ev.host?.name || 'Organizer')}</span>` : escHtml(ev.host?.name || 'Organizer')}
         </div>
       </div>
       <div class="rsvp-row" id="rsvp-row-${ev.id}">

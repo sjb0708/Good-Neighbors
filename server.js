@@ -1160,6 +1160,7 @@ app.get('/api/events', async (req, res) => {
       host: { id: e.host_id, username: e.host_username, name: e.host_name, avatar: e.host_avatar, initials: e.host_initials, verified: e.host_verified },
       location: e.location, date: e.event_date, time: e.event_time, endTime: e.end_time,
       category: e.category, isHoaEvent: e.is_hoa_event, image: e.image_url || null, cancelled: e.cancelled || false,
+      businessId: e.business_id || null,
       rsvp: { going: e.going_count, maybe: e.maybe_count, cantGo: e.cant_go_count },
       userRsvp: userRsvps[e.id] ? (userRsvps[e.id] === 'cant_go' ? 'cantGo' : userRsvps[e.id]) : null,
       goingAvatars: [],
