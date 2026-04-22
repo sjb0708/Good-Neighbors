@@ -1557,12 +1557,12 @@ app.get('/api/realestate', async (req, res) => {
 app.post('/api/realestate', requireAuth(async (req, res) => {
   const u = req.currentUser;
   if (u.role !== 'admin' && u.role !== 'realtor') return res.status(403).json({ error: 'Realtor or admin only' });
-  const { title, type, price, externalUrl } = req.body;
+  const { title, type, price, externalUrl, image } = req.body;
   if (!title || !externalUrl) return res.status(400).json({ error: 'Title and URL are required' });
   await sql`ALTER TABLE real_estate_listings ADD COLUMN IF NOT EXISTS external_url TEXT`;
 
-  let imageUrl = null;
-  try {
+  let imageUrl = image || null;
+  if (!imageUrl) try {
     const https = require('https'), http = require('http');
     const fetcher = externalUrl.startsWith('https') ? https : http;
     const parseOgImage = (html) => {

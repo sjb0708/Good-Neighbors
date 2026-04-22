@@ -3454,12 +3454,12 @@ function buildRealEstateCard(listing) {
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'realtor';
   const priceLabel = listing.price ? `$${Number(listing.price).toLocaleString()}` : '';
   const externalUrl = listing.externalUrl || 'https://www.uncoverpanamarealestate.com';
-  const imgSrc = listing.image || 'https://www.uncoverpanamarealestate.com/wp-content/uploads/2022/01/uncover-panama-logo.png';
+  const imgSrc = listing.image || '/images/uncover-panama-logo.png';
 
   card.innerHTML = `
     <div class="re-card-img-wrap">
       <img src="${imgSrc}" alt="${escHtml(listing.title)}" class="re-card-img"
-        onerror="this.src='https://www.uncoverpanamarealestate.com/wp-content/uploads/2022/01/uncover-panama-logo.png';this.style.objectFit='contain';this.style.padding='20px';this.style.background='var(--bg)'">
+        onerror="this.src='/images/uncover-panama-logo.png';this.style.objectFit='contain';this.style.padding='20px';this.style.background='var(--bg)'">
       ${priceLabel ? `<div class="re-price-badge">${priceLabel}</div>` : ''}
       <div class="re-type-badge ${typeCls}">${typeBadge}</div>
     </div>
@@ -3524,7 +3524,7 @@ async function deleteListing(id, btn) {
 }
 
 function openAddListingModal() {
-  ['rlUrl','rlTitle','rlPrice'].forEach(id => {
+  ['rlUrl','rlTitle','rlPrice','rlImage'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -3546,7 +3546,8 @@ async function submitListing() {
         externalUrl: url,
         title,
         type: get('rlType') || 'for_sale',
-        price: Number(get('rlPrice')) || 0
+        price: Number(get('rlPrice')) || 0,
+        image: get('rlImage') || null
       })
     });
     if (!res.ok) throw new Error();
