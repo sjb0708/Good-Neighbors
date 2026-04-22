@@ -188,6 +188,9 @@
         <span class="icon">🏪</span> Business Claims
         <span class="nav-badge" id="badge-claims" style="display:none">0</span>
       </button>
+      <button class="nav-item" onclick="showView('businesses')" id="nav-businesses">
+        <span class="icon">🗂️</span> Manage Businesses
+      </button>
       <button class="nav-item" onclick="showView('realtors')" id="nav-realtors">
         <span class="icon">🏠</span> Realtors
       </button>
@@ -624,6 +627,12 @@
     </div>
   </div>
 
+  <!-- Manage Businesses View -->
+  <div class="view" id="view-businesses" style="padding:0 24px 24px;">
+    <div class="panel-header"><h2>🗂️ Manage Businesses</h2><div class="panel-header-sub">View and remove business listings</div></div>
+    <div id="bizManageList"></div>
+  </div>
+
   <!-- Business Claims View -->
   <div class="view" id="view-claims" style="padding:0 24px 24px;">
     <div class="panel">
@@ -686,7 +695,7 @@
     }
 
     async function loadMembers() {
-      const res = await fetch('/api/neighbors', { credentials: 'include' });
+      const res = await fetch('/api/admin/all-users', { credentials: 'include' });
       allMembers = res.ok ? await res.json() : [];
       document.getElementById('statMembers').textContent = allMembers.length;
       renderMembers();
@@ -703,8 +712,9 @@
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.getElementById('view-' + name).classList.add('active');
       document.getElementById('nav-' + name)?.classList.add('active');
-      const titles = { dashboard: 'Dashboard', access: 'Access Requests', members: 'All Members', reports: 'Reports', banned: 'Banned Members', team: 'Admin Team', alerts: 'Security Alerts', managed: 'Managed Accounts', sponsored: 'Sponsored Posts', claims: 'Business Claims', realtors: 'Realtors' };
+      const titles = { dashboard: 'Dashboard', access: 'Access Requests', members: 'All Members', reports: 'Reports', banned: 'Banned Members', team: 'Admin Team', alerts: 'Security Alerts', managed: 'Managed Accounts', sponsored: 'Sponsored Posts', claims: 'Business Claims', businesses: 'Manage Businesses', realtors: 'Realtors' };
       document.getElementById('topbarTitle').textContent = titles[name] || name;
+      if (name === 'businesses') loadBusinesses();
     }
 
     function timeAgo(iso) {
@@ -756,6 +766,7 @@
           <td style="color:var(--text-light)">@${m.username}</td>
           <td style="color:var(--text-mid);font-size:13px">${m.email || '—'}${!m.emailVerified ? ' <span style="color:#e76f51;font-size:11px;font-weight:700;">UNVERIFIED</span>' : ''}</td>
           <td style="color:var(--text-mid);font-size:13px">${m.address || '—'}</td>
+          <td><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:${m.role==='business'?'#dbeafe':m.role==='realtor'?'#fef9c3':'#dcfce7'};color:${m.role==='business'?'#1d4ed8':m.role==='realtor'?'#92400e':'#166534'};">${m.role}</span></td>
           <td>
             ${m.username !== currentAdmin?.username ? `
               <div style="display:flex;gap:6px;">
@@ -1295,6 +1306,29 @@
     }
 
     // ── Business Claims ──────────────────────────────────────────────────────
+    async function loadBusinesses() {
+      const res = await fetch('/api/admin/businesses', { credentials: 'include' });
+      const businesses = res.ok ? await res.json() : [];
+      const el = document.getElementById('bizManageList');
+      if (!businesses.length) { el.innerHTML = '<p style="color:#888;font-size:14px;">No businesses listed.</p>'; return; }
+      el.innerHTML = businesses.map(b => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;background:white;">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#0d1b2a;">${b.name}</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px;">${b.category || 'Uncategorized'} · ${b.claimed ? '✅ Claimed' : '📋 Unclaimed'}</div>
+          </div>
+          <button onclick="adminDeleteBusiness('${b.id}','${b.name.replace(/'/g,"\\'")}',this)" style="padding:7px 14px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Delete</button>
+        </div>`).join('');
+    }
+
+    async function adminDeleteBusiness(id, name, btn) {
+      if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+      btn.disabled = true; btn.textContent = 'Deleting…';
+      const res = await fetch(`/api/admin/businesses/${id}`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) { showToast('Business deleted'); loadBusinesses(); }
+      else { showToast('Failed to delete'); btn.disabled = false; btn.textContent = 'Delete'; }
+    }
+
     async function loadClaims() {
       const res = await fetch('/api/admin/claims', { credentials: 'include' });
       allClaims = res.ok ? await res.json() : [];

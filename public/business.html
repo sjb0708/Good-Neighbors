@@ -1210,24 +1210,6 @@
       });
 
       if (res.ok) {
-        // Also create a public event entry when posting an event
-        if (currentTab === 'event' && eventTitle && eventDate) {
-          await fetch('/api/events', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: eventTitle,
-              description: content,
-              location: eventLocation || '',
-              eventDate,
-              eventTime: eventTime || null,
-              category: 'Business Event',
-              image: postFileDataUrl || ''
-            }),
-            credentials: 'include'
-          }).catch(() => {});
-        }
-
         document.getElementById('composeBox').value = '';
         if (document.getElementById('offerTitle')) document.getElementById('offerTitle').value = '';
         if (document.getElementById('offerExpiry')) document.getElementById('offerExpiry').value = '';

@@ -61,6 +61,7 @@ function formatUser(row) {
     isOwner: row.is_owner || false, managedAccount: row.managed_account || false,
     businessId: row.business_id || undefined,
     contactEmail: row.contact_email || undefined, contactPhone: row.contact_phone || undefined,
+    allowMessages: row.allow_messages !== false,
   };
 }
 
@@ -661,6 +662,11 @@ app.post('/api/admin/banned/:id/unban', requireAdmin(async (req, res) => {
   res.json({ ok: true });
 }));
 
+app.get('/api/admin/all-users', requireAdmin(async (req, res) => {
+  const rows = await sql`SELECT id, username, name, email, role, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, created_at FROM users WHERE role != 'admin' ORDER BY created_at DESC`;
+  res.json(rows.map(u => ({ id: u.id, username: u.username, name: u.name, email: u.email, role: u.role, avatar: u.avatar_hex, avatarUrl: u.avatar_url, initials: u.initials, verified: u.verified, yearsInNeighborhood: u.years_in_neighborhood, address: u.address })));
+}));
+
 app.get('/api/admin/banned', requireAdmin(async (req, res) => {
   const rows = await sql`SELECT * FROM banned_users WHERE lifted_at IS NULL ORDER BY banned_at DESC`;
   res.json(rows.map(r => ({
@@ -1246,6 +1252,22 @@ app.post('/api/admin/businesses', requireAdmin(async (req, res) => {
     RETURNING *
   `;
   res.json({ ok: true, business: formatBusiness(biz) });
+}));
+
+app.get('/api/admin/businesses', requireAdmin(async (req, res) => {
+  const rows = await sql`SELECT * FROM businesses ORDER BY created_at DESC`;
+  res.json(rows.map(formatBusiness));
+}));
+
+app.delete('/api/admin/businesses/:id', requireAdmin(async (req, res) => {
+  const { id } = req.params;
+  await sql`DELETE FROM business_reviews WHERE business_id = ${id}`;
+  await sql`DELETE FROM business_faves WHERE business_id = ${id}`;
+  await sql`DELETE FROM business_claims WHERE business_id = ${id}`;
+  await sql`DELETE FROM business_claim_codes WHERE business_id = ${id}`;
+  await sql`UPDATE users SET business_id = NULL WHERE business_id = ${id}`;
+  await sql`DELETE FROM businesses WHERE id = ${id}`;
+  res.json({ ok: true });
 }));
 
 app.post('/api/businesses/:id/banner', requireAuth(upload.single('banner'), async (req, res) => {
@@ -2042,7 +2064,7 @@ app.post('/api/notifications/read', requireAuth(async (req, res) => {
 
 app.get('/api/neighbors', async (req, res) => {
   try {
-    const rows = await sql`SELECT id, username, name, email, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, email_verified FROM users WHERE role IN ('neighbor','business','realtor') ORDER BY created_at DESC`;
+    const rows = await sql`SELECT id, username, name, email, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, email_verified FROM users WHERE role IN ('neighbor','realtor') ORDER BY created_at DESC`;
     res.json(rows.map(u => ({ id: u.id, username: u.username, name: u.name, email: u.email, avatar: u.avatar_hex, avatarUrl: u.avatar_url, initials: u.initials, verified: u.verified, yearsInNeighborhood: u.years_in_neighborhood, address: u.address, emailVerified: u.email_verified })));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
@@ -2069,17 +2091,25 @@ app.patch('/api/profile', requireAuth(async (req, res) => {
   res.json({ ok: true });
 }));
 
+app.patch('/api/profile/allow-messages', requireAuth(async (req, res) => {
+  const { allow } = req.body;
+  await sql`UPDATE users SET allow_messages = ${!!allow} WHERE id = ${req.currentUser.id}`;
+  res.json({ ok: true });
+}));
+
 // ─── Direct Messages ──────────────────────────────────────────────────────────
 
 async function ensureMessagingTables() {
   await sql`CREATE TABLE IF NOT EXISTS conversations (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user1_id UUID REFERENCES users(id) ON DELETE CASCADE, user2_id UUID REFERENCES users(id) ON DELETE CASCADE, last_message_at TIMESTAMPTZ DEFAULT NOW(), created_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(user1_id, user2_id))`;
   await sql`CREATE TABLE IF NOT EXISTS direct_messages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE, sender_id UUID REFERENCES users(id) ON DELETE CASCADE, content TEXT NOT NULL, read BOOLEAN DEFAULT false, created_at TIMESTAMPTZ DEFAULT NOW())`;
+  await sql`CREATE TABLE IF NOT EXISTS blocked_users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, blocked_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(user_id, blocked_user_id))`;
 }
 
 app.post('/api/conversations/:username', requireAuth(async (req, res) => {
   await ensureMessagingTables();
-  const [other] = await sql`SELECT id FROM users WHERE username=${req.params.username}`;
+  const [other] = await sql`SELECT id, allow_messages FROM users WHERE username=${req.params.username}`;
   if (!other) return res.status(404).json({ error: 'User not found' });
+  if (other.allow_messages === false) return res.status(403).json({ error: 'This user is not accepting messages.' });
   const u1 = req.currentUser.id < other.id ? req.currentUser.id : other.id;
   const u2 = req.currentUser.id < other.id ? other.id : req.currentUser.id;
   const [conv] = await sql`INSERT INTO conversations (user1_id, user2_id) VALUES (${u1}, ${u2}) ON CONFLICT (user1_id, user2_id) DO UPDATE SET last_message_at = conversations.last_message_at RETURNING id`;
@@ -2095,13 +2125,14 @@ app.get('/api/conversations', requireAuth(async (req, res) => {
       u.name AS partner_name, u.username AS partner_username, u.avatar_hex AS partner_avatar,
       u.avatar_url AS partner_avatar_url, u.initials AS partner_initials,
       (SELECT content FROM direct_messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) AS last_message,
-      (SELECT COUNT(*)::int FROM direct_messages WHERE conversation_id = c.id AND sender_id != ${userId} AND read = false) AS unread_count
+      (SELECT COUNT(*)::int FROM direct_messages WHERE conversation_id = c.id AND sender_id != ${userId} AND read = false) AS unread_count,
+      EXISTS(SELECT 1 FROM blocked_users WHERE user_id = ${userId} AND blocked_user_id = CASE WHEN c.user1_id = ${userId} THEN c.user2_id ELSE c.user1_id END) AS you_blocked_them
     FROM conversations c
     JOIN users u ON u.id = CASE WHEN c.user1_id = ${userId} THEN c.user2_id ELSE c.user1_id END
     WHERE c.user1_id = ${userId} OR c.user2_id = ${userId}
     ORDER BY c.last_message_at DESC
   `;
-  res.json(rows.map(r => ({ id: r.id, partner: { id: r.partner_id, name: r.partner_name, username: r.partner_username, avatar: r.partner_avatar, avatarUrl: r.partner_avatar_url, initials: r.partner_initials }, lastMessage: r.last_message, unreadCount: r.unread_count, lastMessageAt: r.last_message_at })));
+  res.json(rows.map(r => ({ id: r.id, partner: { id: r.partner_id, name: r.partner_name, username: r.partner_username, avatar: r.partner_avatar, avatarUrl: r.partner_avatar_url, initials: r.partner_initials }, lastMessage: r.last_message, unreadCount: r.unread_count, lastMessageAt: r.last_message_at, youBlockedThem: r.you_blocked_them })));
 }));
 
 app.get('/api/conversations/:id/messages', requireAuth(async (req, res) => {
@@ -2120,9 +2151,12 @@ app.post('/api/conversations/:id/messages', requireAuth(async (req, res) => {
   if (!content?.trim()) return res.status(400).json({ error: 'Message cannot be empty' });
   const [conv] = await sql`SELECT * FROM conversations WHERE id=${req.params.id} AND (user1_id=${userId} OR user2_id=${userId})`;
   if (!conv) return res.status(404).json({ error: 'Not found' });
+  const partnerId = conv.user1_id === userId ? conv.user2_id : conv.user1_id;
+  // Block check — if recipient has blocked sender, silently reject
+  const [blocked] = await sql`SELECT 1 FROM blocked_users WHERE user_id = ${partnerId} AND blocked_user_id = ${userId}`;
+  if (blocked) return res.status(403).json({ error: 'Unable to send message' });
   const [msg] = await sql`INSERT INTO direct_messages (conversation_id, sender_id, content) VALUES (${req.params.id}, ${userId}, ${content.trim()}) RETURNING *`;
   await sql`UPDATE conversations SET last_message_at = NOW() WHERE id=${req.params.id}`;
-  const partnerId = conv.user1_id === userId ? conv.user2_id : conv.user1_id;
   await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id) VALUES (${partnerId}, 'message', ${`${req.currentUser.name} sent you a message`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials}, ${req.params.id})`;
   res.json({ id: msg.id, senderId: msg.sender_id, content: msg.content, read: msg.read, createdAt: msg.created_at });
 }));
@@ -2130,6 +2164,29 @@ app.post('/api/conversations/:id/messages', requireAuth(async (req, res) => {
 app.post('/api/conversations/:id/read', requireAuth(async (req, res) => {
   await ensureMessagingTables();
   await sql`UPDATE direct_messages SET read=true WHERE conversation_id=${req.params.id} AND sender_id!=${req.currentUser.id}`;
+  res.json({ ok: true });
+}));
+
+app.post('/api/conversations/:id/block', requireAuth(async (req, res) => {
+  await ensureMessagingTables();
+  const userId = req.currentUser.id;
+  const [conv] = await sql`SELECT * FROM conversations WHERE id=${req.params.id} AND (user1_id=${userId} OR user2_id=${userId})`;
+  if (!conv) return res.status(404).json({ error: 'Not found' });
+  const partnerId = conv.user1_id === userId ? conv.user2_id : conv.user1_id;
+  const [partner] = await sql`SELECT name, username FROM users WHERE id=${partnerId}`;
+  await sql`INSERT INTO blocked_users (user_id, blocked_user_id) VALUES (${userId}, ${partnerId}) ON CONFLICT DO NOTHING`;
+  // Auto-file a report
+  await sql`INSERT INTO reports (target_type, target_id, target_label, reason, note, reported_by_user_id) VALUES ('member', ${partner.username}, ${partner.name}, 'Harassment', 'Blocked via direct message', ${userId})`;
+  res.json({ ok: true });
+}));
+
+app.post('/api/conversations/:id/unblock', requireAuth(async (req, res) => {
+  await ensureMessagingTables();
+  const userId = req.currentUser.id;
+  const [conv] = await sql`SELECT * FROM conversations WHERE id=${req.params.id} AND (user1_id=${userId} OR user2_id=${userId})`;
+  if (!conv) return res.status(404).json({ error: 'Not found' });
+  const partnerId = conv.user1_id === userId ? conv.user2_id : conv.user1_id;
+  await sql`DELETE FROM blocked_users WHERE user_id=${userId} AND blocked_user_id=${partnerId}`;
   res.json({ ok: true });
 }));
 
@@ -2422,6 +2479,7 @@ async function runMigrations() {
       PRIMARY KEY (user_id, section)
     )`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_claim_business_id UUID`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS allow_messages BOOLEAN DEFAULT TRUE`;
     await sql`CREATE TABLE IF NOT EXISTS business_claim_codes (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,

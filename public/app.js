@@ -960,12 +960,7 @@ async function renderBusinesses(container) {
 
   allBusinesses = await fetchJSON('/api/businesses') || [];
 
-  if (!allBusinesses.length) {
-    container.insertAdjacentHTML('beforeend', emptyStateHTML('🏪', 'No businesses listed', 'Know a great local business? Recommend it!'));
-    return;
-  }
-
-  // Category chips — fixed predefined list
+  // Category chips — always shown
   const chipWrap = document.createElement('div');
   chipWrap.id = 'bizCatChips';
   chipWrap.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;';
@@ -1454,6 +1449,10 @@ function renderSettings(container) {
         <div class="settings-row-info"><div class="settings-row-label">Appear in Neighbor Search</div><div class="settings-row-sub">Other residents can find your profile</div></div>
         <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
       </div>
+      <div class="settings-row">
+        <div class="settings-row-info"><div class="settings-row-label">Receive Direct Messages</div><div class="settings-row-sub">Allow neighbors to send you private messages</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="allowMessagesToggle" ${u.allowMessages !== false ? 'checked' : ''} onchange="toggleAllowMessages(this.checked)"><span class="toggle-slider"></span></label>
+      </div>
     </div>
 
     <div class="settings-group">
@@ -1469,6 +1468,21 @@ function renderSettings(container) {
     </div>
   `;
   lucide.createIcons();
+}
+
+async function toggleAllowMessages(allow) {
+  const res = await fetch('/api/profile/allow-messages', {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ allow })
+  });
+  if (res.ok) {
+    currentUser.allowMessages = allow;
+    showToast(allow ? 'Messages enabled' : 'Messages turned off');
+  } else {
+    showToast('Failed to save. Try again.');
+    document.getElementById('allowMessagesToggle').checked = !allow;
+  }
 }
 
 // ─── Build Sponsored Post Card ───────────────────────────────────
@@ -2699,7 +2713,7 @@ async function renderMessages(container) {
         </div>
         ${conv.unreadCount > 0 ? `<div class="conv-unread">${conv.unreadCount}</div>` : ''}
       `;
-      item.onclick = () => openConversationPanel(conv.id, conv.partner, layout);
+      item.onclick = () => openConversationPanel(conv.id, conv.partner, layout, conv.youBlockedThem);
       leftPanel.appendChild(item);
     });
   }
@@ -2715,33 +2729,41 @@ async function renderMessages(container) {
 
   if (activeConversationId) {
     const conv = conversations.find(c => c.id === activeConversationId);
-    if (conv) openConversationPanel(conv.id, conv.partner, layout);
+    if (conv) openConversationPanel(conv.id, conv.partner, layout, conv.youBlockedThem);
   } else if (conversations.length) {
-    openConversationPanel(conversations[0].id, conversations[0].partner, layout);
+    openConversationPanel(conversations[0].id, conversations[0].partner, layout, conversations[0].youBlockedThem);
   }
 }
 
-async function openConversationPanel(convId, partner, layout) {
+async function openConversationPanel(convId, partner, layout, youBlockedThem) {
   activeConversationId = convId;
   layout?.querySelectorAll('.conv-item').forEach(el => el.classList.toggle('active', el.dataset.convId === convId));
   const panel = document.getElementById('chatPanel');
   if (!panel) return;
   fetch(`/api/conversations/${convId}/read`, { method: 'POST', credentials: 'include' });
   const messages = await fetchJSON(`/api/conversations/${convId}/messages`) || [];
+  const isBlocked = youBlockedThem;
   panel.innerHTML = `
     <div class="chat-header">
       <div class="chat-header-avatar" style="background:${partner.avatar};overflow:hidden;">
         ${partner.avatarUrl ? `<img src="${partner.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(partner.initials)}
       </div>
       <div class="chat-header-name">${escHtml(partner.name)}</div>
+      <div style="margin-left:auto;">
+        ${isBlocked
+          ? `<button onclick="unblockUser('${convId}')" style="padding:6px 12px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Unblock</button>`
+          : `<button onclick="blockAndReport('${convId}','${escHtml(partner.name).replace(/'/g,"\\'")}',this)" style="padding:6px 12px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Block & Report</button>`
+        }
+      </div>
     </div>
+    ${isBlocked ? `<div style="background:#fef2f2;border-bottom:1px solid #fecaca;padding:10px 16px;font-size:13px;color:#dc2626;font-weight:600;">You have blocked this person. They cannot message you.</div>` : ''}
     <div class="chat-messages" id="chatMessages">
       ${messages.map(m => buildMessageBubble(m)).join('')}
       ${!messages.length ? '<div style="text-align:center;color:var(--text-light);font-size:13px;padding:24px;">Say hello!</div>' : ''}
     </div>
     <div class="chat-input-row">
-      <input type="text" class="chat-input" id="chatInput" placeholder="Send a message…" onkeydown="if(event.key==='Enter')sendDirectMessage('${convId}')">
-      <button class="chat-send-btn" onclick="sendDirectMessage('${convId}')">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Send a message…" onkeydown="if(event.key==='Enter')sendDirectMessage('${convId}')" ${isBlocked ? 'disabled' : ''}>
+      <button class="chat-send-btn" onclick="sendDirectMessage('${convId}')" ${isBlocked ? 'disabled' : ''}>
         <i data-lucide="send" style="width:16px;height:16px;"></i>
       </button>
     </div>
@@ -2765,6 +2787,27 @@ async function openConversationPanel(convId, partner, layout) {
       fetch(`/api/conversations/${convId}/read`, { method: 'POST', credentials: 'include' });
     }
   }, 5000);
+}
+
+async function blockAndReport(convId, partnerName, btn) {
+  if (!confirm(`Block ${partnerName}? They won't be able to message you and a report will be filed automatically.`)) return;
+  btn.disabled = true; btn.textContent = 'Blocking…';
+  const res = await fetch(`/api/conversations/${convId}/block`, { method: 'POST', credentials: 'include' });
+  if (res.ok) {
+    showToast(`${partnerName} has been blocked and reported.`);
+    await renderMessages(document.getElementById('sectionContent'));
+  } else {
+    showToast('Something went wrong. Try again.');
+    btn.disabled = false; btn.textContent = 'Block & Report';
+  }
+}
+
+async function unblockUser(convId) {
+  const res = await fetch(`/api/conversations/${convId}/unblock`, { method: 'POST', credentials: 'include' });
+  if (res.ok) {
+    showToast('User unblocked.');
+    await renderMessages(document.getElementById('sectionContent'));
+  }
 }
 
 function buildMessageBubble(msg) {
@@ -4461,6 +4504,19 @@ function renderSearchDropdown(results, q) {
   drop.style.cssText = `position:fixed;top:${rect.bottom + 6}px;left:${rect.left}px;width:${Math.max(rect.width, 340)}px;background:white;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:9999;overflow:hidden;max-height:420px;overflow-y:auto;`;
   searchDropdownEl = drop;
 
+  const sectionShortcuts = [
+    { key: 'feed', label: 'Neighborhood Feed', icon: '🏠', aliases: ['feed','neighborhood','general','news'] },
+    { key: 'safety', label: 'Safety', icon: '🛡️', aliases: ['safety','alert','emergency','crime'] },
+    { key: 'marketplace', label: 'Marketplace', icon: '🛒', aliases: ['marketplace','buy','sell','shop'] },
+    { key: 'events', label: 'Events', icon: '📅', aliases: ['events','event','party','happening'] },
+    { key: 'businesses', label: 'Business Directory', icon: '🏪', aliases: ['business','businesses','restaurant','cafe','shop','salon','store','service','handyman','bar','grill'] },
+    { key: 'neighbors', label: 'Neighbors', icon: '👋', aliases: ['neighbor','neighbors','people','residents'] },
+    { key: 'groups', label: 'Groups', icon: '👥', aliases: ['groups','group','community'] },
+    { key: 'real-estate', label: 'Real Estate', icon: '🏡', aliases: ['real estate','realestate','house','home','property','rent','buy'] },
+  ];
+  const lq = q.toLowerCase();
+  const matchedSection = sectionShortcuts.find(s => s.aliases.some(a => a.includes(lq) || lq.includes(a)));
+
   const all = [
     ...results.posts.map(r => ({ ...r, _type: 'post', _section: 'feed' })),
     ...results.businesses.map(r => ({ ...r, _type: 'business', _section: 'businesses' })),
@@ -4468,13 +4524,24 @@ function renderSearchDropdown(results, q) {
     ...results.neighbors.map(r => ({ ...r, _type: 'neighbor', _section: 'neighbors' })),
   ];
 
-  if (!all.length) {
-    drop.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-light);font-size:14px;">No results for "${escHtml(q)}"</div>`;
-  } else {
+  let html = '';
+
+  if (matchedSection) {
+    html += `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;background:#f0f8ff;border-bottom:1px solid var(--border);" onmousedown="searchGoTo('${matchedSection.key}','')">
+      <span style="font-size:20px;">${matchedSection.icon}</span>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;color:var(--ocean);">Go to ${matchedSection.label}</div>
+        <div style="font-size:12px;color:var(--text-light);">Browse section</div>
+      </div>
+      <span style="font-size:12px;color:var(--ocean);">→</span>
+    </div>`;
+  }
+
+  if (all.length) {
     const icons = { post: '📝', business: '🏪', event: '📅', neighbor: '👤' };
     const labels = { post: 'Post', business: 'Business', event: 'Event', neighbor: 'Neighbor' };
-    drop.innerHTML = all.map(r => `
-      <div data-section="${r._section}" data-id="${r.id || ''}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border);" onmousedown="searchGoTo('${r._section}','${r.id||''}')">
+    html += all.map(r => `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border);" onmousedown="searchGoTo('${r._section}','${r.id||''}')">
         <span style="font-size:20px;">${icons[r._type]}</span>
         <div style="flex:1;min-width:0;">
           <div style="font-size:14px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(r.title || r.name || r.content || '')}</div>
@@ -4484,6 +4551,11 @@ function renderSearchDropdown(results, q) {
     `).join('');
   }
 
+  if (!html) {
+    html = `<div style="padding:20px;text-align:center;color:var(--text-light);font-size:14px;">No results for "${escHtml(q)}"</div>`;
+  }
+
+  drop.innerHTML = html;
   document.body.appendChild(drop);
 }
 
