@@ -1273,27 +1273,25 @@ app.delete('/api/admin/businesses/:id', requireAdmin(async (req, res) => {
 }));
 
 app.post('/api/businesses/:id/banner', requireAuth(async (req, res) => {
-  await new Promise((resolve, reject) => upload.single('banner')(req, res, err => err ? reject(err) : resolve()));
   const [biz] = await sql`SELECT claimed_by_user_id, added_by_user_id FROM businesses WHERE id=${req.params.id}`;
   if (!biz) return res.status(404).json({ error: 'Not found' });
   const isOwner = biz.claimed_by_user_id === req.currentUser.id || biz.added_by_user_id === req.currentUser.id;
   if (!isOwner && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
-  if (!req.file) return res.status(400).json({ error: 'No file' });
-  const b64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-  const url = await storeImage(b64, 'biz-banner');
+  const { dataUrl } = req.body;
+  if (!dataUrl) return res.status(400).json({ error: 'No image data' });
+  const url = await storeImage(dataUrl, 'biz-banner');
   await sql`UPDATE businesses SET banner_url=${url} WHERE id=${req.params.id}`;
   res.json({ ok: true, bannerUrl: url });
 }));
 
 app.post('/api/businesses/:id/logo', requireAuth(async (req, res) => {
-  await new Promise((resolve, reject) => upload.single('logo')(req, res, err => err ? reject(err) : resolve()));
   const [biz] = await sql`SELECT claimed_by_user_id, added_by_user_id FROM businesses WHERE id=${req.params.id}`;
   if (!biz) return res.status(404).json({ error: 'Not found' });
   const isOwner = biz.claimed_by_user_id === req.currentUser.id || biz.added_by_user_id === req.currentUser.id;
   if (!isOwner && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
-  if (!req.file) return res.status(400).json({ error: 'No file' });
-  const b64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-  const url = await storeImage(b64, 'biz-logo');
+  const { dataUrl } = req.body;
+  if (!dataUrl) return res.status(400).json({ error: 'No image data' });
+  const url = await storeImage(dataUrl, 'biz-logo');
   await sql`UPDATE businesses SET logo_url=${url} WHERE id=${req.params.id}`;
   res.json({ ok: true, logoUrl: url });
 }));
