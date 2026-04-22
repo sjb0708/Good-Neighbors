@@ -138,8 +138,9 @@ async function loadSidebarWidgets() {
     fetchJSON('/api/neighbors'),
   ]);
 
-  // Nav badges — server-driven unread counts
+  // Nav badges — server-driven unread counts, poll every 30s
   refreshUnreadBadges();
+  setInterval(refreshUnreadBadges, 30000);
 
   // Community stats
   const stats = await fetchJSON('/api/community-stats');
@@ -2674,6 +2675,21 @@ async function openConversationPanel(convId, partner, layout) {
   const msgsEl = document.getElementById('chatMessages');
   if (msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight;
   document.getElementById('chatInput')?.focus();
+  // Poll for new messages every 5s while this conversation is open
+  clearInterval(window._msgPollTimer);
+  window._msgPollTimer = setInterval(async () => {
+    if (activeConversationId !== convId) { clearInterval(window._msgPollTimer); return; }
+    const latest = await fetchJSON(`/api/conversations/${convId}/messages`);
+    if (!latest) return;
+    const msgsEl = document.getElementById('chatMessages');
+    if (!msgsEl) { clearInterval(window._msgPollTimer); return; }
+    const existing = msgsEl.querySelectorAll('.msg-row').length;
+    if (latest.length > existing) {
+      latest.slice(existing).forEach(m => msgsEl.insertAdjacentHTML('beforeend', buildMessageBubble(m)));
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+      fetch(`/api/conversations/${convId}/read`, { method: 'POST', credentials: 'include' });
+    }
+  }, 5000);
 }
 
 function buildMessageBubble(msg) {
