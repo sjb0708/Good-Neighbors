@@ -1671,12 +1671,12 @@ function votePoll(postId, optId, el) {
 
 function buildReactionPicker(postId) {
   const reactions = [
-    { key: 'like', emoji: '👍', label: 'Like' },
-    { key: 'insightful', emoji: '💡', label: 'Insightful' },
-    { key: 'agree', emoji: '✅', label: 'Agree' },
-    { key: 'haha', emoji: '😄', label: 'Haha' },
-    { key: 'wow', emoji: '😮', label: 'Wow' },
-    { key: 'sad', emoji: '😢', label: 'Sad' }
+    { key: 'like',  emoji: '👍', label: 'Like'  },
+    { key: 'love',  emoji: '❤️', label: 'Love'  },
+    { key: 'haha',  emoji: '😂', label: 'Haha'  },
+    { key: 'wow',   emoji: '😮', label: 'Wow'   },
+    { key: 'sad',   emoji: '😢', label: 'Sad'   },
+    { key: 'angry', emoji: '😡', label: 'Angry' }
   ];
   return reactions.map(r => `
     <button class="reaction-pick-btn" onclick="reactToPost('${postId}','${r.key}')">
@@ -4485,19 +4485,19 @@ function postTypeLabel(type) {
   return labels[type] || capitalize(type);
 }
 
+const REACTION_MAP = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+
 function reactionEmoji(key) {
-  const emojis = { like: '👍', insightful: '💡', agree: '✅', haha: '😄', wow: '😮', sad: '😢' };
-  return emojis[key] || '👍';
+  return REACTION_MAP[key] || '👍';
 }
 
 function getTopReactions(reactions) {
   if (!reactions) return [];
-  const emojiMap = { like: '👍', insightful: '💡', agree: '✅', haha: '😄', wow: '😮', sad: '😢' };
   return Object.entries(reactions)
     .filter(([, count]) => count > 0)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
-    .map(([key]) => ({ key, emoji: emojiMap[key] }));
+    .map(([key]) => ({ key, emoji: REACTION_MAP[key] || '👍' }));
 }
 
 function emptyStateHTML(icon, title, body) {

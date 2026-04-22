@@ -1218,7 +1218,11 @@
           <div class="post-content">${p.content}</div>
           ${p.image ? (p.image.match(/\.pdf($|\?)/i) ? `<a class="post-pdf-link" href="${p.image}" target="_blank">📄 View PDF</a>` : `<img class="post-image" src="${p.image}" alt="" onclick="window.open(this.src,'_blank')">`) : ''}
           <div class="post-stats">
-            <span class="post-stat">👍 ${Object.values(p.reactions).reduce((a,b)=>a+b,0)} reactions</span>
+            ${(()=>{
+              const EMOJI = { like:'👍', love:'❤️', haha:'😂', wow:'😮', sad:'😢', angry:'😡' };
+              const parts = Object.entries(p.reactions||{}).filter(([,c])=>c>0).map(([k,c])=>`<span class="post-stat">${EMOJI[k]||'👍'} ${c}</span>`);
+              return parts.length ? parts.join('') : '<span class="post-stat">No reactions yet</span>';
+            })()}
             <span class="post-stat">💬 ${p.commentCount} comments</span>
           </div>
         </div>
