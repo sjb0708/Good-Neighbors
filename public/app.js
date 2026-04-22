@@ -2308,7 +2308,8 @@ async function renderBusinessPage(bizId, container) {
           ${!biz.claimed ? '<span style="font-size:11px;font-weight:700;color:#92400E;background:#FEF3C7;border:1px solid #F59E0B;padding:2px 8px;border-radius:20px;">📋 Unclaimed</span>' : ''}
           <span style="font-size:14px;font-weight:600;color:var(--text-light);">${biz.recommendedBy}</span>
         </div>
-        <div style="font-size:14px;color:var(--ocean);font-weight:500;margin-bottom:12px;">${escHtml(biz.category)}</div>
+        <div style="font-size:14px;color:var(--ocean);font-weight:500;margin-bottom:${biz.description ? '10px' : '12px'};">${escHtml(biz.category)}</div>
+        ${biz.description ? `<div style="font-size:14px;color:var(--text-mid);line-height:1.65;margin-bottom:12px;">${escHtml(biz.description)}</div>` : ''}
       </div>
       <!-- Action bar -->
       <div style="padding:0 24px 12px;">
@@ -2324,8 +2325,6 @@ async function renderBusinessPage(bizId, container) {
           </div>
         </div>
       </div>
-      <!-- Description -->
-      <div style="padding:0 24px 20px;font-size:14px;color:var(--text-mid);line-height:1.65;">${escHtml(biz.description)}</div>
       <!-- Claim banner (only if unclaimed) -->
       ${!biz.claimed ? `<div style="border-top:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;background:#FFFBEA;">
         <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#92400E;font-weight:600;">📋 This business hasn't been claimed yet</div>
@@ -2348,13 +2347,6 @@ async function renderBusinessPage(bizId, container) {
 
         <!-- Overview tab -->
         <div id="bizTab-overview">
-
-          <!-- About -->
-          ${biz.description ? `
-          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:14px;">
-            <div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">About</div>
-            <div style="font-size:15px;color:var(--text-dark);line-height:1.7;">${escHtml(biz.description)}</div>
-          </div>` : ''}
 
           <!-- Details -->
           <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:14px;">
