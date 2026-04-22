@@ -321,7 +321,7 @@ app.post('/api/auth/register', async (req, res) => {
           <div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
             <h2 style="color:#0077B6;">Welcome to Costa Blanca Connect!</h2>
             <p>Hi ${displayName},</p>
-            <p>Thanks for signing up! Please confirm your email address to activate your account.</p>
+            <p>Thank you for registering! Please confirm your email address to activate your account.</p>
             <a href="${appUrl}/verify-email?token=${verifyToken}" style="display:inline-block;background:#0077B6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:16px 0;">Confirm Email</a>
             <p>This link expires in 24 hours.</p>
             <hr style="border:none;border-top:1px solid #eee;margin-top:24px;">
@@ -355,7 +355,7 @@ app.post('/api/auth/register', async (req, res) => {
         <div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
           <h2 style="color:#0077B6;">Welcome to Costa Blanca Connect!</h2>
           <p>Hi ${displayName},</p>
-          <p>Thanks for registering your business! Please confirm your email to activate your account.</p>
+          <p>Thank you for registering! Please confirm your email to activate your account.</p>
           <a href="${appUrl}/verify-email?token=${verifyToken}" style="display:inline-block;background:#0077B6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:16px 0;">Confirm Email</a>
           <p>This link expires in 24 hours.</p>
           <hr style="border:none;border-top:1px solid #eee;margin-top:24px;">
@@ -2198,6 +2198,7 @@ app.get('/app.html',        (req, res) => res.sendFile(path.join(__dirname, 'pub
 app.get('/business',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'business.html')));
 app.get('/hoa',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'hoa.html')));
 app.get('/reset-password',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
+app.get('/verify-email',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-email.html')));
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
