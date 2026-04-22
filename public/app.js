@@ -2329,8 +2329,9 @@ async function renderBusinessPage(bizId, container) {
     <!-- Header card -->
     <div class="biz-page-header-card" style="flex-direction:column;padding:0;overflow:hidden;">
       <!-- Banner -->
-      <div id="bizPageBanner" style="position:relative;height:140px;background:linear-gradient(135deg,var(--ocean),var(--seafoam));flex-shrink:0;">
-        ${isPageOwner ? `<label title="Change banner" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.45);color:white;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;"><input type="file" accept="image/*" style="display:none" onchange="uploadBizBanner('${biz.id}',this)">📷 Banner</label>` : ''}
+      <div style="position:relative;height:140px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,var(--ocean),var(--seafoam));">
+        ${biz.bannerUrl ? `<img src="${biz.bannerUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">` : ''}
+        ${isPageOwner ? `<label title="Change banner" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.45);color:white;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;z-index:1;"><input type="file" accept="image/*" style="display:none" onchange="uploadBizBanner('${biz.id}',this)">📷 Banner</label>` : ''}
       </div>
       <!-- Logo overlapping banner -->
       <div style="display:flex;align-items:flex-end;gap:18px;padding:0 24px 0;margin-top:-44px;position:relative;z-index:1;">
@@ -2627,10 +2628,6 @@ async function renderBusinessPage(bizId, container) {
 
   container.innerHTML = '';
   container.appendChild(wrap);
-  if (biz.bannerUrl) {
-    const bannerEl = wrap.querySelector('#bizPageBanner');
-    if (bannerEl) bannerEl.style.background = `url('${biz.bannerUrl}') center/cover no-repeat`;
-  }
 }
 
 async function uploadBizBanner(bizId, input) {
