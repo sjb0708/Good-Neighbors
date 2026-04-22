@@ -2587,9 +2587,7 @@ function buildNeighborCard(neighbor) {
     <div class="neighbor-years">
       ${yearsText} in Costa Blanca Villas
     </div>
-    <button class="btn-wave-neighbor" onclick="startConversation('${neighbor.username}')">
-      💬 Message
-    </button>
+    ${neighbor.username !== currentUser?.username ? `<button class="btn-wave-neighbor" onclick="startConversation('${neighbor.username}')">💬 Message</button>` : ''}
   `;
   return card;
 }
@@ -2705,11 +2703,11 @@ async function sendDirectMessage(convId) {
 async function startConversation(username) {
   try {
     const res = await fetch(`/api/conversations/${username}`, { method: 'POST', credentials: 'include' });
-    if (!res.ok) return;
-    const { conversationId } = await res.json();
-    activeConversationId = conversationId;
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Could not start conversation'); return; }
+    activeConversationId = data.conversationId;
     navigate('messages');
-  } catch {}
+  } catch (e) { showToast('Could not start conversation'); }
 }
 
 // ─── Group Card ──────────────────────────────────────────────────
