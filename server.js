@@ -1572,27 +1572,18 @@ app.post('/api/realestate', requireAuth(async (req, res) => {
   await sql`ALTER TABLE real_estate_listings ADD COLUMN IF NOT EXISTS external_url TEXT`;
 
   let imageUrl = image || null;
-  if (!imageUrl) try {
-    const https = require('https'), http = require('http');
-    const fetcher = externalUrl.startsWith('https') ? https : http;
-    const parseOgImage = (html) => {
-      const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-             || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-      return m ? m[1] : null;
-    };
-    imageUrl = await new Promise((resolve) => {
-      let done = false;
-      const finish = (v) => { if (!done) { done = true; resolve(v); } };
-      const req2 = fetcher.get(externalUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (r) => {
-        let html = '';
-        r.setEncoding('utf8');
-        r.on('data', chunk => { html += chunk; if (html.length > 50000) { r.destroy(); finish(parseOgImage(html)); } });
-        r.on('end', () => finish(parseOgImage(html)));
-        r.on('error', () => finish(null));
-      });
-      req2.on('error', () => finish(null));
-      req2.setTimeout(5000, () => { req2.destroy(); finish(null); });
-    });
+  if (!imageUrl && externalUrl) try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 7000);
+    const r = await fetch(externalUrl, { signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CostaBlancaBot/1.0)' } });
+    clearTimeout(timeout);
+    const html = await r.text();
+    const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+           || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)
+           || html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i);
+    if (m && m[1]) {
+      imageUrl = m[1].startsWith('http') ? m[1] : new URL(m[1], externalUrl).href;
+    }
   } catch { imageUrl = null; }
 
   const [listing] = await sql`
