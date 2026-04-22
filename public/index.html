@@ -619,7 +619,13 @@
     // ── Sign Up State ──
     let suStep = 0;
     let suRole = null;
-    const suStepCount = 2;
+    let suClaimBizId = null;
+    let suClaimBizName = null;
+    let suClaimBizClaimed = false;
+    let suSearchTimer = null;
+    // Steps: 0=role, 1=find listing (biz only), 2=account details / success(3)
+    // For neighbor: 0 → 2 (skip step 1)
+    // Dots: 0,1,2 always shown; for neighbor dot1 skipped visually
 
     const ROLE_OPTIONS = [
       { id: 'neighbor', icon: '🏡', name: 'Resident / Neighbor', desc: 'Owner or renter living in Costa Blanca Villas' },
@@ -630,6 +636,7 @@
 
     function openSignUp() {
       suStep = 0; suRole = null;
+      suClaimBizId = null; suClaimBizName = null; suClaimBizClaimed = false;
       document.getElementById('suSteps').style.display = '';
       document.getElementById('suFooter').style.display = '';
       renderSuStep();
@@ -640,9 +647,13 @@
     }
 
     function updateSuDots() {
-      for (let i = 0; i < suStepCount; i++) {
+      // Dot 0 = role, dot 1 = find listing, dot 2 = account details
+      // For neighbor flow: step 0 → step 2, so map neighbor's "step 2" to dot 2 directly
+      const dotStep = suRole === 'neighbor' && suStep === 2 ? 2 : suStep;
+      for (let i = 0; i <= 2; i++) {
         const d = document.getElementById('dot' + i);
-        d.className = 'su-step-dot' + (i < suStep ? ' done' : i === suStep ? ' active' : '');
+        if (!d) continue;
+        d.className = 'su-step-dot' + (i < dotStep ? ' done' : i === dotStep ? ' active' : '');
       }
     }
 
@@ -673,18 +684,49 @@
           <p style="font-size:11.5px;color:#a0aec0;margin-top:14px;line-height:1.5;">All accounts require email verification before signing in.</p>
         `;
       } else if (suStep === 1) {
+        // Business only: Find Your Listing
+        document.getElementById('suTitle').textContent = 'Find Your Listing';
+        document.getElementById('suSubtitle').textContent = 'Search if your business is already in our directory';
+        next.textContent = 'Skip — My business isn\'t listed yet →';
+        body.innerHTML = `
+          <div class="su-error" id="suErr"></div>
+          <div class="su-field">
+            <label>Search by Business Name</label>
+            <input id="suBizSearch" type="text" placeholder="e.g. Amar By La Playa" oninput="suSearchListings()" autocomplete="off" />
+          </div>
+          <div id="suBizResults" style="margin-top:4px;max-height:220px;overflow-y:auto;"></div>
+          ${suClaimBizId ? `
+          <div style="margin-top:14px;padding:12px 14px;background:#f0f8ff;border:1.5px solid #0077B6;border-radius:10px;display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#0077B6;">Selected: ${suClaimBizName}</div>
+              <div style="font-size:12px;color:#4a6378;margin-top:2px;">This listing will be linked to your account after email verification.</div>
+            </div>
+            <button onclick="suClearClaim()" style="background:none;border:none;color:#E63946;font-size:18px;cursor:pointer;padding:4px;">✕</button>
+          </div>` : ''}
+        `;
+        // Re-run search if there's existing text
+        setTimeout(() => {
+          const inp = document.getElementById('suBizSearch');
+          if (inp && inp.value) suSearchListings();
+        }, 0);
+      } else if (suStep === 2) {
         const isBiz = suRole === 'business';
         document.getElementById('suTitle').textContent = isBiz ? 'Business Sign Up' : 'Create Your Account';
         document.getElementById('suSubtitle').textContent = 'Enter your details below';
         next.textContent = 'Sign Up';
+        const claimNotice = (isBiz && suClaimBizId) ? `
+          <div style="padding:10px 14px;background:#f0f8ff;border:1.5px solid #0077B6;border-radius:10px;margin-bottom:14px;font-size:13px;color:#0077B6;">
+            <strong>Claiming:</strong> ${suClaimBizName} — your listing will be linked after email verification.
+          </div>` : '';
         body.innerHTML = `
           <div class="su-error" id="suErr"></div>
+          ${claimNotice}
           ${isBiz ? `
           <div class="su-field">
             <label>Business Name *</label>
-            <input id="bizName" type="text" placeholder="e.g. Amar By La Playa" />
+            <input id="bizName" type="text" placeholder="e.g. Amar By La Playa" value="${suClaimBizName ? suClaimBizName.replace(/"/g,'&quot;') : ''}" ${suClaimBizId ? 'readonly style="background:#f4f8fb;color:#4a6378;"' : ''} />
           </div>
-          <div class="su-field"><label>Category *</label><select id="bizCat"><option value="">Select a category…</option>${BIZ_CATEGORIES.map(c=>'<option>'+c+'</option>').join('')}</select></div>
+          ${!suClaimBizId ? `<div class="su-field"><label>Category *</label><select id="bizCat"><option value="">Select a category…</option>${BIZ_CATEGORIES.map(c=>'<option>'+c+'</option>').join('')}</select></div>` : ''}
           <div class="su-field"><label>Your Full Name *</label><input id="fullName" type="text" placeholder="Your personal name" /></div>
           ` : `
           <div class="su-field"><label>Full Name *</label><input id="fullName" type="text" placeholder="e.g. Maria Torres" /></div>
@@ -710,7 +752,7 @@
           </div>
           <div style="font-size:11px;color:#a0aec0;margin-top:12px;line-height:1.5;">By signing up you agree to our <a href="#" onclick="closeLegal();openLegal('tos');return false;" style="color:#0077B6;">Member Agreement</a> and <a href="#" onclick="closeLegal();openLegal('privacy');return false;" style="color:#0077B6;">Privacy Policy</a>.</div>
         `;
-      } else if (suStep === 2) {
+      } else if (suStep === 3) {
         // Success
         document.getElementById('suSteps').style.display = 'none';
         footer.style.display = 'none';
@@ -726,6 +768,50 @@
           </div>
         `;
       }
+    }
+
+    async function suSearchListings() {
+      clearTimeout(suSearchTimer);
+      const q = document.getElementById('suBizSearch')?.value.trim();
+      const resultsEl = document.getElementById('suBizResults');
+      if (!resultsEl) return;
+      if (!q || q.length < 2) { resultsEl.innerHTML = ''; return; }
+      suSearchTimer = setTimeout(async () => {
+        try {
+          const res = await fetch('/api/businesses/search?q=' + encodeURIComponent(q));
+          const data = await res.json();
+          if (!data.length) {
+            resultsEl.innerHTML = '<div style="font-size:13px;color:#a0aec0;padding:10px 0;">No listings found matching that name.</div>';
+            return;
+          }
+          resultsEl.innerHTML = data.map(b => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1.5px solid ${b.claimed ? '#e8edf2' : '#d1dce6'};border-radius:10px;margin-bottom:7px;background:${b.claimed ? '#f9fafb' : '#fff'};">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:${b.claimed ? '#a0aec0' : '#1a2b3c'};">${b.name}</div>
+                <div style="font-size:12px;color:#8896a5;">${b.category || ''}${b.address ? ' · ' + b.address : ''}</div>
+                ${b.claimed ? '<div style="font-size:11px;color:#E63946;margin-top:2px;">Already claimed</div>' : ''}
+              </div>
+              ${!b.claimed ? `<button onclick="suSelectListing('${b.id}','${b.name.replace(/'/g,"\\'")}')" style="padding:7px 14px;background:#0077B6;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;">Select</button>` : ''}
+            </div>
+          `).join('');
+        } catch (e) { /* ignore */ }
+      }, 300);
+    }
+
+    function suSelectListing(id, name) {
+      suClaimBizId = id;
+      suClaimBizName = name;
+      suClaimBizClaimed = false;
+      // Advance to account details step
+      suStep = 2;
+      renderSuStep();
+    }
+
+    function suClearClaim() {
+      suClaimBizId = null;
+      suClaimBizName = null;
+      suClaimBizClaimed = false;
+      renderSuStep();
     }
 
     function selectRole(id) {
@@ -779,7 +865,10 @@
     }
 
     function suPrev() {
-      if (suStep > 0) { suStep--; renderSuStep(); }
+      if (suStep === 0) return;
+      if (suStep === 2 && suRole === 'business') { suStep = 1; renderSuStep(); return; }
+      if (suStep === 2 && suRole === 'neighbor') { suStep = 0; renderSuStep(); return; }
+      suStep--; renderSuStep();
     }
 
     async function suNext() {
@@ -788,8 +877,19 @@
 
       if (suStep === 0) {
         if (!suRole) { alert('Please select an account type.'); return; }
-        suStep++; renderSuStep();
-      } else if (suStep === 1) {
+        // Neighbor skips the find-listing step
+        suStep = suRole === 'business' ? 1 : 2;
+        renderSuStep();
+        return;
+      }
+
+      if (suStep === 1) {
+        // Find listing step (business only) — clicking "Skip" in footer
+        suStep = 2; renderSuStep();
+        return;
+      }
+
+      if (suStep === 2) {
         const isBiz = suRole === 'business';
         const fullName = document.getElementById('fullName')?.value.trim();
         const email = document.getElementById('suEmail')?.value.trim();
@@ -804,7 +904,7 @@
         if (!password || password.length < 6) { showSuErr('Password must be at least 6 characters.'); return; }
         if (password !== confirm) { showSuErr('Passwords do not match.'); return; }
 
-        if (isBiz) {
+        if (isBiz && !suClaimBizId) {
           const biz = document.getElementById('bizName')?.value.trim();
           const cat = document.getElementById('bizCat')?.value;
           if (!biz) { showSuErr('Please enter your business name.'); return; }
@@ -819,6 +919,7 @@
             fullName, email, username, password, role: suRole,
             businessName: document.getElementById('bizName')?.value.trim() || null,
             businessCategory: document.getElementById('bizCat')?.value || null,
+            claimBusinessId: suClaimBizId || null,
           };
           const res = await fetch('/api/auth/register', {
             method: 'POST',
@@ -827,7 +928,7 @@
           });
           const data = await res.json();
           if (!res.ok) { showSuErr(data.error || 'Something went wrong.'); nextBtn.textContent = 'Sign Up'; nextBtn.disabled = false; return; }
-          suStep++; renderSuStep();
+          suStep = 3; renderSuStep();
         } catch {
           showSuErr('Connection error. Please try again.');
           nextBtn.textContent = 'Sign Up'; nextBtn.disabled = false;

@@ -1559,7 +1559,7 @@ function buildPostCard(post) {
 
       ${post.pollOptions ? buildPollHTML(post) : ''}
 
-      ${post.image ? `<div class="post-image-wrap"><img src="${post.image}" alt="Post image" style="width:100%;border-radius:10px;margin-top:12px;object-fit:cover;max-height:360px;display:block;cursor:zoom-in;" onclick="openLightbox('${post.image}')"></div>` : ''}
+      ${post.image ? (post.image.match(/\.pdf($|\?)/i) ? `<a href="${post.image}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;background:rgba(0,119,182,0.07);border:1px solid rgba(0,119,182,0.18);border-radius:8px;font-size:13px;font-weight:600;color:var(--ocean);text-decoration:none;">📄 View PDF</a>` : `<div class="post-image-wrap"><img src="${post.image}" alt="Post image" style="width:100%;border-radius:10px;margin-top:12px;object-fit:cover;max-height:360px;display:block;cursor:zoom-in;" onclick="openLightbox('${post.image}')"></div>`) : ''}
 
       <div class="post-divider"></div>
 
@@ -2470,66 +2470,69 @@ function toggleBizMoreMenu(bizId) {
 function openClaimModal(bizId, bizName) {
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;';
-  overlay.innerHTML = `
-    <div style="background:white;border-radius:20px;width:min(480px,100%);padding:28px;box-shadow:0 24px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto;">
-      <div style="font-size:24px;margin-bottom:6px;">🏪</div>
-      <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;color:#0d1b2a;">Claim ${escHtml(bizName)}</h3>
-      <p style="font-size:13px;color:#4a6378;margin-bottom:20px;">Tell us who you are and we'll verify ownership. You'll receive login credentials within 24 hours to manage your business profile.</p>
-      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px;">
-        <div>
-          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Your full name *</label>
-          <input id="claimName" type="text" placeholder="e.g. Maria González" value="${currentUser?.name || ''}" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
+  const isBizUser = currentUser?.role === 'business';
+
+  if (isBizUser) {
+    overlay.innerHTML = `
+      <div style="background:white;border-radius:20px;width:min(440px,100%);padding:28px;box-shadow:0 24px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto;">
+        <div style="font-size:24px;margin-bottom:6px;">🏪</div>
+        <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;color:#0d1b2a;">Claim ${escHtml(bizName)}</h3>
+        <p style="font-size:13px;color:#4a6378;margin-bottom:20px;">We'll send a 6-digit verification code to your email address on file.</p>
+        <div id="claimSendSection">
+          <button onclick="sendInlineClaimCode('${bizId}',this)" style="width:100%;padding:12px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">Send Verification Code</button>
         </div>
-        <div>
-          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Email address *</label>
-          <input id="claimEmail" type="email" placeholder="you@example.com" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
+        <div id="claimCodeSection" style="display:none;">
+          <p style="font-size:13px;color:#4a6378;margin-bottom:10px;">Enter the 6-digit code sent to your email:</p>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="inlineClaimCode" maxlength="6" placeholder="000000" style="flex:1;padding:11px 14px;border:1.5px solid #d1dce6;border-radius:10px;font-size:18px;letter-spacing:6px;font-family:inherit;outline:none;text-align:center;" />
+            <button onclick="verifyInlineClaim('${bizId}',this)" style="padding:11px 18px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">Verify</button>
+          </div>
         </div>
-        <div>
-          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Phone number</label>
-          <input id="claimPhone" type="tel" placeholder="+507 6XXX-XXXX" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
-        </div>
-        <div>
-          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Your role at this business</label>
-          <select id="claimRole" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;">
-            <option value="Owner">Owner</option>
-            <option value="Manager">Manager</option>
-            <option value="Marketing">Marketing / PR</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Anything to help us verify? <span style="font-weight:400;color:#8a9db0;">(optional)</span></label>
-          <textarea id="claimMessage" rows="2" placeholder="e.g. I am the registered owner, my name appears on the business license." style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;resize:none;box-sizing:border-box;"></textarea>
-        </div>
-      </div>
-      <div style="display:flex;gap:10px;">
-        <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:11px;background:#f0f3f7;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">Cancel</button>
-        <button onclick="submitClaim(this,'${bizId}')" style="flex:1;padding:11px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">Submit Claim</button>
-      </div>
-    </div>
-  `;
+        <button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;padding:10px;background:none;border:none;font-size:14px;color:#4a6378;cursor:pointer;font-family:inherit;margin-top:12px;">Cancel</button>
+      </div>`;
+  } else {
+    overlay.innerHTML = `
+      <div style="background:white;border-radius:20px;width:min(440px,100%);padding:32px 28px;box-shadow:0 24px 60px rgba(0,0,0,0.3);text-align:center;">
+        <div style="font-size:40px;margin-bottom:12px;">🏪</div>
+        <h3 style="font-size:18px;font-weight:800;margin-bottom:8px;color:#0d1b2a;">Own ${escHtml(bizName)}?</h3>
+        <p style="font-size:14px;color:#4a6378;margin-bottom:24px;line-height:1.6;">Create a free business account to claim this listing, respond to reviews, and post announcements directly to your neighbors.</p>
+        <button onclick="this.closest('[style*=fixed]').remove();window.location.href='/login'" style="width:100%;padding:13px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:10px;">Create Business Account →</button>
+        <button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;padding:10px;background:none;border:none;font-size:14px;color:#4a6378;cursor:pointer;font-family:inherit;">Cancel</button>
+      </div>`;
+  }
   document.body.appendChild(overlay);
 }
 
-async function submitClaim(btn, bizId) {
-  const name  = document.getElementById('claimName')?.value.trim();
-  const email = document.getElementById('claimEmail')?.value.trim();
-  const phone = document.getElementById('claimPhone')?.value.trim();
-  const role  = document.getElementById('claimRole')?.value;
-  const message = document.getElementById('claimMessage')?.value.trim();
-  if (!name || !email) { showToast('Name and email are required'); return; }
-  btn.disabled = true; btn.textContent = 'Submitting…';
-  const res = await fetch('/api/business/claim', {
+async function sendInlineClaimCode(bizId, btn) {
+  btn.disabled = true; btn.textContent = 'Sending…';
+  const res = await fetch(`/api/businesses/${bizId}/claim/send-code`, { method: 'POST', credentials: 'include' });
+  if (res.ok) {
+    document.getElementById('claimSendSection').style.display = 'none';
+    document.getElementById('claimCodeSection').style.display = 'block';
+  } else {
+    const d = await res.json();
+    showToast(d.error || 'Could not send code');
+    btn.disabled = false; btn.textContent = 'Send Verification Code';
+  }
+}
+
+async function verifyInlineClaim(bizId, btn) {
+  const code = document.getElementById('inlineClaimCode')?.value.trim();
+  if (!code) { showToast('Enter the code'); return; }
+  btn.disabled = true; btn.textContent = 'Verifying…';
+  const res = await fetch(`/api/businesses/${bizId}/claim/verify-code`, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ businessId: bizId, name, email, phone, role, message })
+    body: JSON.stringify({ code })
   });
-  const data = await res.json();
-  btn.closest('[style*=fixed]').remove();
   if (res.ok) {
-    showToast('Claim submitted! We will review and send your login within 24 hours.');
+    btn.closest('[style*=fixed]').remove();
+    showToast('Business claimed! Redirecting to your dashboard…');
+    setTimeout(() => window.location.href = '/business', 1500);
   } else {
-    showToast(data.error || 'Could not submit claim — please try again.');
+    const d = await res.json();
+    showToast(d.error || 'Invalid code');
+    btn.disabled = false; btn.textContent = 'Verify';
   }
 }
 

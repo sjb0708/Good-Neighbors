@@ -279,7 +279,7 @@ app.get('/api/auth/me', requireAuth(async (req, res) => {
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { fullName, email, username, password, role, businessName, businessCategory } = req.body;
+    const { fullName, email, username, password, role, businessName, businessCategory, claimBusinessId } = req.body;
 
     if (!fullName || !email || !username || !password || !role)
       return res.status(400).json({ error: 'Missing required fields.' });
@@ -332,20 +332,32 @@ app.post('/api/auth/register', async (req, res) => {
       return res.json({ ok: true, role: 'neighbor', message: 'Check your email to confirm your account.' });
     }
 
-    // Businesses — create account directly, require email verification (no admin approval)
+    // Businesses — check if they want to claim an existing listing
+    let pendingClaimId = null;
+    if (claimBusinessId) {
+      const [claimTarget] = await sql`SELECT id, claimed FROM businesses WHERE id = ${claimBusinessId}`;
+      if (!claimTarget) return res.status(404).json({ error: 'The selected listing was not found.' });
+      if (claimTarget.claimed) return res.status(409).json({ error: 'That listing has already been claimed by another account.' });
+      pendingClaimId = claimBusinessId;
+    }
+
+    // Create the business user
     const [newBiz] = await sql`
-      INSERT INTO users (username, email, password_hash, role, name, full_name, avatar_hex, initials, email_verified)
-      VALUES (${username}, ${email}, ${passwordHash}, ${role}, ${displayName}, ${fullName}, ${avatarHex}, ${initials}, false)
+      INSERT INTO users (username, email, password_hash, role, name, full_name, avatar_hex, initials, email_verified, pending_claim_business_id)
+      VALUES (${username}, ${email}, ${passwordHash}, ${role}, ${displayName}, ${fullName}, ${avatarHex}, ${initials}, false, ${pendingClaimId})
       RETURNING *
     `;
-    if (businessName) {
+
+    if (!pendingClaimId && businessName) {
+      // No claim target — create a new empty listing as before
       const [biz] = await sql`
         INSERT INTO businesses (name, category, description, claimed, claimed_by_user_id)
         VALUES (${businessName}, ${businessCategory||null}, '', true, ${newBiz.id})
         RETURNING id
       `;
-      await sql`UPDATE users SET business_id=${biz.id} WHERE id=${newBiz.id}`;
+      await sql`UPDATE users SET business_id = ${biz.id} WHERE id = ${newBiz.id}`;
     }
+
     const verifyToken = crypto.randomBytes(32).toString('hex');
     await sql`INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES (${newBiz.id}, ${verifyToken}, ${new Date(Date.now() + 24 * 3600 * 1000)})`;
     await sendEmail({
@@ -355,7 +367,7 @@ app.post('/api/auth/register', async (req, res) => {
         <div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
           <h2 style="color:#0077B6;">Welcome to Costa Blanca Connect!</h2>
           <p>Hi ${displayName},</p>
-          <p>Thank you for registering! Please confirm your email to activate your account.</p>
+          <p>Thank you for registering! Please confirm your email to activate your account${pendingClaimId ? ' and claim your listing' : ''}.</p>
           <a href="${appUrl}/verify-email?token=${verifyToken}" style="display:inline-block;background:#0077B6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:16px 0;">Confirm Email</a>
           <p>This link expires in 24 hours.</p>
           <hr style="border:none;border-top:1px solid #eee;margin-top:24px;">
@@ -452,7 +464,7 @@ app.get('/api/auth/verify-email', async (req, res) => {
     const { token } = req.query;
     if (!token) return res.status(400).json({ error: 'Invalid link.' });
     const [row] = await sql`
-      SELECT evt.*, u.id AS uid, u.role, u.name, u.username, u.avatar_hex, u.initials
+      SELECT evt.*, u.id AS uid, u.role, u.name, u.username, u.avatar_hex, u.initials, u.pending_claim_business_id
       FROM email_verification_tokens evt
       JOIN users u ON evt.user_id = u.id
       WHERE evt.token = ${token} AND evt.expires_at > NOW() AND evt.used_at IS NULL
@@ -461,6 +473,22 @@ app.get('/api/auth/verify-email', async (req, res) => {
     if (!row) return res.status(400).json({ error: 'This link is invalid or has expired.' });
     await sql`UPDATE users SET email_verified = true WHERE id = ${row.uid}`;
     await sql`UPDATE email_verification_tokens SET used_at = NOW() WHERE id = ${row.id}`;
+
+    // Auto-claim the business listing if one was stored during registration
+    if (row.pending_claim_business_id) {
+      const claimed = await sql`
+        UPDATE businesses SET claimed = true, claimed_by_user_id = ${row.uid}
+        WHERE id = ${row.pending_claim_business_id} AND claimed = false
+        RETURNING id
+      `;
+      if (claimed.length) {
+        await sql`UPDATE users SET business_id = ${row.pending_claim_business_id}, pending_claim_business_id = null WHERE id = ${row.uid}`;
+      } else {
+        // Already claimed by someone else — just clear the pending flag
+        await sql`UPDATE users SET pending_claim_business_id = null WHERE id = ${row.uid}`;
+      }
+    }
+
     // For neighbors, notify existing members
     if (row.role === 'neighbor') {
       const allNeighbors = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${row.uid} AND email_verified = true`;
@@ -1400,7 +1428,88 @@ app.post('/api/business/reviews/:id/reply', requireAuth(async (req, res) => {
   res.json({ ok: true });
 }));
 
-// ─── Business claims ──────────────────────────────────────────────────────────
+// ─── Business search (public) ─────────────────────────────────────────────────
+
+app.get('/api/businesses/search', async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q || q.length < 2) return res.json([]);
+    const rows = await sql`
+      SELECT id, name, category, address, claimed
+      FROM businesses
+      WHERE name ILIKE ${'%' + q + '%'}
+      ORDER BY claimed ASC, name ASC
+      LIMIT 8
+    `;
+    res.json(rows.map(b => ({ id: b.id, name: b.name, category: b.category, address: b.address, claimed: b.claimed })));
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+// ─── Business claim codes ─────────────────────────────────────────────────────
+
+app.post('/api/businesses/:id/claim/send-code', requireAuth(async (req, res) => {
+  const u = req.currentUser;
+  if (u.role !== 'business') return res.status(403).json({ error: 'Business account required' });
+  const bizId = req.params.id;
+  const [biz] = await sql`SELECT id, claimed FROM businesses WHERE id = ${bizId}`;
+  if (!biz) return res.status(404).json({ error: 'Business not found' });
+  if (biz.claimed) return res.status(409).json({ error: 'This business has already been claimed' });
+
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+  await sql`DELETE FROM business_claim_codes WHERE user_id = ${u.id} AND business_id = ${bizId} AND used = false`;
+  await sql`INSERT INTO business_claim_codes (business_id, user_id, code, expires_at) VALUES (${bizId}, ${u.id}, ${code}, ${expiresAt})`;
+
+  await sendEmail({
+    to: u.email,
+    subject: 'Your Costa Blanca Connect business verification code',
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+        <h2 style="color:#0077B6;">Business Verification Code</h2>
+        <p>Hi ${u.name},</p>
+        <p>Your Costa Blanca Connect business verification code is:</p>
+        <div style="font-size:36px;font-weight:800;letter-spacing:8px;color:#0077B6;background:#f0f8ff;border-radius:10px;padding:20px;text-align:center;margin:20px 0;">${code}</div>
+        <p>This code expires in <strong>15 minutes</strong>. Do not share it with anyone.</p>
+        <hr style="border:none;border-top:1px solid #eee;margin-top:24px;">
+        <p style="color:#888;font-size:12px;">Costa Blanca Connect · Costa Blanca Villas, Farallón, Coclé, Panamá</p>
+      </div>
+    `
+  });
+  res.json({ ok: true });
+}));
+
+app.post('/api/businesses/:id/claim/verify-code', requireAuth(async (req, res) => {
+  const u = req.currentUser;
+  if (u.role !== 'business') return res.status(403).json({ error: 'Business account required' });
+  const bizId = req.params.id;
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'Code required' });
+
+  const [row] = await sql`
+    SELECT id FROM business_claim_codes
+    WHERE business_id = ${bizId} AND user_id = ${u.id}
+      AND code = ${String(code).trim()}
+      AND expires_at > NOW() AND used = false
+    LIMIT 1
+  `;
+  if (!row) return res.status(400).json({ error: 'Invalid or expired code. Please request a new one.' });
+
+  await sql`UPDATE business_claim_codes SET used = true WHERE id = ${row.id}`;
+  await sql`UPDATE businesses SET claimed = true, claimed_by_user_id = ${u.id} WHERE id = ${bizId} AND claimed = false`;
+
+  // If user had an auto-created empty business (no address, no phone, no description), delete it
+  if (u.business_id && u.business_id !== bizId) {
+    const [oldBiz] = await sql`SELECT id, address, phone, description FROM businesses WHERE id = ${u.business_id}`;
+    if (oldBiz && !oldBiz.address && !oldBiz.phone && (!oldBiz.description || oldBiz.description.trim() === '')) {
+      await sql`DELETE FROM businesses WHERE id = ${oldBiz.id}`;
+    }
+  }
+
+  await sql`UPDATE users SET business_id = ${bizId} WHERE id = ${u.id}`;
+  res.json({ ok: true });
+}));
+
+// ─── Business claims (legacy admin-flow) ─────────────────────────────────────
 
 app.post('/api/business/claim', async (req, res) => {
   try {
@@ -2278,6 +2387,16 @@ async function runMigrations() {
       section VARCHAR(50) NOT NULL,
       last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (user_id, section)
+    )`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_claim_business_id UUID`;
+    await sql`CREATE TABLE IF NOT EXISTS business_claim_codes (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      code VARCHAR(6) NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used BOOLEAN DEFAULT false,
+      created_at TIMESTAMPTZ DEFAULT NOW()
     )`;
   } catch (e) { console.error('Migration error:', e.message); }
 }
