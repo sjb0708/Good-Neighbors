@@ -319,7 +319,12 @@ function renderUserUI() {
   setTextSafe('dropdownInitials', currentUser.avatarUrl ? '' : currentUser.initials);
   setTextSafe('dropdownName', currentUser.name);
 
-  // Sidebar
+  // Sidebar banner
+  const sidebarBanner = document.getElementById('sidebarBanner');
+  if (sidebarBanner && currentUser.bannerUrl) {
+    sidebarBanner.style.background = `url('${currentUser.bannerUrl}') center/cover no-repeat`;
+  }
+  // Sidebar avatar
   const sidebarAv = document.getElementById('sidebarAvatar');
   if (sidebarAv) {
     sidebarAv.style.background = currentUser.avatar;

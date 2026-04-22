@@ -104,11 +104,13 @@
     <!-- Left Sidebar -->
     <aside class="sidebar-left">
       <!-- User Card -->
-      <div class="sidebar-user-card" id="sidebarUserCard">
-        <div class="sidebar-avatar" id="sidebarAvatar">
+      <div class="sidebar-user-card" id="sidebarUserCard" style="padding:0;overflow:hidden;">
+        <div id="sidebarBanner" style="height:70px;background:linear-gradient(135deg,var(--ocean),var(--seafoam));flex-shrink:0;"></div>
+        <div style="padding:0 16px 16px;margin-top:-28px;">
+        <div class="sidebar-avatar" id="sidebarAvatar" style="border:3px solid white;">
           <span id="sidebarInitials">SM</span>
         </div>
-        <div class="sidebar-user-name" id="sidebarName">Sarah Bailey</div>
+        <div class="sidebar-user-name" id="sidebarName" style="margin-top:6px;">Sarah Bailey</div>
         <div class="sidebar-user-hood" id="sidebarHood">
           Costa Blanca Villas · <span style="color:var(--ocean);font-weight:600;">Verified</span>
         </div>
@@ -121,6 +123,7 @@
             <span class="stat-val" id="sidebarPoints">0</span>
             <span class="stat-lbl">Points</span>
           </div>
+        </div>
         </div>
       </div>
 
