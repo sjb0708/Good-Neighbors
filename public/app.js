@@ -3614,12 +3614,11 @@ function buildRealEstateCard(listing) {
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'realtor';
   const priceLabel = listing.price ? `$${Number(listing.price).toLocaleString()}` : '';
   const externalUrl = listing.externalUrl || 'https://www.uncoverpanamarealestate.com';
-  const imgSrc = listing.image || '/images/uncover-panama-logo.png';
+  const imgSrc = listing.image || null;
 
   card.innerHTML = `
     <div class="re-card-img-wrap">
-      <img src="${imgSrc}" alt="${escHtml(listing.title)}" class="re-card-img"
-        onerror="this.src='/images/uncover-panama-logo.png';this.style.objectFit='contain';this.style.padding='20px';this.style.background='var(--bg)'">
+      ${imgSrc ? `<img src="${imgSrc}" alt="${escHtml(listing.title)}" class="re-card-img" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<div style=\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;background:var(--bg)\'>🏡</div>')">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;background:var(--bg)">🏡</div>`}
       ${priceLabel ? `<div class="re-price-badge">${priceLabel}</div>` : ''}
       <div class="re-type-badge ${typeCls}">${typeBadge}</div>
     </div>
