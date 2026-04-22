@@ -1996,15 +1996,15 @@ app.post('/api/profile/avatar', requireAuth(async (req, res) => {
   const { dataUrl } = req.body;
   if (!dataUrl) return res.status(400).json({ error: 'No image data' });
   const u = req.currentUser;
-  let avatarUrl;
+  let avatarUrl = dataUrl;
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const { put } = require('@vercel/blob');
-    const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
-    const buffer = Buffer.from(base64, 'base64');
-    const blob = await put(`avatars/${u.id}-${Date.now()}.jpg`, buffer, { access: 'public', contentType: 'image/jpeg' });
-    avatarUrl = blob.url;
-  } else {
-    avatarUrl = dataUrl;
+    try {
+      const { put } = require('@vercel/blob');
+      const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64, 'base64');
+      const blob = await put(`avatars/${u.id}-${Date.now()}.jpg`, buffer, { access: 'public', contentType: 'image/jpeg' });
+      avatarUrl = blob.url;
+    } catch (e) { console.error('Blob avatar upload failed:', e.message); }
   }
   await sql`UPDATE users SET avatar_url=${avatarUrl} WHERE id=${u.id}`;
   res.json({ avatarUrl });
@@ -2014,15 +2014,15 @@ app.post('/api/profile/banner', requireAuth(async (req, res) => {
   const { dataUrl } = req.body;
   if (!dataUrl) return res.status(400).json({ error: 'No image data' });
   const u = req.currentUser;
-  let bannerUrl;
+  let bannerUrl = dataUrl;
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const { put } = require('@vercel/blob');
-    const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
-    const buffer = Buffer.from(base64, 'base64');
-    const blob = await put(`banners/${u.id}-${Date.now()}.jpg`, buffer, { access: 'public', contentType: 'image/jpeg' });
-    bannerUrl = blob.url;
-  } else {
-    bannerUrl = dataUrl;
+    try {
+      const { put } = require('@vercel/blob');
+      const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64, 'base64');
+      const blob = await put(`banners/${u.id}-${Date.now()}.jpg`, buffer, { access: 'public', contentType: 'image/jpeg' });
+      bannerUrl = blob.url;
+    } catch (e) { console.error('Blob banner upload failed:', e.message); }
   }
   await sql`UPDATE users SET banner_url=${bannerUrl} WHERE id=${u.id}`;
   res.json({ bannerUrl });
