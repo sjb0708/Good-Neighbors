@@ -2253,7 +2253,10 @@ async function openBusinessPage(bizId) {
 }
 
 async function renderBusinessPage(bizId, container) {
-  const biz = await fetchJSON(`/api/businesses/${bizId}`);
+  const [biz, bizPosts] = await Promise.all([
+    fetchJSON(`/api/businesses/${bizId}`),
+    fetchJSON(`/api/businesses/${bizId}/posts`).catch(() => [])
+  ]);
   if (!biz) { container.innerHTML = '<p style="padding:30px;color:var(--coral);">Could not load business.</p>'; return; }
 
   const icon = bizIcons[biz.category] || bizIcons.default;
@@ -2323,6 +2326,8 @@ async function renderBusinessPage(bizId, container) {
           <button class="biz-tab active" onclick="switchBizTab('overview')">Overview</button>
           <button class="biz-tab" onclick="switchBizTab('reviews')">Reviews (${reviews.length})</button>
           <button class="biz-tab" onclick="switchBizTab('photos')">Photos</button>
+          <button class="biz-tab" onclick="switchBizTab('posts')">Posts${bizPosts.length ? ` (${bizPosts.length})` : ''}</button>
+          <button class="biz-tab" onclick="switchBizTab('promotions')">Promotions</button>
         </div>
 
         <!-- Overview tab -->
@@ -2405,6 +2410,73 @@ async function renderBusinessPage(bizId, container) {
           ${photos.length ? `<div class="biz-photo-grid">${photos.map(url => `<img src="${url}" alt="Business photo" loading="lazy" />`).join('')}</div>`
             : '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:40px;text-align:center;color:var(--text-light);">No photos yet.</div>'}
         </div>
+
+        <!-- Posts tab (hidden) -->
+        <div id="bizTab-posts" style="display:none;">
+          ${bizPosts.length === 0
+            ? '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:40px;text-align:center;color:var(--text-light);font-size:14px;">No posts yet.</div>'
+            : bizPosts.map(p => {
+                const isEvent = p.type === 'event';
+                const isPromo = p.type === 'promotion';
+                const badgeColor = isEvent ? 'background:rgba(42,157,143,0.1);color:#2A9D8F;' : isPromo ? 'background:rgba(231,111,81,0.1);color:#E76F51;' : 'background:rgba(0,119,182,0.1);color:#0077B6;';
+                const badgeLabel = isEvent ? '🎟️ Event' : isPromo ? '🎉 Promotion' : '📢 Announcement';
+                const eventDateStr = p.eventDate ? new Date(p.eventDate + 'T00:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) : '';
+                const totalReactions = p.reactions ? Object.values(p.reactions).reduce((a,b) => a+b, 0) : 0;
+                return `<div style="background:white;border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:12px;">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                    <span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;${badgeColor}">${badgeLabel}</span>
+                    <span style="font-size:12px;color:var(--text-light);margin-left:auto;">${relativeTime(p.createdAt)}</span>
+                  </div>
+                  ${isEvent && p.eventTitle ? `<div style="font-size:15px;font-weight:700;color:#2A9D8F;margin-bottom:6px;">🎟️ ${escHtml(p.eventTitle)}</div>` : ''}
+                  ${isEvent ? `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;font-size:12px;color:var(--text-light);">
+                    ${p.eventDate ? `<span>📅 ${eventDateStr}</span>` : ''}
+                    ${p.eventTime ? `<span>🕐 ${escHtml(p.eventTime)}</span>` : ''}
+                    ${p.eventLocation ? `<span>📍 ${escHtml(p.eventLocation)}</span>` : ''}
+                  </div>` : ''}
+                  ${!isEvent && p.offerTitle ? `<div style="font-size:13px;font-weight:700;color:#E76F51;margin-bottom:4px;">🏷️ ${escHtml(p.offerTitle)}</div>` : ''}
+                  ${!isEvent && p.offerExpiry ? `<div style="font-size:11.5px;color:var(--text-light);margin-bottom:6px;">Expires: ${escHtml(p.offerExpiry)}</div>` : ''}
+                  <div style="font-size:14px;color:var(--text-mid);line-height:1.6;margin-bottom:10px;">${escHtml(p.content)}</div>
+                  ${p.image ? (p.image.match(/\.pdf($|\?)/i)
+                    ? `<a href="${escHtml(p.image)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:10px;padding:8px 14px;background:rgba(0,119,182,0.07);border:1px solid rgba(0,119,182,0.18);border-radius:8px;font-size:13px;font-weight:600;color:var(--ocean);text-decoration:none;">📄 View PDF</a>`
+                    : `<img src="${escHtml(p.image)}" alt="" loading="lazy" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:10px;cursor:pointer;" onclick="window.open(this.src,'_blank')">`
+                  ) : ''}
+                  <div style="display:flex;gap:14px;font-size:12px;color:var(--text-light);">
+                    <span>👍 ${totalReactions} reaction${totalReactions !== 1 ? 's' : ''}</span>
+                    <span>💬 ${p.commentCount} comment${p.commentCount !== 1 ? 's' : ''}</span>
+                  </div>
+                </div>`;
+              }).join('')
+          }
+        </div>
+
+        <!-- Promotions tab (hidden) -->
+        <div id="bizTab-promotions" style="display:none;">
+          ${(() => {
+              const promos = bizPosts.filter(p => p.type === 'promotion');
+              if (promos.length === 0) return '<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:40px;text-align:center;color:var(--text-light);font-size:14px;">No promotions yet.</div>';
+              return promos.map(p => {
+                const totalReactions = p.reactions ? Object.values(p.reactions).reduce((a,b) => a+b, 0) : 0;
+                return `<div style="background:white;border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:12px;">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                    <span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;background:rgba(231,111,81,0.1);color:#E76F51;">🎉 Promotion</span>
+                    <span style="font-size:12px;color:var(--text-light);margin-left:auto;">${relativeTime(p.createdAt)}</span>
+                  </div>
+                  ${p.offerTitle ? `<div style="font-size:14px;font-weight:700;color:#E76F51;margin-bottom:4px;">🏷️ ${escHtml(p.offerTitle)}</div>` : ''}
+                  ${p.offerExpiry ? `<div style="font-size:12px;color:var(--text-light);margin-bottom:8px;">Expires: ${escHtml(p.offerExpiry)}</div>` : ''}
+                  <div style="font-size:14px;color:var(--text-mid);line-height:1.6;margin-bottom:10px;">${escHtml(p.content)}</div>
+                  ${p.image ? (p.image.match(/\.pdf($|\?)/i)
+                    ? `<a href="${escHtml(p.image)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:10px;padding:8px 14px;background:rgba(0,119,182,0.07);border:1px solid rgba(0,119,182,0.18);border-radius:8px;font-size:13px;font-weight:600;color:var(--ocean);text-decoration:none;">📄 View PDF</a>`
+                    : `<img src="${escHtml(p.image)}" alt="" loading="lazy" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:10px;cursor:pointer;" onclick="window.open(this.src,'_blank')">`
+                  ) : ''}
+                  <div style="display:flex;gap:14px;font-size:12px;color:var(--text-light);">
+                    <span>👍 ${totalReactions} reaction${totalReactions !== 1 ? 's' : ''}</span>
+                    <span>💬 ${p.commentCount} comment${p.commentCount !== 1 ? 's' : ''}</span>
+                  </div>
+                </div>`;
+              }).join('');
+            })()
+          }
+        </div>
       </div>
 
       <!-- Right sidebar -->
@@ -2453,7 +2525,7 @@ async function uploadBizLogo(bizId, input) {
 }
 
 function switchBizTab(tabName) {
-  ['overview','reviews','photos'].forEach(t => {
+  ['overview','reviews','photos','posts','promotions'].forEach(t => {
     const el = document.getElementById(`bizTab-${t}`);
     if (el) el.style.display = t === tabName ? 'block' : 'none';
   });

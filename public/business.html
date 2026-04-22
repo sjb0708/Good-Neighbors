@@ -361,6 +361,7 @@
 
     .badge-announcement { background: rgba(0,119,182,0.1); color: var(--ocean); }
     .badge-promotion { background: rgba(231,111,81,0.1); color: var(--coral); }
+    .badge-event { background: rgba(42,157,143,0.1); color: var(--seafoam); }
 
     .post-time { font-size: 12px; color: var(--text-light); }
 
@@ -373,6 +374,32 @@
     .post-offer-expiry {
       font-size: 11.5px; color: var(--text-light);
       margin-bottom: 6px;
+    }
+
+    .post-event-title {
+      font-size: 14px; font-weight: 700;
+      color: var(--seafoam);
+      margin-bottom: 4px;
+    }
+
+    .post-event-meta {
+      font-size: 12px; color: var(--text-light);
+      margin-bottom: 6px;
+      display: flex; flex-wrap: wrap; gap: 10px;
+    }
+
+    .event-fields {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .event-fields.show { display: flex; }
+
+    .event-fields-row {
+      display: flex;
+      gap: 10px;
     }
 
     .post-content {
@@ -800,11 +827,20 @@
         <div class="compose-tabs">
           <button class="compose-tab active" onclick="switchTab('announcement', this)">📢 Announcement</button>
           <button class="compose-tab" onclick="switchTab('promotion', this)">🎉 Promotion</button>
+          <button class="compose-tab" onclick="switchTab('event', this)">🎟️ Event</button>
         </div>
         <textarea id="composeBox" class="compose-box" placeholder="Write a message to your neighbors..."></textarea>
         <div class="promo-fields" id="promoFields">
           <input class="promo-input" id="offerTitle" placeholder="Offer title  e.g. 20% off ceviche this weekend" />
           <input class="promo-input" id="offerExpiry" placeholder="Expires  e.g. Sun Apr 13" />
+        </div>
+        <div class="event-fields" id="eventFields">
+          <input class="promo-input" id="eventTitle" placeholder="Event title  e.g. Live Music Night" required />
+          <div class="event-fields-row">
+            <input class="promo-input" id="eventDate" type="date" title="Event date" style="flex:1;" />
+            <input class="promo-input" id="eventTime" type="time" title="Event time (optional)" style="flex:1;" />
+          </div>
+          <input class="promo-input" id="eventLocation" placeholder="Location  e.g. La Palapa Beach Bar, Farallón" />
         </div>
         <input type="file" id="postFileInput" accept="image/*,.pdf" style="display:none" onchange="handlePostFile(event)" />
         <div id="postFilePreview" style="display:none;margin-top:12px;position:relative;"></div>
@@ -1051,16 +1087,26 @@
         list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No messages sent yet. Send your first announcement above!</p></div>';
         return;
       }
-      list.innerHTML = posts.map(p => `
+      list.innerHTML = posts.map(p => {
+        const isEvent = p.type === 'event';
+        const isPromo = p.type === 'promotion';
+        const badgeClass = isEvent ? 'badge-event' : isPromo ? 'badge-promotion' : 'badge-announcement';
+        const badgeLabel = isEvent ? '🎟️ Event' : isPromo ? '🎉 Promotion' : '📢 Announcement';
+        const eventDateStr = p.eventDate ? new Date(p.eventDate + 'T00:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) : '';
+        return `
         <div class="post-item">
           <div class="post-meta">
-            <span class="post-type-badge ${p.type === 'promotion' ? 'badge-promotion' : 'badge-announcement'}">
-              ${p.type === 'promotion' ? '🎉 Promotion' : '📢 Announcement'}
-            </span>
+            <span class="post-type-badge ${badgeClass}">${badgeLabel}</span>
             <span class="post-time">${timeAgo(p.createdAt)}</span>
           </div>
-          ${p.offerTitle ? `<div class="post-offer-title">🏷️ ${p.offerTitle}</div>` : ''}
-          ${p.offerExpiry ? `<div class="post-offer-expiry">Expires: ${p.offerExpiry}</div>` : ''}
+          ${isEvent && p.eventTitle ? `<div class="post-event-title">🎟️ ${p.eventTitle}</div>` : ''}
+          ${isEvent ? `<div class="post-event-meta">
+            ${p.eventDate ? `<span>📅 ${eventDateStr}</span>` : ''}
+            ${p.eventTime ? `<span>🕐 ${p.eventTime}</span>` : ''}
+            ${p.eventLocation ? `<span>📍 ${p.eventLocation}</span>` : ''}
+          </div>` : ''}
+          ${!isEvent && p.offerTitle ? `<div class="post-offer-title">🏷️ ${p.offerTitle}</div>` : ''}
+          ${!isEvent && p.offerExpiry ? `<div class="post-offer-expiry">Expires: ${p.offerExpiry}</div>` : ''}
           <div class="post-content">${p.content}</div>
           ${p.image ? (p.image.match(/\.pdf($|\?)/i) ? `<a class="post-pdf-link" href="${p.image}" target="_blank">📄 View PDF</a>` : `<img class="post-image" src="${p.image}" alt="" onclick="window.open(this.src,'_blank')">`) : ''}
           <div class="post-stats">
@@ -1068,7 +1114,8 @@
             <span class="post-stat">💬 ${p.commentCount} comments</span>
           </div>
         </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function switchTab(tab, btn) {
@@ -1076,12 +1123,16 @@
       document.querySelectorAll('.compose-tab').forEach(t => t.classList.remove('active'));
       btn.classList.add('active');
       const promoFields = document.getElementById('promoFields');
-      const placeholder = tab === 'promotion'
-        ? 'Tell neighbors about your special offer or event...'
-        : 'Share news, updates, or announcements with the neighborhood...';
-      document.getElementById('composeBox').placeholder = placeholder;
-      if (tab === 'promotion') promoFields.classList.add('show');
-      else promoFields.classList.remove('show');
+      const eventFields = document.getElementById('eventFields');
+      const placeholders = {
+        promotion: 'Tell neighbors about your special offer or discount...',
+        event: 'Describe your event — what to expect, who it\'s for...',
+        announcement: 'Share news, updates, or announcements with the neighborhood...'
+      };
+      document.getElementById('composeBox').placeholder = placeholders[tab] || placeholders.announcement;
+      if (tab === 'promotion') { promoFields.classList.add('show'); eventFields.classList.remove('show'); }
+      else if (tab === 'event') { eventFields.classList.add('show'); promoFields.classList.remove('show'); }
+      else { promoFields.classList.remove('show'); eventFields.classList.remove('show'); }
     }
 
     function handlePostFile(e) {
@@ -1122,15 +1173,32 @@
     async function sendPost() {
       const content = document.getElementById('composeBox').value.trim();
       if (!content) { showToast('Please write a message first.'); return; }
+
+      if (currentTab === 'event') {
+        const evTitle = document.getElementById('eventTitle')?.value.trim();
+        const evDate  = document.getElementById('eventDate')?.value;
+        if (!evTitle) { showToast('Please enter an event title.'); return; }
+        if (!evDate)  { showToast('Please select an event date.'); return; }
+      }
+
       const btn = document.getElementById('sendBtn');
       btn.disabled = true;
       btn.textContent = 'Sending...';
+
+      const eventTitle    = document.getElementById('eventTitle')?.value.trim() || '';
+      const eventDate     = document.getElementById('eventDate')?.value || '';
+      const eventTime     = document.getElementById('eventTime')?.value || '';
+      const eventLocation = document.getElementById('eventLocation')?.value.trim() || '';
 
       const body = {
         postType: currentTab,
         content,
         offerTitle: document.getElementById('offerTitle')?.value.trim() || '',
         offerExpiry: document.getElementById('offerExpiry')?.value.trim() || '',
+        eventTitle,
+        eventDate,
+        eventTime,
+        eventLocation,
         image: postFileDataUrl || ''
       };
 
@@ -1142,9 +1210,31 @@
       });
 
       if (res.ok) {
+        // Also create a public event entry when posting an event
+        if (currentTab === 'event' && eventTitle && eventDate) {
+          await fetch('/api/events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: eventTitle,
+              description: content,
+              location: eventLocation || '',
+              eventDate,
+              eventTime: eventTime || null,
+              category: 'Business Event',
+              image: postFileDataUrl || ''
+            }),
+            credentials: 'include'
+          }).catch(() => {});
+        }
+
         document.getElementById('composeBox').value = '';
         if (document.getElementById('offerTitle')) document.getElementById('offerTitle').value = '';
         if (document.getElementById('offerExpiry')) document.getElementById('offerExpiry').value = '';
+        if (document.getElementById('eventTitle')) document.getElementById('eventTitle').value = '';
+        if (document.getElementById('eventDate')) document.getElementById('eventDate').value = '';
+        if (document.getElementById('eventTime')) document.getElementById('eventTime').value = '';
+        if (document.getElementById('eventLocation')) document.getElementById('eventLocation').value = '';
         clearPostFile();
         bizData.postsCount++;
         document.getElementById('statPosts').textContent = bizData.postsCount;

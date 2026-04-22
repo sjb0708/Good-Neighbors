@@ -115,6 +115,10 @@ function formatPost(row, reactionRows, commentCountMap, userReactionMap, pollVot
   if (row.category)    post.category   = row.category;
   if (row.offer_title) post.offerTitle = row.offer_title;
   if (row.offer_expiry) post.offerExpiry = row.offer_expiry;
+  if (row.event_title)    post.eventTitle    = row.event_title;
+  if (row.event_date)     post.eventDate     = row.event_date;
+  if (row.event_time)     post.eventTime     = row.event_time;
+  if (row.event_location) post.eventLocation = row.event_location;
 
   if (row.poll_options) {
     const votes = pollVoteMap[row.id] || {};
@@ -1313,6 +1317,13 @@ app.get('/api/businesses/:id', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
+app.get('/api/businesses/:id/posts', async (req, res) => {
+  try {
+    const posts = await fetchPostsWithMeta(`WHERE p.business_id = '${req.params.id}' AND p.is_business_post = true`, null);
+    res.json(posts);
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
 app.post('/api/businesses/:id/fave', requireAuth(async (req, res) => {
   const bizId = req.params.id;
   const [biz] = await sql`SELECT id, fave_years, fave_threshold FROM businesses WHERE id=${bizId}`;
@@ -1373,11 +1384,37 @@ app.post('/api/business/post', requireAuth(async (req, res) => {
   if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
   const [biz] = await sql`SELECT * FROM businesses WHERE id=${u.business_id}`;
   if (!biz) return res.status(404).json({ error: 'Business not found' });
-  const { postType, content, offerTitle, offerExpiry, image } = req.body;
+  const { postType, content, offerTitle, offerExpiry, eventTitle, eventDate, eventTime, eventLocation, image } = req.body;
   if (!content) return res.status(400).json({ error: 'Content required' });
   const imageUrl = await storeImage(image, 'business');
-  const type     = postType === 'promotion' ? 'promotion' : 'announcement';
-  const [post]   = await sql`
+
+  if (postType === 'event') {
+    if (!eventTitle || !eventDate) return res.status(400).json({ error: 'Event title and date required' });
+    // Ensure required columns exist
+    await Promise.all([
+      sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS business_id UUID`,
+      sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS event_title TEXT`,
+      sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS event_date DATE`,
+      sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS event_time TEXT`,
+      sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS event_location TEXT`,
+    ]);
+    await sql`
+      INSERT INTO events (title, description, host_id, location, event_date, event_time, end_time, category, is_hoa_event, image_url, business_id)
+      VALUES (${eventTitle}, ${content}, ${u.id}, ${eventLocation||'Costa Blanca Villas'}, ${eventDate}, ${eventTime||null}, null, 'Business Event', false, ${imageUrl}, ${biz.id})
+      RETURNING *
+    `;
+    // Also insert a feed post so it shows in the neighborhood feed
+    const [post] = await sql`
+      INSERT INTO posts (type, section, content, author_id, image_url, is_business_post, business_id, event_title, event_date, event_time, event_location)
+      VALUES ('event', 'feed', ${content}, ${u.id}, ${imageUrl}, true, ${biz.id}, ${eventTitle}, ${eventDate}, ${eventTime||null}, ${eventLocation||null})
+      RETURNING *
+    `;
+    const full = await fetchPostsWithMeta(`WHERE p.id = '${post.id}'`, u.id);
+    return res.json(full[0] || post);
+  }
+
+  const type   = postType === 'promotion' ? 'promotion' : 'announcement';
+  const [post] = await sql`
     INSERT INTO posts (type, section, content, author_id, image_url, offer_title, offer_expiry, is_business_post, business_id)
     VALUES (${type}, 'feed', ${content}, ${u.id}, ${imageUrl}, ${offerTitle||null}, ${offerExpiry||null}, true, ${biz.id})
     RETURNING *
