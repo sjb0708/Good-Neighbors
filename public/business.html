@@ -786,25 +786,6 @@
         </div>
       </div>
 
-      <!-- Neighborhood Fave -->
-      <div class="card" id="faveCard">
-        <div class="card-title">Neighborhood Fave</div>
-        <div id="faveAwards" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;"></div>
-        <div id="faveProgressWrap">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-            <span style="font-size:12.5px;font-weight:600;color:var(--text-mid);">Progress toward <span id="faveYear">2026</span> Award</span>
-            <span style="font-size:13px;font-weight:700;color:var(--ocean);" id="faveCountLabel">— / 30</span>
-          </div>
-          <div style="background:var(--border);border-radius:20px;height:8px;overflow:hidden;margin-bottom:8px;">
-            <div id="faveProgressBar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,#0077B6,#00B4D8);transition:width 0.4s ease;width:0%;"></div>
-          </div>
-          <div style="font-size:12px;color:var(--text-light);" id="faveHint">Loading...</div>
-        </div>
-        <div id="faveWonBadge" style="display:none;align-items:center;gap:8px;padding:12px 14px;background:#FFFBEA;border:1.5px solid #F6C90E;border-radius:10px;font-size:13px;font-weight:600;color:#7A5B00;">
-          🏆 <span id="faveWonText">Neighborhood Fave Award earned!</span>
-        </div>
-      </div>
-
       <!-- Rating & Reviews -->
       <div class="card">
         <div class="card-title">Neighbor Reviews</div>
@@ -1041,46 +1022,6 @@
       document.getElementById('statReach').textContent = bizData.totalReach;
       document.getElementById('bannerNeighbors').textContent = bizData.neighborhoodSize;
       document.getElementById('hintCount').textContent = bizData.neighborhoodSize;
-      renderFaveCard();
-    }
-
-    function renderFaveCard() {
-      const trophySVG = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4a2 2 0 0 1-2-2V5h4"/><path d="M18 9h2a2 2 0 0 0 2-2V5h-4"/><path d="M12 17v4"/><path d="M8 21h8"/><path d="M6 5h12v4a6 6 0 0 1-12 0V5Z"/></svg>`;
-      const faveYears = bizData.faveYears || [];
-      const currentYearFaves = bizData.currentYearFaves || 0;
-      const faveThreshold = bizData.faveThreshold || 30;
-      const currentYear = new Date().getFullYear();
-      const alreadyWon = faveYears.includes(currentYear);
-      const pct = Math.min(100, Math.round((currentYearFaves / faveThreshold) * 100));
-
-      // Trophy badges for past years
-      const awardsEl = document.getElementById('faveAwards');
-      if (faveYears.length) {
-        awardsEl.innerHTML = faveYears.map(y => `
-          <div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 12px;background:#FFFBEA;border:1.5px solid #F6C90E;border-radius:10px;">
-            <span style="color:#B8860B;">${trophySVG}</span>
-            <span style="font-size:11px;font-weight:700;color:#7A5B00;">${y}</span>
-          </div>`).join('');
-        awardsEl.style.display = 'flex';
-      } else {
-        awardsEl.style.display = 'none';
-      }
-
-      document.getElementById('faveYear').textContent = currentYear;
-
-      if (alreadyWon) {
-        document.getElementById('faveProgressWrap').style.display = 'none';
-        const badge = document.getElementById('faveWonBadge');
-        badge.style.display = 'flex';
-        document.getElementById('faveWonText').textContent = `${currentYear} Neighborhood Fave Award earned!`;
-      } else {
-        document.getElementById('faveProgressWrap').style.display = 'block';
-        document.getElementById('faveWonBadge').style.display = 'none';
-        document.getElementById('faveCountLabel').textContent = `${currentYearFaves} / ${faveThreshold}`;
-        document.getElementById('faveProgressBar').style.width = `${pct}%`;
-        const remaining = faveThreshold - currentYearFaves;
-        document.getElementById('faveHint').textContent = `${remaining} more fave${remaining !== 1 ? 's' : ''} needed for the ${currentYear} award`;
-      }
     }
 
     function renderReviews() {
