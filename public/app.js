@@ -2338,10 +2338,9 @@ async function renderBusinessPage(bizId, container) {
       <div class="biz-page-main">
         <div class="biz-tab-bar">
           <button class="biz-tab active" onclick="switchBizTab('overview')">Overview</button>
-          <button class="biz-tab" onclick="switchBizTab('reviews')">Reviews (${reviews.length})</button>
-          <button class="biz-tab" onclick="switchBizTab('photos')">Photos</button>
+          <button class="biz-tab" onclick="switchBizTab('reviews')">Reviews</button>
           ${biz.menuUrl || biz.menuText ? `<button class="biz-tab" onclick="switchBizTab('menu')">Menu</button>` : ''}
-          <button class="biz-tab" onclick="switchBizTab('posts')">Posts${bizPosts.length ? ` (${bizPosts.length})` : ''}</button>
+          <button class="biz-tab" onclick="switchBizTab('posts')">Posts</button>
           <button class="biz-tab" onclick="switchBizTab('promotions')">Promotions</button>
         </div>
 
