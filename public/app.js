@@ -1014,7 +1014,7 @@ function openAddBusinessModal() {
       <div style="padding:0 24px 24px;">
         <div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">NAME *</label><input id="abName" type="text" placeholder="e.g. Costa Coffee" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/></div>
         <div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">CATEGORY</label><select id="abCategory" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;background:white;"><option value="">Select a category…</option>${BIZ_CATEGORIES.map(c=>`<option value="${c.label}">${c.icon} ${c.label}</option>`).join('')}</select></div>
-        ${['ADDRESS:abAddress:text:Street address','PHONE:abPhone:tel:+507 xxx xxxx','HOURS:abHours:text:Mon–Fri 9am–6pm','WEBSITE:abWebsite:url:https://...'].map(f => {
+        ${['ADDRESS:abAddress:text:Street address','PHONE:abPhone:tel:+507 xxx xxxx','HOURS:abHours:text:Mon–Fri 9am–6pm','WEBSITE:abWebsite:url:https://...','INSTAGRAM:abInstagram:url:https://instagram.com/yourbusiness','FACEBOOK:abFacebook:url:https://facebook.com/yourbusiness'].map(f => {
           const [label, id, type, placeholder] = f.split(':');
           return `<div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">${label}</label><input id="${id}" type="${type}" placeholder="${placeholder}" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/></div>`;
         }).join('')}
@@ -1068,6 +1068,8 @@ async function submitAddBusiness() {
       phone: document.getElementById('abPhone')?.value.trim() || null,
       hours: document.getElementById('abHours')?.value.trim() || null,
       website: document.getElementById('abWebsite')?.value.trim() || null,
+      instagramUrl: document.getElementById('abInstagram')?.value.trim() || null,
+      facebookUrl: document.getElementById('abFacebook')?.value.trim() || null,
       description: document.getElementById('abDesc')?.value.trim() || '',
     })
   });
@@ -2382,7 +2384,9 @@ async function renderBusinessPage(bizId, container) {
           <div class="biz-sidebar-row"><span class="biz-sidebar-icon">🕐</span><span>${escHtml(biz.hours)}</span></div>
           <div class="biz-sidebar-row"><span class="biz-sidebar-icon">📍</span><span>${escHtml(biz.address)}</span></div>
           <div class="biz-sidebar-row"><span class="biz-sidebar-icon">🧭</span><span style="color:var(--ocean);cursor:pointer;font-weight:600;" onclick="showToast('Opening directions...')">Get directions</span></div>
-          ${biz.website && biz.website !== '#' ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">🔗</span><span style="color:var(--ocean);">${escHtml(biz.website)}</span></div>` : ''}
+          ${biz.website && biz.website !== '#' ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">🔗</span><a href="${escHtml(biz.website)}" target="_blank" rel="noopener" style="color:var(--ocean);text-decoration:none;">Website</a></div>` : ''}
+          ${biz.instagramUrl ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">📸</span><a href="${escHtml(biz.instagramUrl)}" target="_blank" rel="noopener" style="color:#E1306C;text-decoration:none;font-weight:600;">Instagram</a></div>` : ''}
+          ${biz.facebookUrl ? `<div class="biz-sidebar-row"><span class="biz-sidebar-icon">👤</span><a href="${escHtml(biz.facebookUrl)}" target="_blank" rel="noopener" style="color:#1877F2;text-decoration:none;font-weight:600;">Facebook</a></div>` : ''}
         </div>
         <div class="biz-sidebar-card" style="text-align:center;">
           <div style="font-size:28px;font-weight:800;color:var(--text-dark);">${biz.rating}</div>

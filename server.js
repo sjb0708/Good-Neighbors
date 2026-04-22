@@ -1179,6 +1179,7 @@ function formatBusiness(b) {
   return {
     id: b.id, name: b.name, category: b.category, description: b.description,
     address: b.address, phone: b.phone, hours: b.hours, website: b.website,
+    instagramUrl: b.instagram_url||null, facebookUrl: b.facebook_url||null,
     photos: b.photos||[], tags: b.tags||[], rating: parseFloat(b.rating)||0,
     reviewCount: b.review_count||0, recommendedBy: b.recommended_by||0,
     claimed: b.claimed,
@@ -1188,11 +1189,13 @@ function formatBusiness(b) {
 }
 
 app.post('/api/businesses', requireAuth(async (req, res) => {
-  const { name, category, description, address, phone, hours, website } = req.body;
+  const { name, category, description, address, phone, hours, website, instagramUrl, facebookUrl } = req.body;
   if (!name) return res.status(400).json({ error: 'Business name required' });
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS instagram_url TEXT`;
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS facebook_url TEXT`;
   const [biz] = await sql`
-    INSERT INTO businesses (name, category, description, address, phone, hours, website, added_by_user_id, claimed)
-    VALUES (${name}, ${category||null}, ${description||''}, ${address||null}, ${phone||null}, ${hours||null}, ${website||null}, ${req.currentUser.id}, false)
+    INSERT INTO businesses (name, category, description, address, phone, hours, website, instagram_url, facebook_url, added_by_user_id, claimed)
+    VALUES (${name}, ${category||null}, ${description||''}, ${address||null}, ${phone||null}, ${hours||null}, ${website||null}, ${instagramUrl||null}, ${facebookUrl||null}, ${req.currentUser.id}, false)
     RETURNING *
   `;
   res.json({ ok: true, business: formatBusiness(biz) });
