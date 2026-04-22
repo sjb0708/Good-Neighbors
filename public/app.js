@@ -2587,7 +2587,7 @@ function buildNeighborCard(neighbor) {
     <div class="neighbor-years">
       ${yearsText} in Costa Blanca Villas
     </div>
-    ${neighbor.username !== currentUser?.username ? `<button class="btn-wave-neighbor" onclick="startConversation('${neighbor.username}')">💬 Message</button>` : ''}
+    <button class="btn-wave-neighbor" onclick="startConversation('${neighbor.username}')">💬 Message</button>
   `;
   return card;
 }

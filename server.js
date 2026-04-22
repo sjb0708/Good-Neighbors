@@ -1947,7 +1947,6 @@ app.post('/api/conversations/:username', requireAuth(async (req, res) => {
   await ensureMessagingTables();
   const [other] = await sql`SELECT id FROM users WHERE username=${req.params.username}`;
   if (!other) return res.status(404).json({ error: 'User not found' });
-  if (other.id === req.currentUser.id) return res.status(400).json({ error: 'Cannot message yourself' });
   const u1 = req.currentUser.id < other.id ? req.currentUser.id : other.id;
   const u2 = req.currentUser.id < other.id ? other.id : req.currentUser.id;
   const [conv] = await sql`INSERT INTO conversations (user1_id, user2_id) VALUES (${u1}, ${u2}) ON CONFLICT (user1_id, user2_id) DO UPDATE SET last_message_at = conversations.last_message_at RETURNING id`;
