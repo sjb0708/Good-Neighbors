@@ -62,6 +62,7 @@ function formatUser(row) {
     businessId: row.business_id || undefined,
     contactEmail: row.contact_email || undefined, contactPhone: row.contact_phone || undefined,
     allowMessages: row.allow_messages !== false,
+    memberSince: row.created_at ? new Date(row.created_at).getFullYear() : null,
   };
 }
 

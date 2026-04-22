@@ -1284,8 +1284,8 @@ async function renderProfile(container) {
           <div class="profile-stat-lbl">Points · ${pointsLevelLabel(user.points)}</div>
         </div>
         <div class="profile-stat">
-          <div class="profile-stat-val">${user.yearsInNeighborhood || 4}</div>
-          <div class="profile-stat-lbl">Years Here</div>
+          <div class="profile-stat-val">${user.memberSince || new Date().getFullYear()}</div>
+          <div class="profile-stat-lbl">Member Since</div>
         </div>
       </div>
     </div>
@@ -1326,12 +1326,12 @@ function openEditProfile() {
           <textarea id="epBio" rows="3" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;">${escHtml(u.bio||'')}</textarea>
         </div>
         <div>
-          <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Address / Villa Number</label>
-          <input id="epAddress" value="${escHtml(u.address||'')}" placeholder="e.g. Villa 42" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+          <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Neighborhood / Area <span style="font-weight:400;text-transform:none;color:#aaa;">(optional)</span></label>
+          <input id="epAddress" value="${escHtml(u.address||'')}" placeholder="e.g. Villa 42, Farallón, Las Olas…" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
         </div>
         <div>
-          <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Years in Neighborhood</label>
-          <input id="epYears" type="number" min="0" max="50" value="${u.yearsInNeighborhood||0}" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+          <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Member Since <span style="font-weight:400;text-transform:none;color:#aaa;">(optional)</span></label>
+          <input id="epYears" type="number" min="2000" max="${new Date().getFullYear()}" value="${u.memberSince || new Date().getFullYear()}" placeholder="${new Date().getFullYear()}" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
         </div>
         <div id="epErr" style="display:none;color:var(--coral);font-size:13px;"></div>
         <button onclick="submitEditProfile()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Save Changes</button>
@@ -1346,7 +1346,7 @@ async function submitEditProfile() {
   const name = document.getElementById('epName')?.value.trim();
   const bio = document.getElementById('epBio')?.value.trim();
   const address = document.getElementById('epAddress')?.value.trim();
-  const yearsInNeighborhood = document.getElementById('epYears')?.value;
+  const yearsInNeighborhood = document.getElementById('epYears')?.value ? new Date().getFullYear() - parseInt(document.getElementById('epYears').value) : 0;
   const errEl = document.getElementById('epErr');
   if (!name) { errEl.textContent = 'Name is required.'; errEl.style.display = 'block'; return; }
   const res = await fetch('/api/profile', {
@@ -2666,7 +2666,8 @@ function buildStars(rating) {
 function buildNeighborCard(neighbor) {
   const card = document.createElement('div');
   card.className = 'neighbor-card';
-  const yearsText = neighbor.yearsInNeighborhood === 1 ? '1 year' : `${neighbor.yearsInNeighborhood} years`;
+  const memberYear = neighbor.memberSince || (neighbor.yearsInNeighborhood ? new Date().getFullYear() - neighbor.yearsInNeighborhood : new Date().getFullYear());
+  const yearsText = `Member since ${memberYear}`;
 
   card.innerHTML = `
     <div class="neighbor-avatar" style="background:${neighbor.avatar}">
