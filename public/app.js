@@ -1252,7 +1252,13 @@ async function renderProfile(container) {
         <i data-lucide="camera" style="width:14px;height:14px"></i> Change Cover
       </label>
       <div class="profile-avatar-wrap">
-        <div class="profile-avatar" style="background:${user.avatar}">${avatarContent}</div>
+        <label style="cursor:pointer;position:relative;display:block;" title="Change profile photo">
+          <input type="file" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+          <div class="profile-avatar" style="background:${user.avatar}">${avatarContent}</div>
+          <div style="position:absolute;bottom:2px;right:2px;width:26px;height:26px;background:#0077B6;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;">
+            <i data-lucide="camera" style="width:12px;height:12px;color:white;"></i>
+          </div>
+        </label>
       </div>
     </div>
     <div class="profile-info">
@@ -1386,23 +1392,16 @@ function renderSettings(container) {
     <div class="settings-group">
       <div class="settings-group-title">Profile</div>
       <div class="settings-row">
-        <div class="settings-row-info"><div class="settings-row-label">Profile Photo</div><div class="settings-row-sub">Upload a photo — JPG or PNG, max 5MB</div></div>
-        <label style="cursor:pointer;flex-shrink:0;">
-          <input type="file" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
-          <span class="settings-btn">Upload Photo</span>
-        </label>
-      </div>
-      <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Display Name</div><div class="settings-row-sub">${u.name}</div></div>
-        <button class="settings-btn" onclick="showToast('Profile editing available after launch')">Edit</button>
+        <button class="settings-btn" onclick="navigate('profile');openEditProfile()">Edit</button>
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Bio</div><div class="settings-row-sub">${u.bio || 'No bio yet'}</div></div>
-        <button class="settings-btn" onclick="showToast('Profile editing available after launch')">Edit</button>
+        <button class="settings-btn" onclick="navigate('profile');openEditProfile()">Edit</button>
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Address</div><div class="settings-row-sub">${u.address || 'Costa Blanca Villas'}</div></div>
-        <button class="settings-btn" onclick="showToast('Profile editing available after launch')">Edit</button>
+        <button class="settings-btn" onclick="navigate('profile');openEditProfile()">Edit</button>
       </div>
     </div>
 
