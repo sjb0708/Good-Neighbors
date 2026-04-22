@@ -496,6 +496,10 @@
               </div>
             </div>
             <div style="margin-bottom:14px;">
+              <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Email Address</label>
+              <input id="maEmail" type="email" placeholder="e.g. agent@realestate.com" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
+            </div>
+            <div style="margin-bottom:14px;">
               <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Address / Location</label>
               <input id="maAddress" type="text" placeholder="e.g. Costa Blanca Villas, Farallón" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
             </div>
@@ -1125,6 +1129,7 @@
       const role = document.getElementById('maRole').value;
       const username = document.getElementById('maUsername').value.trim();
       const password = document.getElementById('maPassword').value.trim();
+      const email = document.getElementById('maEmail').value.trim();
       const address = document.getElementById('maAddress').value.trim();
       const bio = document.getElementById('maBio').value.trim();
       const errEl = document.getElementById('maError');
@@ -1133,13 +1138,14 @@
       if (!displayName || !username || !password) { errEl.textContent = 'Display name, username, and password are required.'; errEl.style.display = 'block'; return; }
       if (!/^[a-z0-9_-]{3,30}$/.test(username)) { errEl.textContent = 'Username: 3–30 lowercase letters, numbers, hyphens, underscores.'; errEl.style.display = 'block'; return; }
 
-      const res = await fetch('/api/admin/create-account', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName, role, username, password, address, bio }) });
+      const res = await fetch('/api/admin/create-account', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName, role, username, password, email, address, bio }) });
       const data = await res.json();
       if (!res.ok) { errEl.textContent = data.error || 'Error creating account'; errEl.style.display = 'block'; return; }
 
       document.getElementById('maName').value = '';
       document.getElementById('maUsername').value = '';
       document.getElementById('maPassword').value = '';
+      document.getElementById('maEmail').value = '';
       document.getElementById('maAddress').value = '';
       document.getElementById('maBio').value = '';
       showToast(`Account @${data.user.username} created — share credentials securely`);

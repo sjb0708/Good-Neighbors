@@ -822,7 +822,7 @@ app.post('/api/admin/security-alerts', requireAdmin(async (req, res) => {
 // ─── Admin: managed accounts ─────────────────────────────────────────────────
 
 app.post('/api/admin/create-account', requireOwner(async (req, res) => {
-  const { displayName, username, password, role, address, bio } = req.body;
+  const { displayName, username, password, role, address, bio, email } = req.body;
   if (!displayName || !username || !password || !role) return res.status(400).json({ error: 'Missing required fields' });
   if (!['hoa','business','realtor','neighbor'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
 
@@ -835,8 +835,8 @@ app.post('/api/admin/create-account', requireOwner(async (req, res) => {
   const hash     = await bcrypt.hash(password, 12);
 
   const [newUser] = await sql`
-    INSERT INTO users (username, password_hash, role, name, initials, avatar_hex, address, bio, verified, managed_account)
-    VALUES (${username}, ${hash}, ${role}, ${displayName}, ${initials}, ${avatarHex}, ${address||'Costa Blanca Villas, Farallón'}, ${bio||`Official ${role} account.`}, true, true)
+    INSERT INTO users (username, password_hash, role, name, initials, avatar_hex, address, bio, email, verified, managed_account)
+    VALUES (${username}, ${hash}, ${role}, ${displayName}, ${initials}, ${avatarHex}, ${address||'Costa Blanca Villas, Farallón'}, ${bio||`Official ${role} account.`}, ${email||null}, true, true)
     RETURNING *
   `;
   res.json({ ok: true, user: { username, displayName, role, password } });
