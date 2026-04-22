@@ -1554,12 +1554,34 @@ app.get('/api/realestate', async (req, res) => {
 app.post('/api/realestate', requireAuth(async (req, res) => {
   const u = req.currentUser;
   if (u.role !== 'admin' && u.role !== 'realtor') return res.status(403).json({ error: 'Realtor or admin only' });
-  const { title, type, price, image, externalUrl } = req.body;
+  const { title, type, price, externalUrl } = req.body;
   if (!title || !externalUrl) return res.status(400).json({ error: 'Title and URL are required' });
   await sql`ALTER TABLE real_estate_listings ADD COLUMN IF NOT EXISTS external_url TEXT`;
+
+  let imageUrl = null;
+  try {
+    const https = require('https'); const http = require('http');
+    const fetcher = externalUrl.startsWith('https') ? https : http;
+    imageUrl = await new Promise((resolve) => {
+      const req2 = fetcher.get(externalUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (r) => {
+        let html = '';
+        r.setEncoding('utf8');
+        r.on('data', chunk => { html += chunk; if (html.length > 50000) r.destroy(); });
+        r.on('end', () => {
+          const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+                 || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+          resolve(m ? m[1] : null);
+        });
+        r.on('error', () => resolve(null));
+      });
+      req2.on('error', () => resolve(null));
+      req2.setTimeout(5000, () => { req2.destroy(); resolve(null); });
+    });
+  } catch { imageUrl = null; }
+
   const [listing] = await sql`
     INSERT INTO real_estate_listings (type, title, price, image_url, external_url, posted_by_user_id)
-    VALUES (${type||'for_sale'}, ${title}, ${Number(price)||0}, ${image||null}, ${externalUrl}, ${u.id})
+    VALUES (${type||'for_sale'}, ${title}, ${Number(price)||0}, ${imageUrl}, ${externalUrl}, ${u.id})
     RETURNING *
   `;
   res.json({ id: listing.id, type: listing.type, title: listing.title, price: parseFloat(listing.price)||0, image: listing.image_url, externalUrl: listing.external_url, listedAt: listing.created_at });

@@ -3521,7 +3521,7 @@ async function deleteListing(id, btn) {
 }
 
 function openAddListingModal() {
-  ['rlUrl','rlTitle','rlPrice','rlImage'].forEach(id => {
+  ['rlUrl','rlTitle','rlPrice'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -3543,8 +3543,7 @@ async function submitListing() {
         externalUrl: url,
         title,
         type: get('rlType') || 'for_sale',
-        price: Number(get('rlPrice')) || 0,
-        image: get('rlImage') || null
+        price: Number(get('rlPrice')) || 0
       })
     });
     if (!res.ok) throw new Error();
