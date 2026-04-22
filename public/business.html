@@ -691,7 +691,26 @@
     .post-pdf-link:hover { background: rgba(0,119,182,0.12); }
 
     @media (max-width: 860px) {
-      .page { grid-template-columns: 1fr; }
+      .page { grid-template-columns: 1fr; padding: calc(var(--topbar-h) + 16px) 14px 48px; gap: 16px; }
+      .card { padding: 16px; }
+      .logo-name { display: none; }
+      .biz-badge { font-size: 10px; padding: 3px 8px; }
+      .biz-name-topbar { font-size: 13px; }
+      .btn-logout { padding: 6px 12px; font-size: 12px; }
+      .topbar-inner { padding: 0 14px; }
+      .stat-box { padding: 12px 8px; }
+      .stat-val { font-size: 22px; }
+      .stat-label { font-size: 9px; }
+      .compose-tab { font-size: 12px; padding: 7px 10px; }
+      .btn-send { font-size: 14px; padding: 11px 18px; }
+      .post-item { padding: 14px; }
+    }
+
+    @media (max-width: 480px) {
+      .stats-row { gap: 8px; }
+      .biz-profile-header { gap: 10px; }
+      .biz-avatar { width: 44px; height: 44px; font-size: 15px; }
+      .biz-profile-name { font-size: 15px; }
     }
   </style>
 </head>
@@ -1092,7 +1111,7 @@
         const isPromo = p.type === 'promotion';
         const badgeClass = isEvent ? 'badge-event' : isPromo ? 'badge-promotion' : 'badge-announcement';
         const badgeLabel = isEvent ? '🎟️ Event' : isPromo ? '🎉 Promotion' : '📢 Announcement';
-        const eventDateStr = p.eventDate ? new Date(p.eventDate + 'T00:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) : '';
+        const eventDateStr = p.eventDate ? new Date(String(p.eventDate).substring(0,10) + 'T12:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) : '';
         return `
         <div class="post-item">
           <div class="post-meta">
