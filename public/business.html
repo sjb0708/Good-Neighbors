@@ -740,20 +740,32 @@
     <div>
 
       <!-- Business Profile -->
-      <div class="card">
-        <div class="biz-profile-header">
-          <div class="biz-avatar" id="bizAvatar"></div>
-          <div>
-            <div class="biz-profile-name" id="bizName">Loading...</div>
-            <div class="biz-profile-cat" id="bizCategory"></div>
-          </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <!-- Banner -->
+        <div id="bizBannerArea" style="position:relative;height:90px;background:linear-gradient(135deg,#0077B6,#00B4D8);border-radius:12px 12px 0 0;">
+          <label title="Change banner photo" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.45);color:white;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
+            📷 Change Banner
+            <input type="file" accept="image/*" style="display:none;" onchange="uploadDashBanner(this)">
+          </label>
         </div>
-        <div class="biz-profile-desc" id="bizDesc"></div>
-        <div class="biz-detail"><span class="biz-detail-icon">📍</span><span id="bizAddress"></span></div>
-        <div class="biz-detail"><span class="biz-detail-icon">🕐</span><span id="bizHours"></span></div>
-        <div class="biz-detail"><span class="biz-detail-icon">📞</span><span id="bizPhone"></span></div>
-        <div id="bizSocialLinks" style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;"></div>
-        <button class="btn-edit" onclick="openEditModal()">✏️ Edit Profile</button>
+        <!-- Avatar + name row -->
+        <div style="padding:0 16px 16px;margin-top:-32px;position:relative;">
+          <div style="position:relative;display:inline-block;margin-bottom:8px;">
+            <div class="biz-avatar" id="bizAvatar" style="width:64px;height:64px;font-size:22px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.15);"></div>
+            <label title="Change logo" style="position:absolute;bottom:-4px;right:-4px;width:22px;height:22px;background:var(--ocean);border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;color:white;">
+              📷
+              <input type="file" accept="image/*" style="display:none;" onchange="uploadDashLogo(this)">
+            </label>
+          </div>
+          <div class="biz-profile-name" id="bizName" style="margin-top:4px;">Loading...</div>
+          <div class="biz-profile-cat" id="bizCategory"></div>
+          <div class="biz-profile-desc" id="bizDesc"></div>
+          <div class="biz-detail"><span class="biz-detail-icon">📍</span><span id="bizAddress"></span></div>
+          <div class="biz-detail"><span class="biz-detail-icon">🕐</span><span id="bizHours"></span></div>
+          <div class="biz-detail"><span class="biz-detail-icon">📞</span><span id="bizPhone"></span></div>
+          <div id="bizSocialLinks" style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;"></div>
+          <button class="btn-edit" style="margin-top:12px;" onclick="openEditModal()">✏️ Edit Profile</button>
+        </div>
       </div>
 
       <!-- Photos -->
@@ -983,9 +995,18 @@
         bizData.website      ? `<a href="${bizData.website}"      target="_blank" rel="noopener" style="font-size:13px;font-weight:600;color:#0077B6;text-decoration:none;">🌐 Website</a>`      : ''
       ].filter(Boolean).join('');
 
+      const banner = document.getElementById('bizBannerArea');
+      if (banner && bizData.bannerUrl) {
+        banner.style.background = `url(${bizData.bannerUrl}) center/cover no-repeat`;
+      }
       const av = document.getElementById('bizAvatar');
-      av.style.background = '#0077B6';
-      av.textContent = bizData.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      if (bizData.logoUrl) {
+        av.style.background = 'white';
+        av.innerHTML = `<img src="${bizData.logoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+      } else {
+        av.style.background = '#0077B6';
+        av.textContent = bizData.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      }
     }
 
     function renderPhotos() {
@@ -1059,6 +1080,36 @@
         preview.innerHTML = '';
       }
       if (textInput && bizData.menuText) textInput.value = bizData.menuText;
+    }
+
+    async function uploadDashLogo(input) {
+      const file = input.files[0];
+      if (!file || !bizData.id) return;
+      const fd = new FormData();
+      fd.append('logo', file);
+      const res = await fetch(`/api/businesses/${bizData.id}/logo`, { method: 'POST', body: fd, credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        bizData.logoUrl = data.logoUrl;
+        renderProfile();
+        showToast('✅ Logo updated!');
+      } else showToast('Upload failed. Please try again.');
+      input.value = '';
+    }
+
+    async function uploadDashBanner(input) {
+      const file = input.files[0];
+      if (!file || !bizData.id) return;
+      const fd = new FormData();
+      fd.append('banner', file);
+      const res = await fetch(`/api/businesses/${bizData.id}/banner`, { method: 'POST', body: fd, credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        bizData.bannerUrl = data.bannerUrl;
+        renderProfile();
+        showToast('✅ Banner updated!');
+      } else showToast('Upload failed. Please try again.');
+      input.value = '';
     }
 
     async function uploadBizMenu(input) {
