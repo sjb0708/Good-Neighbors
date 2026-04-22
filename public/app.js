@@ -1919,7 +1919,7 @@ function contactSeller(encodedData) {
         </div>
       </div>
       ${seller.phone ? `<a href="tel:${seller.phone}" style="display:flex;align-items:center;gap:8px;padding:11px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;margin-bottom:10px;text-decoration:none;color:#166534;font-weight:700;font-size:14px;">📞 Call ${seller.phone}</a>` : ''}
-      ${seller.username ? `<button onclick="document.getElementById('contactSellerModal').remove();navigate('neighbors')" style="width:100%;padding:11px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;">View in Neighbors</button>` : ''}
+      ${seller.username ? `<button onclick="document.getElementById('contactSellerModal').remove();startConversation('${seller.username}')" style="width:100%;padding:11px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;">💬 Message ${escHtml(seller.name?.split(' ')[0] || 'Seller')}</button>` : ''}
       <button onclick="document.getElementById('contactSellerModal').remove()" style="width:100%;padding:11px;background:var(--bg);color:var(--text-mid);border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">Close</button>
     </div>
   `;
