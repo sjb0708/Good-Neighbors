@@ -997,7 +997,7 @@
 
       const banner = document.getElementById('bizBannerArea');
       if (banner && bizData.bannerUrl) {
-        banner.style.background = `url(${bizData.bannerUrl}) center/cover no-repeat`;
+        banner.style.background = `url("${bizData.bannerUrl}") center/cover no-repeat`;
       }
       const av = document.getElementById('bizAvatar');
       if (bizData.logoUrl) {
