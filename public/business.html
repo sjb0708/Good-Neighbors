@@ -756,15 +756,37 @@
         <button class="btn-edit" onclick="openEditModal()">✏️ Edit Profile</button>
       </div>
 
-      <!-- Photo Gallery Management -->
+      <!-- Photos -->
       <div class="card">
-        <div class="card-title">📷 Photos & Menu</div>
-        <p style="font-size:13px;color:#6B7280;margin:0 0 12px;">Upload photos of your menu, food, or business. They appear in your public Photos tab.</p>
+        <div class="card-title">📷 Business Photos</div>
+        <p style="font-size:13px;color:#6B7280;margin:0 0 12px;">Upload photos of your business, food, or venue. Neighbors will see these in your public Photos tab.</p>
         <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;background:#0077B6;color:#fff;font-size:13px;font-weight:600;padding:8px 16px;border-radius:8px;">
           📤 Upload Photo
           <input type="file" accept="image/*" style="display:none;" onchange="uploadBizPhoto(this)">
         </label>
         <div id="bizPhotosGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;"></div>
+      </div>
+
+      <!-- Menu & Services -->
+      <div class="card">
+        <div class="card-title">📋 Menu & Services</div>
+        <p style="font-size:13px;color:#6B7280;margin:0 0 14px;">Upload your menu or service price list. Neighbors can view it directly on your business page.</p>
+
+        <!-- Upload option -->
+        <div style="margin-bottom:14px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Option 1 — Upload a photo or PDF</div>
+          <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;background:#3A7D44;color:#fff;font-size:13px;font-weight:600;padding:8px 16px;border-radius:8px;">
+            📎 Upload Menu / PDF
+            <input type="file" accept="image/*,application/pdf" style="display:none;" onchange="uploadBizMenu(this)">
+          </label>
+          <div id="menuFilePreview" style="margin-top:10px;"></div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);padding-top:14px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Option 2 — Type your prices or services</div>
+          <textarea id="menuTextInput" rows="5" placeholder="e.g.&#10;Ceviche — $8&#10;Fish Tacos — $10&#10;Cold Beer — $2&#10;Happy Hour 4–7pm daily" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;resize:vertical;outline:none;"></textarea>
+          <button onclick="saveMenuText()" style="margin-top:8px;padding:8px 20px;background:var(--ocean);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Save Price List</button>
+        </div>
       </div>
 
       <!-- Stats -->
@@ -937,6 +959,7 @@
       bizData = await res.json();
       renderProfile();
       renderPhotos();
+      renderMenu();
       renderStats();
       renderReviews();
       await loadPosts();
@@ -1014,6 +1037,71 @@
         bizData.photos = data.photos;
         renderPhotos();
       }
+    }
+
+    function renderMenu() {
+      const preview = document.getElementById('menuFilePreview');
+      const textInput = document.getElementById('menuTextInput');
+      if (preview && bizData.menuUrl) {
+        const isPdf = bizData.menuUrl.match(/\.pdf($|\?)/i);
+        preview.innerHTML = isPdf
+          ? `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;">
+               <span style="font-size:22px;">📄</span>
+               <div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#166534;">Menu PDF uploaded</div><div style="font-size:12px;color:#6B7280;">Neighbors can open and view it</div></div>
+               <a href="${bizData.menuUrl}" target="_blank" style="font-size:12px;font-weight:600;color:var(--ocean);">View</a>
+               <button onclick="deleteMenu()" style="background:none;border:none;color:#EF4444;font-size:18px;cursor:pointer;padding:0;">×</button>
+             </div>`
+          : `<div style="position:relative;display:inline-block;">
+               <img src="${bizData.menuUrl}" style="max-height:140px;border-radius:10px;object-fit:cover;" onclick="window.open('${bizData.menuUrl}','_blank')">
+               <button onclick="deleteMenu()" style="position:absolute;top:-6px;right:-6px;background:#EF4444;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;cursor:pointer;">×</button>
+             </div>`;
+      } else if (preview) {
+        preview.innerHTML = '';
+      }
+      if (textInput && bizData.menuText) textInput.value = bizData.menuText;
+    }
+
+    async function uploadBizMenu(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const res = await fetch('/api/business/menu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ file: e.target.result, filename: file.name })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          bizData.menuUrl = data.menuUrl;
+          renderMenu();
+          showToast('✅ Menu uploaded!');
+        } else {
+          showToast('Upload failed. Please try again.');
+        }
+      };
+      reader.readAsDataURL(file);
+      input.value = '';
+    }
+
+    async function saveMenuText() {
+      const text = document.getElementById('menuTextInput')?.value.trim();
+      const res = await fetch('/api/business/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ text })
+      });
+      if (res.ok) {
+        bizData.menuText = text;
+        showToast('✅ Price list saved!');
+      }
+    }
+
+    async function deleteMenu() {
+      const res = await fetch('/api/business/menu', { method: 'DELETE', credentials: 'include' });
+      if (res.ok) { bizData.menuUrl = null; renderMenu(); showToast('Menu removed.'); }
     }
 
     function renderStats() {

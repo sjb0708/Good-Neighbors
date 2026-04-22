@@ -2341,6 +2341,7 @@ async function renderBusinessPage(bizId, container) {
           <button class="biz-tab active" onclick="switchBizTab('overview')">Overview</button>
           <button class="biz-tab" onclick="switchBizTab('reviews')">Reviews (${reviews.length})</button>
           <button class="biz-tab" onclick="switchBizTab('photos')">Photos</button>
+          ${biz.menuUrl || biz.menuText ? `<button class="biz-tab" onclick="switchBizTab('menu')">Menu</button>` : ''}
           <button class="biz-tab" onclick="switchBizTab('posts')">Posts${bizPosts.length ? ` (${bizPosts.length})` : ''}</button>
           <button class="biz-tab" onclick="switchBizTab('promotions')">Promotions</button>
         </div>
@@ -2479,6 +2480,29 @@ async function renderBusinessPage(bizId, container) {
           })()}
         </div>
 
+        <!-- Menu tab (hidden) -->
+        <div id="bizTab-menu" style="display:none;">
+          ${biz.menuUrl ? (() => {
+            const isPdf = biz.menuUrl.match(/\.pdf($|\?)/i);
+            return isPdf
+              ? `<div style="background:white;border:1px solid var(--border);border-radius:14px;padding:24px;text-align:center;">
+                   <div style="font-size:40px;margin-bottom:12px;">📄</div>
+                   <div style="font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Menu / Price List</div>
+                   <div style="font-size:13px;color:var(--text-light);margin-bottom:16px;">Click below to open the full menu</div>
+                   <a href="${escHtml(biz.menuUrl)}" target="_blank" rel="noopener" style="display:inline-block;padding:10px 28px;background:var(--ocean);color:white;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;">📄 Open Menu PDF</a>
+                 </div>`
+              : `<div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+                   <img src="${escHtml(biz.menuUrl)}" style="width:100%;display:block;" onclick="window.open('${escHtml(biz.menuUrl)}','_blank')" loading="lazy">
+                 </div>`;
+          })() : ''}
+          ${biz.menuText ? `
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:22px 24px;margin-top:${biz.menuUrl ? '14px' : '0'};">
+            <div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;">Prices & Services</div>
+            <pre style="font-size:14px;color:var(--text-dark);line-height:1.8;white-space:pre-wrap;font-family:inherit;margin:0;">${escHtml(biz.menuText)}</pre>
+          </div>` : ''}
+          ${!biz.menuUrl && !biz.menuText ? '<div style="background:white;border:1px solid var(--border);border-radius:14px;padding:40px;text-align:center;color:var(--text-light);font-size:14px;">No menu posted yet.</div>' : ''}
+        </div>
+
         <!-- Posts tab (hidden) -->
         <div id="bizTab-posts" style="display:none;">
           ${bizPosts.length === 0
@@ -2590,7 +2614,7 @@ async function uploadBizLogo(bizId, input) {
 }
 
 function switchBizTab(tabName) {
-  ['overview','reviews','photos','posts','promotions'].forEach(t => {
+  ['overview','reviews','photos','menu','posts','promotions'].forEach(t => {
     const el = document.getElementById(`bizTab-${t}`);
     if (el) el.style.display = t === tabName ? 'block' : 'none';
   });

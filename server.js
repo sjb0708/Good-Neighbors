@@ -1227,6 +1227,7 @@ function formatBusiness(b) {
     reviewCount: b.review_count||0, recommendedBy: b.recommended_by||0,
     claimed: b.claimed,
     bannerUrl: b.banner_url||null, logoUrl: b.logo_url||null,
+    menuUrl: b.menu_url||null, menuText: b.menu_text||null,
     addedByUserId: b.added_by_user_id||null, claimedByUserId: b.claimed_by_user_id||null,
   };
 }
@@ -1506,6 +1507,28 @@ app.delete('/api/business/photos/:index', requireAuth(async (req, res) => {
   const photos = (biz?.photos || []).filter((_, i) => i !== idx);
   await sql`UPDATE businesses SET photos=${JSON.stringify(photos)}::jsonb WHERE id=${u.business_id}`;
   res.json({ photos });
+}));
+
+app.post('/api/business/menu', requireAuth(async (req, res) => {
+  const u = req.currentUser;
+  if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS menu_url TEXT`;
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS menu_text TEXT`;
+  const { file, filename, text } = req.body;
+  let menuUrl = undefined;
+  if (file) menuUrl = await storeImage(file, 'menus');
+  const updates = [];
+  if (menuUrl !== undefined) await sql`UPDATE businesses SET menu_url=${menuUrl} WHERE id=${u.business_id}`;
+  if (text !== undefined) await sql`UPDATE businesses SET menu_text=${text||null} WHERE id=${u.business_id}`;
+  const [biz] = await sql`SELECT menu_url, menu_text FROM businesses WHERE id=${u.business_id}`;
+  res.json({ menuUrl: biz.menu_url||null, menuText: biz.menu_text||null });
+}));
+
+app.delete('/api/business/menu', requireAuth(async (req, res) => {
+  const u = req.currentUser;
+  if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
+  await sql`UPDATE businesses SET menu_url=NULL WHERE id=${u.business_id}`;
+  res.json({ ok: true });
 }));
 
 app.get('/api/business/posts', requireAuth(async (req, res) => {
