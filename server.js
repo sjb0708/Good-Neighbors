@@ -1600,6 +1600,28 @@ app.delete('/api/realestate/:id', requireAuth(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ─── Global Search ────────────────────────────────────────────────────────────
+
+app.get('/api/search', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q || q.length < 2) return res.json({ posts: [], businesses: [], events: [], neighbors: [] });
+  const like = `%${q}%`;
+  try {
+    const [posts, businesses, events, neighbors] = await Promise.all([
+      sql`SELECT id, content FROM posts WHERE content ILIKE ${like} ORDER BY created_at DESC LIMIT 5`,
+      sql`SELECT id, name, category FROM businesses WHERE name ILIKE ${like} OR category ILIKE ${like} ORDER BY name LIMIT 5`,
+      sql`SELECT id, title FROM events WHERE title ILIKE ${like} ORDER BY date DESC LIMIT 5`,
+      sql`SELECT id, name FROM users WHERE name ILIKE ${like} AND role='resident' ORDER BY name LIMIT 5`,
+    ]);
+    res.json({
+      posts: posts.map(r => ({ id: r.id, content: r.content?.substring(0, 80) })),
+      businesses: businesses.map(r => ({ id: r.id, name: r.name, category: r.category })),
+      events: events.map(r => ({ id: r.id, title: r.title })),
+      neighbors: neighbors.map(r => ({ id: r.id, name: r.name })),
+    });
+  } catch (err) { console.error(err); res.json({ posts: [], businesses: [], events: [], neighbors: [] }); }
+});
+
 // ─── Groups ───────────────────────────────────────────────────────────────────
 
 async function formatGroupRow(g, userId, isAdminUser) {

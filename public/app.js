@@ -4055,9 +4055,79 @@ document.addEventListener('keydown', (e) => {
     closeModal('postDetailModal');
     closeModal('eventDetailModal');
     closeDropdowns();
+    closeSearchDropdown();
   }
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
     e.preventDefault();
     document.getElementById('searchInput')?.focus();
   }
 });
+
+// ─── Global Search ────────────────────────────────────────────────
+let searchDebounce = null;
+let searchDropdownEl = null;
+
+function closeSearchDropdown() {
+  if (searchDropdownEl) { searchDropdownEl.remove(); searchDropdownEl = null; }
+}
+
+const searchInput = document.getElementById('searchInput');
+if (searchInput) {
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchDebounce);
+    const q = searchInput.value.trim();
+    if (!q) { closeSearchDropdown(); return; }
+    searchDebounce = setTimeout(() => runSearch(q), 300);
+  });
+  searchInput.addEventListener('blur', () => setTimeout(closeSearchDropdown, 200));
+}
+
+async function runSearch(q) {
+  const results = await fetchJSON(`/api/search?q=${encodeURIComponent(q)}`);
+  if (!results) return;
+  renderSearchDropdown(results, q);
+}
+
+function renderSearchDropdown(results, q) {
+  closeSearchDropdown();
+  const bar = document.getElementById('searchInput');
+  if (!bar) return;
+  const wrap = bar.closest('.search-bar') || bar.parentElement;
+  const rect = wrap.getBoundingClientRect();
+
+  const drop = document.createElement('div');
+  drop.style.cssText = `position:fixed;top:${rect.bottom + 6}px;left:${rect.left}px;width:${Math.max(rect.width, 340)}px;background:white;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:9999;overflow:hidden;max-height:420px;overflow-y:auto;`;
+  searchDropdownEl = drop;
+
+  const all = [
+    ...results.posts.map(r => ({ ...r, _type: 'post', _section: 'feed' })),
+    ...results.businesses.map(r => ({ ...r, _type: 'business', _section: 'businesses' })),
+    ...results.events.map(r => ({ ...r, _type: 'event', _section: 'events' })),
+    ...results.neighbors.map(r => ({ ...r, _type: 'neighbor', _section: 'neighbors' })),
+  ];
+
+  if (!all.length) {
+    drop.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-light);font-size:14px;">No results for "${escHtml(q)}"</div>`;
+  } else {
+    const icons = { post: '📝', business: '🏪', event: '📅', neighbor: '👤' };
+    const labels = { post: 'Post', business: 'Business', event: 'Event', neighbor: 'Neighbor' };
+    drop.innerHTML = all.map(r => `
+      <div data-section="${r._section}" data-id="${r.id || ''}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border);" onmousedown="searchGoTo('${r._section}','${r.id||''}')">
+        <span style="font-size:20px;">${icons[r._type]}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(r.title || r.name || r.content || '')}</div>
+          <div style="font-size:12px;color:var(--text-light);margin-top:1px;">${labels[r._type]}${r.category ? ' · ' + escHtml(r.category) : ''}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  document.body.appendChild(drop);
+}
+
+function searchGoTo(section, id) {
+  closeSearchDropdown();
+  const si = document.getElementById('searchInput');
+  if (si) si.value = '';
+  navigate(section);
+}
