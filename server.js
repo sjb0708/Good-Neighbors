@@ -906,6 +906,10 @@ app.get('/api/posts', async (req, res) => {
     const userId  = user?.id || null;
     const section = req.query.section || 'feed';
 
+    if (section === 'marketplace' || section === 'safety') {
+      await sql`DELETE FROM posts WHERE section=${section} AND created_at < NOW() - INTERVAL '90 days'`;
+    }
+
     let posts;
     if (section === 'feed') {
       posts = await fetchPostsWithMeta(`WHERE (p.section = 'feed' OR p.section IS NULL)`, userId);
