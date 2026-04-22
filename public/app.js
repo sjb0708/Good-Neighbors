@@ -1271,7 +1271,7 @@ async function renderProfile(container) {
   if (!user) return;
 
   const bannerStyle = user.bannerUrl
-    ? `background:url("${user.bannerUrl}") center/cover no-repeat`
+    ? `background:url('${user.bannerUrl}') center/cover no-repeat`
     : `background:linear-gradient(135deg,var(--ocean),var(--seafoam))`;
   const avatarContent = user.avatarUrl
     ? `<img src="${user.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
@@ -2322,7 +2322,7 @@ async function renderBusinessPage(bizId, container) {
     <!-- Header card -->
     <div class="biz-page-header-card" style="flex-direction:column;padding:0;overflow:hidden;">
       <!-- Banner -->
-      <div style="position:relative;height:140px;background:${biz.bannerUrl ? `url("${biz.bannerUrl}") center/cover no-repeat` : 'linear-gradient(135deg,var(--ocean),var(--seafoam))'};flex-shrink:0;">
+      <div style="position:relative;height:140px;background:${biz.bannerUrl ? `url('${biz.bannerUrl}') center/cover no-repeat` : 'linear-gradient(135deg,var(--ocean),var(--seafoam))'};flex-shrink:0;">
         ${isPageOwner ? `<label title="Change banner" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.45);color:white;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;"><input type="file" accept="image/*" style="display:none" onchange="uploadBizBanner('${biz.id}',this)">📷 Banner</label>` : ''}
       </div>
       <!-- Logo overlapping banner -->
