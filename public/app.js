@@ -299,8 +299,20 @@ function renderUserUI() {
 
   // Sidebar
   const sidebarAv = document.getElementById('sidebarAvatar');
-  if (sidebarAv) sidebarAv.style.background = currentUser.avatar;
-  setTextSafe('sidebarInitials', currentUser.initials);
+  if (sidebarAv) {
+    sidebarAv.style.background = currentUser.avatar;
+    const sidebarInit = document.getElementById('sidebarInitials');
+    if (currentUser.avatarUrl) {
+      sidebarAv.style.backgroundImage = `url(${currentUser.avatarUrl})`;
+      sidebarAv.style.backgroundSize = 'cover';
+      sidebarAv.style.backgroundPosition = 'center';
+      if (sidebarInit) sidebarInit.style.display = 'none';
+    } else {
+      sidebarAv.style.backgroundImage = '';
+      if (sidebarInit) sidebarInit.style.display = '';
+    }
+  }
+  setTextSafe('sidebarInitials', currentUser.avatarUrl ? '' : currentUser.initials);
   setTextSafe('sidebarName', currentUser.name);
   setTextSafe('sidebarPoints', currentUser.points);
 
