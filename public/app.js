@@ -4054,7 +4054,8 @@ function openImageCropper(file, { aspectRatio, circular, onCrop }) {
       const ctx = out.getContext('2d');
       const scaleUp = OUTPUT / PREVIEW_W;
       ctx.drawImage(img, ox * scaleUp, oy * scaleUp, img.naturalWidth * scale * scaleUp, img.naturalHeight * scale * scaleUp);
-      out.toBlob(blob => { URL.revokeObjectURL(url); overlay.remove(); onCrop(blob); }, 'image/jpeg', 0.92);
+      const dataUrl = out.toDataURL('image/jpeg', 0.88);
+      URL.revokeObjectURL(url); overlay.remove(); onCrop(dataUrl);
     };
   };
   img.src = url;
@@ -4062,13 +4063,11 @@ function openImageCropper(file, { aspectRatio, circular, onCrop }) {
 
 async function uploadAvatar(input) {
   if (!input.files || !input.files[0]) return;
-  openImageCropper(input.files[0], { aspectRatio: 1, circular: true, onCrop: async (blob) => {
-    if (!blob) { showToast('Could not process image — try a different file'); return; }
-    const formData = new FormData();
-    formData.append('avatar', blob, 'avatar.jpg');
+  openImageCropper(input.files[0], { aspectRatio: 1, circular: true, onCrop: async (dataUrl) => {
+    if (!dataUrl) { showToast('Could not process image — try a different file'); return; }
     showToast('Uploading…');
     try {
-      const res = await fetch('/api/profile/avatar', { method: 'POST', body: formData, credentials: 'include' });
+      const res = await fetch('/api/profile/avatar', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) });
       if (!res.ok) { const d = await res.json().catch(() => ({})); showToast(d.error || `Upload failed (${res.status})`); return; }
       const { avatarUrl } = await res.json();
       currentUser.avatarUrl = avatarUrl;
@@ -4080,19 +4079,18 @@ async function uploadAvatar(input) {
 
 async function uploadBanner(input) {
   if (!input.files || !input.files[0]) return;
-  openImageCropper(input.files[0], { aspectRatio: 4, circular: false, onCrop: async (blob) => {
-    const formData = new FormData();
-    formData.append('banner', blob, 'banner.jpg');
+  openImageCropper(input.files[0], { aspectRatio: 4, circular: false, onCrop: async (dataUrl) => {
+    if (!dataUrl) { showToast('Could not process image — try a different file'); return; }
     showToast('Uploading…');
     try {
-      const res = await fetch('/api/profile/banner', { method: 'POST', body: formData, credentials: 'include' });
-      if (!res.ok) throw new Error();
+      const res = await fetch('/api/profile/banner', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); showToast(d.error || `Upload failed (${res.status})`); return; }
       const { bannerUrl } = await res.json();
       currentUser.bannerUrl = bannerUrl;
       const banner = document.getElementById('profileBanner');
       if (banner) { banner.style.background = `url(${bannerUrl}) center/cover no-repeat`; }
       showToast('Cover photo updated! ✓');
-    } catch { showToast('Upload failed — try a smaller image'); }
+    } catch (e) { showToast('Upload failed — ' + (e.message || 'network error')); }
   }});
 }
 

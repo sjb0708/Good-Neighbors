@@ -1992,33 +1992,37 @@ app.delete('/api/transport/fares/:id', requireAuth(async (req, res) => {
   res.json({ ok: true });
 }));
 
-app.post('/api/profile/avatar', upload.single('avatar'), requireAuth(async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file' });
-  const u    = req.currentUser;
+app.post('/api/profile/avatar', requireAuth(async (req, res) => {
+  const { dataUrl } = req.body;
+  if (!dataUrl) return res.status(400).json({ error: 'No image data' });
+  const u = req.currentUser;
   let avatarUrl;
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     const { put } = require('@vercel/blob');
-    const ext  = req.file.mimetype.split('/')[1] || 'jpg';
-    const blob = await put(`avatars/${u.id}-${Date.now()}.${ext}`, req.file.buffer, { access: 'public', contentType: req.file.mimetype });
-    avatarUrl  = blob.url;
+    const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64, 'base64');
+    const blob = await put(`avatars/${u.id}-${Date.now()}.jpg`, buffer, { access: 'public', contentType: 'image/jpeg' });
+    avatarUrl = blob.url;
   } else {
-    avatarUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    avatarUrl = dataUrl;
   }
   await sql`UPDATE users SET avatar_url=${avatarUrl} WHERE id=${u.id}`;
   res.json({ avatarUrl });
 }));
 
-app.post('/api/profile/banner', uploadBanner.single('banner'), requireAuth(async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file' });
-  const u    = req.currentUser;
+app.post('/api/profile/banner', requireAuth(async (req, res) => {
+  const { dataUrl } = req.body;
+  if (!dataUrl) return res.status(400).json({ error: 'No image data' });
+  const u = req.currentUser;
   let bannerUrl;
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     const { put } = require('@vercel/blob');
-    const ext  = req.file.mimetype.split('/')[1] || 'jpg';
-    const blob = await put(`banners/${u.id}-${Date.now()}.${ext}`, req.file.buffer, { access: 'public', contentType: req.file.mimetype });
-    bannerUrl  = blob.url;
+    const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64, 'base64');
+    const blob = await put(`banners/${u.id}-${Date.now()}.jpg`, buffer, { access: 'public', contentType: 'image/jpeg' });
+    bannerUrl = blob.url;
   } else {
-    bannerUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    bannerUrl = dataUrl;
   }
   await sql`UPDATE users SET banner_url=${bannerUrl} WHERE id=${u.id}`;
   res.json({ bannerUrl });
