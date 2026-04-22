@@ -1555,8 +1555,6 @@ function buildPostCard(post) {
           <i data-lucide="share-2" style="width:15px;height:15px"></i>
           Share
         </button>
-        ${canResolve ? `<button onclick="resolveAlert('${post.id}')" style="margin-left:auto;padding:6px 14px;background:#2A9D8F;color:white;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">✅ Mark Resolved</button>` : ''}
-        ${post.severity === 'resolved' && post.resolvedBy ? `<span style="margin-left:auto;font-size:11.5px;color:#2A9D8F;font-weight:600;">✅ Resolved by ${escHtml(post.resolvedBy)}</span>` : ''}
         ${(currentUser && (post.author?.id === currentUser.id || currentUser.role === 'admin')) ? `<button onclick="deletePost('${post.id}')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-light);font-size:12px;padding:4px 8px;border-radius:6px;" title="Delete post">🗑</button>` : ''}
       </div>
     </div>
