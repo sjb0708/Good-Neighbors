@@ -1234,7 +1234,8 @@ function formatBusiness(b) {
     photos: b.photos||[], tags: b.tags||[], rating: parseFloat(b.rating)||0,
     reviewCount: b.review_count||0, recommendedBy: b.recommended_by||0,
     claimed: b.claimed,
-    bannerUrl: b.banner_url||null, logoUrl: b.logo_url||null,
+    bannerUrl: b.banner_url ? (b.banner_url.startsWith('data:') ? `/api/businesses/${b.id}/banner-image` : b.banner_url) : null,
+    logoUrl: b.logo_url ? (b.logo_url.startsWith('data:') ? `/api/businesses/${b.id}/logo-image` : b.logo_url) : null,
     menuUrl: b.menu_url||null, menuText: b.menu_text||null,
     addedByUserId: b.added_by_user_id||null, claimedByUserId: b.claimed_by_user_id||null,
   };
@@ -1356,6 +1357,24 @@ app.get('/api/businesses/:id/banner-check', async (req, res) => {
   const [biz] = await sql`SELECT id, name, banner_url FROM businesses WHERE id=${req.params.id}`;
   if (!biz) return res.status(404).json({ error: 'Not found' });
   res.json({ id: biz.id, name: biz.name, hasBanner: !!biz.banner_url, bannerLength: biz.banner_url ? biz.banner_url.length : 0 });
+});
+
+app.get('/api/businesses/:id/banner-image', async (req, res) => {
+  const [biz] = await sql`SELECT banner_url FROM businesses WHERE id=${req.params.id}`;
+  if (!biz?.banner_url) return res.status(404).end();
+  if (!biz.banner_url.startsWith('data:')) return res.redirect(biz.banner_url);
+  const [header, data] = biz.banner_url.split(',');
+  const mime = (header.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
+  res.set('Content-Type', mime).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(data, 'base64'));
+});
+
+app.get('/api/businesses/:id/logo-image', async (req, res) => {
+  const [biz] = await sql`SELECT logo_url FROM businesses WHERE id=${req.params.id}`;
+  if (!biz?.logo_url) return res.status(404).end();
+  if (!biz.logo_url.startsWith('data:')) return res.redirect(biz.logo_url);
+  const [header, data] = biz.logo_url.split(',');
+  const mime = (header.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
+  res.set('Content-Type', mime).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(data, 'base64'));
 });
 
 app.get('/api/businesses/:id', async (req, res) => {
