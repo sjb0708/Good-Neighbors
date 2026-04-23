@@ -1002,6 +1002,7 @@ const BIZ_CATEGORIES = [
   { label: 'Relocation',      icon: '🚚' },
   { label: 'Veterans',        icon: '🎖️' },
   { label: 'LEO/Fire/EMS',    icon: '🚨' },
+  { label: 'Delivery Service', icon: '📦' },
   { label: 'Fresh Market',    icon: '🥦' },
   { label: 'Fish Market',     icon: '🐟' },
   { label: 'Other',           icon: '📌' },
