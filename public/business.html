@@ -966,17 +966,21 @@
     let postFileDataUrl = null;
 
     async function init() {
-      const res = await fetch('/api/business/me', { credentials: 'include' });
-      if (!res.ok) { window.location.href = '/login'; return; }
-      bizData = await res.json();
-      renderProfile();
-      renderPhotos();
-      renderMenu();
-      renderStats();
-      renderReviews();
-      await loadPosts();
-      // Always show the claim card as a secondary option
-      document.getElementById('claimListingCard').style.display = '';
+      try {
+        const res = await fetch('/api/business/me', { credentials: 'include' });
+        if (!res.ok) { window.location.href = '/login'; return; }
+        bizData = await res.json();
+        renderProfile();
+        renderPhotos();
+        renderMenu();
+        renderStats();
+        renderReviews();
+        await loadPosts();
+        document.getElementById('claimListingCard').style.display = '';
+      } catch (err) {
+        console.error('Dashboard init failed:', err);
+        document.getElementById('bizName').textContent = 'Failed to load — please refresh';
+      }
     }
 
     function renderProfile() {
@@ -1139,7 +1143,6 @@
         const data = await res.json();
         if (res.ok) { bizData.bannerUrl = data.bannerUrl; renderProfile(); showToast('✅ Banner saved!'); }
         else { showToast('❌ Banner failed: ' + (data.error || res.status)); }
-        else showToast('Upload failed. Please try again.');
       }});
     }
 

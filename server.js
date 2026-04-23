@@ -106,7 +106,7 @@ function formatPost(row, reactionRows, commentCountMap, userReactionMap, pollVot
     isPinned:       row.is_pinned        || false,
   };
 
-  if (row.image_url)   post.image    = row.image_url;
+  if (row.image_url)   post.image    = row.image_url && row.image_url.startsWith('data:') ? `/api/posts/${row.id}/image` : row.image_url;
   if (row.location)    post.location = row.location;
   if (row.business_id) post.businessId = row.business_id;
   if (row.alert_type)  post.alertType  = row.alert_type;
@@ -1030,6 +1030,15 @@ app.post('/api/posts', requireAuth(async (req, res) => {
   res.json(fullPost[0] || post);
 }));
 
+app.get('/api/posts/:id/image', async (req, res) => {
+  const [post] = await sql`SELECT image_url FROM posts WHERE id=${req.params.id}`;
+  if (!post?.image_url) return res.status(404).end();
+  if (!post.image_url.startsWith('data:')) return res.redirect(post.image_url);
+  const [header, data] = post.image_url.split(',');
+  const mime = (header.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
+  res.set('Content-Type', mime).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(data, 'base64'));
+});
+
 app.delete('/api/posts/:id', requireAuth(async (req, res) => {
   const [post] = await sql`SELECT author_id FROM posts WHERE id=${req.params.id}`;
   if (!post) return res.status(404).json({ error: 'Not found' });
@@ -1299,7 +1308,8 @@ app.post('/api/businesses/:id/banner', requireAuth(async (req, res) => {
   }
   const url = await storeImage(dataUrl, 'biz-banner');
   await sql`UPDATE businesses SET banner_url=${url} WHERE id=${req.params.id}`;
-  res.json({ ok: true, bannerUrl: url });
+  const bannerUrl = url && url.startsWith('data:') ? `/api/businesses/${req.params.id}/banner-image` : url;
+  res.json({ ok: true, bannerUrl });
 }));
 
 app.post('/api/businesses/:id/logo', requireAuth(async (req, res) => {
@@ -1318,7 +1328,8 @@ app.post('/api/businesses/:id/logo', requireAuth(async (req, res) => {
   }
   const url = await storeImage(dataUrl, 'biz-logo');
   await sql`UPDATE businesses SET logo_url=${url} WHERE id=${req.params.id}`;
-  res.json({ ok: true, logoUrl: url });
+  const logoUrl = url && url.startsWith('data:') ? `/api/businesses/${req.params.id}/logo-image` : url;
+  res.json({ ok: true, logoUrl });
 }));
 
 app.get('/api/my-business', requireAuth(async (req, res) => {
