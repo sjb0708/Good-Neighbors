@@ -278,10 +278,10 @@ app.post('/api/auth/logout', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
-app.get('/logout', (req, res) => {
+app.get('/logout', async (req, res) => {
   const token = req.signedCookies?.user;
-  if (token) sql`DELETE FROM sessions WHERE token = ${token}`.catch(() => {});
-  res.clearCookie('user');
+  if (token) { try { await sql`DELETE FROM sessions WHERE token = ${token}`; } catch(e) {} }
+  res.clearCookie('user', { httpOnly: true, signed: true, sameSite: 'lax', path: '/' });
   res.redirect('/login');
 });
 
