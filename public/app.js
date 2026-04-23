@@ -2327,7 +2327,7 @@ async function renderBusinessPage(bizId, container) {
     <button class="group-back-btn" onclick="navigate('businesses')">← Back to Businesses</button>
 
     <!-- Header card -->
-    <div class="biz-page-header-card" style="flex-direction:column;padding:0;overflow:hidden;">
+    <div class="biz-page-header-card" style="flex-direction:column;padding:0;overflow:visible;">
       <!-- Banner -->
       <div class="biz-banner-area" style="position:relative;height:140px;overflow:hidden;flex-shrink:0;background:#0077B6;">
         ${isPageOwner ? `<label title="Change banner" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.45);color:white;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;z-index:1;"><input type="file" accept="image/*" style="display:none" onchange="uploadBizBanner('${biz.id}',this)">📷 Banner</label>` : ''}
