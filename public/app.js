@@ -4467,16 +4467,6 @@ function loadFRMyInfo() {
           `).join('')}
         </div>
       </div>
-
-      <!-- Safety Alert CTA -->
-      <div style="background:#fff8f0;border:1.5px solid #f97316;border-radius:16px;padding:18px 22px;display:flex;align-items:center;gap:16px;">
-        <span style="font-size:32px;flex-shrink:0;">🚨</span>
-        <div style="flex:1;">
-          <div style="font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:2px;">See something? Alert your neighbors.</div>
-          <div style="font-size:13px;color:var(--text-mid);">Post a safety alert instantly to everyone in the community.</div>
-        </div>
-        <button onclick="navigate('safety')" style="padding:10px 16px;background:#f97316;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Post Alert</button>
-      </div>
     </div>
   `;
   lucide.createIcons();
