@@ -966,17 +966,9 @@
     let postFileDataUrl = null;
 
     async function init() {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
-        const res = await fetch('/api/business/me', { credentials: 'include', signal: controller.signal });
-        clearTimeout(timeout);
-        if (!res.ok) { window.location.href = '/login'; return; }
-        bizData = await res.json();
-      } catch(e) {
-        document.getElementById('bizName').textContent = 'Server unavailable — please refresh or sign out';
-        return;
-      }
+      const res = await fetch('/api/business/me', { credentials: 'include' });
+      if (!res.ok) { window.location.href = '/login'; return; }
+      bizData = await res.json();
       renderProfile();
       renderPhotos();
       renderMenu();
@@ -1005,7 +997,7 @@
 
       const banner = document.getElementById('bizBannerArea');
       if (banner && bizData.bannerUrl) {
-        banner.innerHTML = `<img src="${bizData.bannerUrl}" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+        banner.style.background = `url("${bizData.bannerUrl}") center/cover no-repeat`;
       }
       const av = document.getElementById('bizAvatar');
       if (bizData.logoUrl) {
@@ -1562,8 +1554,8 @@
       if (btn) btn.textContent = sel.value === 'es' ? '🌐 EN' : '🌐 ES';
     }
 
-    function logout() {
-      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
       window.location.href = '/login';
     }
 

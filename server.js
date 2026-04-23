@@ -72,7 +72,6 @@ function formatAuthor(row) {
     username: row.author_username || row.username,
     name: row.author_name || row.name,
     avatar: row.author_avatar || row.avatar_hex,
-    avatarUrl: row.author_avatar_url || row.avatar_url || undefined,
     initials: row.author_initials || row.initials,
     verified: row.author_verified !== undefined ? row.author_verified : row.verified,
     address: row.author_address || row.address || undefined,
@@ -137,7 +136,6 @@ async function fetchPostsWithMeta(whereSql, userId) {
       u.username  AS author_username,
       u.name      AS author_name,
       u.avatar_hex AS author_avatar,
-      u.avatar_url AS author_avatar_url,
       u.initials  AS author_initials,
       u.verified  AS author_verified,
       u.address   AS author_address,
@@ -1222,13 +1220,6 @@ async function getBizFaveData(bizId, userId) {
 }
 
 function formatBusiness(b) {
-  // If image is stored as base64, serve via dedicated endpoint to keep API responses small
-  const bannerUrl = b.banner_url
-    ? (b.banner_url.startsWith('data:') ? `/api/businesses/${b.id}/banner-image` : b.banner_url)
-    : null;
-  const logoUrl = b.logo_url
-    ? (b.logo_url.startsWith('data:') ? `/api/businesses/${b.id}/logo-image` : b.logo_url)
-    : null;
   return {
     id: b.id, name: b.name, category: b.category, description: b.description,
     address: b.address, phone: b.phone, hours: b.hours, website: b.website,
@@ -1236,7 +1227,7 @@ function formatBusiness(b) {
     photos: b.photos||[], tags: b.tags||[], rating: parseFloat(b.rating)||0,
     reviewCount: b.review_count||0, recommendedBy: b.recommended_by||0,
     claimed: b.claimed,
-    bannerUrl, logoUrl,
+    bannerUrl: b.banner_url||null, logoUrl: b.logo_url||null,
     menuUrl: b.menu_url||null, menuText: b.menu_text||null,
     addedByUserId: b.added_by_user_id||null, claimedByUserId: b.claimed_by_user_id||null,
   };
@@ -1264,17 +1255,6 @@ app.post('/api/admin/businesses', requireAdmin(async (req, res) => {
     RETURNING *
   `;
   res.json({ ok: true, business: formatBusiness(biz) });
-}));
-
-app.get('/api/admin/backfill-biz-avatars', requireAdmin(async (req, res) => {
-  const bizs = await sql`SELECT id, logo_url FROM businesses WHERE logo_url IS NOT NULL`;
-  let updated = 0;
-  for (const b of bizs) {
-    const avatarUrl = b.logo_url.startsWith('data:') ? `/api/businesses/${b.id}/logo-image` : b.logo_url;
-    await sql`UPDATE users SET avatar_url=${avatarUrl} WHERE business_id=${b.id} AND (avatar_url IS NULL OR avatar_url LIKE 'data:%')`;
-    updated++;
-  }
-  res.json({ ok: true, updated });
 }));
 
 app.get('/api/admin/businesses', requireAdmin(async (req, res) => {
@@ -1329,10 +1309,7 @@ app.post('/api/businesses/:id/logo', requireAuth(async (req, res) => {
   }
   const url = await storeImage(dataUrl, 'biz-logo');
   await sql`UPDATE businesses SET logo_url=${url} WHERE id=${req.params.id}`;
-  // Store image endpoint URL as avatar so posts show logo without embedding base64
-  const avatarUrl = url.startsWith('data:') ? `/api/businesses/${req.params.id}/logo-image` : url;
-  await sql`UPDATE users SET avatar_url=${avatarUrl} WHERE business_id=${req.params.id}::uuid OR id=${u.id}`;
-  res.json({ ok: true, logoUrl: avatarUrl });
+  res.json({ ok: true, logoUrl: url });
 }));
 
 app.get('/api/my-business', requireAuth(async (req, res) => {
@@ -1372,24 +1349,6 @@ app.get('/api/businesses/:id/banner-check', async (req, res) => {
   const [biz] = await sql`SELECT id, name, banner_url FROM businesses WHERE id=${req.params.id}`;
   if (!biz) return res.status(404).json({ error: 'Not found' });
   res.json({ id: biz.id, name: biz.name, hasBanner: !!biz.banner_url, bannerLength: biz.banner_url ? biz.banner_url.length : 0 });
-});
-
-app.get('/api/businesses/:id/banner-image', async (req, res) => {
-  const [biz] = await sql`SELECT banner_url FROM businesses WHERE id=${req.params.id}`;
-  if (!biz?.banner_url) return res.status(404).end();
-  if (!biz.banner_url.startsWith('data:')) return res.redirect(biz.banner_url);
-  const [header, data] = biz.banner_url.split(',');
-  const mime = (header.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
-  res.set('Content-Type', mime).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(data, 'base64'));
-});
-
-app.get('/api/businesses/:id/logo-image', async (req, res) => {
-  const [biz] = await sql`SELECT logo_url FROM businesses WHERE id=${req.params.id}`;
-  if (!biz?.logo_url) return res.status(404).end();
-  if (!biz.logo_url.startsWith('data:')) return res.redirect(biz.logo_url);
-  const [header, data] = biz.logo_url.split(',');
-  const mime = (header.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
-  res.set('Content-Type', mime).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(data, 'base64'));
 });
 
 app.get('/api/businesses/:id', async (req, res) => {
