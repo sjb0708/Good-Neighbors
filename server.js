@@ -278,6 +278,13 @@ app.post('/api/auth/logout', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
+app.get('/logout', (req, res) => {
+  const token = req.signedCookies?.user;
+  if (token) sql`DELETE FROM sessions WHERE token = ${token}`.catch(() => {});
+  res.clearCookie('user');
+  res.redirect('/login');
+});
+
 app.get('/api/auth/me', requireAuth(async (req, res) => {
   const [pc] = await sql`SELECT COUNT(*)::int AS c FROM posts WHERE author_id = ${req.currentUser.id}`;
   res.json({ ...formatUser(req.currentUser), posts: pc?.c || 0 });

@@ -1554,10 +1554,7 @@
       if (btn) btn.textContent = sel.value === 'es' ? '🌐 EN' : '🌐 ES';
     }
 
-    function logout() {
-      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(()=>{});
-      window.location.href = '/login';
-    }
+    function logout() { window.location.href = '/logout'; }
 
     init();
   </script>
