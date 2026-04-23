@@ -966,9 +966,14 @@
     let postFileDataUrl = null;
 
     async function init() {
-      const res = await fetch('/api/business/me', { credentials: 'include' });
-      if (!res.ok) { window.location.href = '/login'; return; }
-      bizData = await res.json();
+      try {
+        const res = await fetch('/api/business/me', { credentials: 'include' });
+        if (!res.ok) { window.location.href = '/login'; return; }
+        bizData = await res.json();
+      } catch(e) {
+        document.getElementById('bizName').textContent = 'Error loading — please refresh';
+        return;
+      }
       renderProfile();
       renderPhotos();
       renderMenu();
@@ -997,7 +1002,7 @@
 
       const banner = document.getElementById('bizBannerArea');
       if (banner && bizData.bannerUrl) {
-        banner.style.background = `url("${bizData.bannerUrl}") center/cover no-repeat`;
+        banner.innerHTML = banner.innerHTML + `<img src="${bizData.bannerUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0;">`;
       }
       const av = document.getElementById('bizAvatar');
       if (bizData.logoUrl) {
