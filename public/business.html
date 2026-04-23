@@ -1002,7 +1002,7 @@
 
       const banner = document.getElementById('bizBannerArea');
       if (banner && bizData.bannerUrl) {
-        banner.innerHTML = banner.innerHTML + `<img src="${bizData.bannerUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0;">`;
+        banner.innerHTML = `<img src="${bizData.bannerUrl}" style="width:100%;height:100%;object-fit:cover;display:block;">`;
       }
       const av = document.getElementById('bizAvatar');
       if (bizData.logoUrl) {
