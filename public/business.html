@@ -1136,7 +1136,9 @@
       openImageCropper(file, { aspectRatio: 16/5, circular: false, onCrop: async (dataUrl) => {
         showToast('Uploading…');
         const res = await fetch(`/api/businesses/${bizData.id}/banner`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) });
-        if (res.ok) { const data = await res.json(); bizData.bannerUrl = data.bannerUrl; renderProfile(); showToast('✅ Banner updated!'); }
+        const data = await res.json();
+        if (res.ok) { bizData.bannerUrl = data.bannerUrl; renderProfile(); showToast('✅ Banner saved!'); }
+        else { showToast('❌ Banner failed: ' + (data.error || res.status)); }
         else showToast('Upload failed. Please try again.');
       }});
     }

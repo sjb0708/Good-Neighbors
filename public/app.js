@@ -2630,7 +2630,7 @@ async function renderBusinessPage(bizId, container) {
   if (biz.bannerUrl) {
     const bannerArea = wrap.querySelector('.biz-banner-area');
     if (bannerArea) {
-      bannerArea.style.background = `url("${biz.bannerUrl}") center/cover no-repeat`;
+      bannerArea.style.cssText = bannerArea.style.cssText + `background:url("${biz.bannerUrl}") center/cover no-repeat;`;
     }
   }
 }
