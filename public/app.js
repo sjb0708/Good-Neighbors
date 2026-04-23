@@ -2629,7 +2629,12 @@ async function renderBusinessPage(bizId, container) {
   container.appendChild(wrap);
   if (biz.bannerUrl) {
     const bannerArea = wrap.querySelector('.biz-banner-area');
-    if (bannerArea) bannerArea.style.background = `url("${biz.bannerUrl}") center/cover no-repeat`;
+    if (bannerArea) {
+      const img = document.createElement('img');
+      img.src = biz.bannerUrl;
+      img.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;';
+      bannerArea.insertBefore(img, bannerArea.firstChild);
+    }
   }
 }
 
