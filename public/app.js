@@ -445,8 +445,9 @@ async function renderSection(section, container) {
     case 'profile':     await renderProfile(container); break;
     case 'settings':    renderSettings(container); break;
     case 'realestate':  await renderRealEstate(container); break;
-    case 'transport':   await renderTransport(container); break;
-    default:            await renderFeed(container);
+    case 'transport':        await renderTransport(container); break;
+    case 'firstresponders':  renderFirstResponders(container); break;
+    default:                 await renderFeed(container);
   }
   lucide.createIcons();
 }
@@ -4029,6 +4030,97 @@ async function submitListing() {
   } catch {
     showToast('Could not save listing. Please try again.');
   }
+}
+
+// ─── First Responders ─────────────────────────────────────────────
+function renderFirstResponders(container) {
+  container.innerHTML = `
+    <div style="max-width:680px;margin:0 auto;padding:0 0 40px;">
+      <div style="margin-bottom:20px;">
+        <h2 style="font-size:22px;font-weight:800;color:var(--text-dark);margin:0 0 4px;">🚨 First Responders</h2>
+        <p style="font-size:14px;color:var(--text-light);margin:0;">Emergency services, local heroes & community support organizations</p>
+      </div>
+
+      <!-- Emergency Numbers -->
+      <div style="background:white;border-radius:16px;border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;">📞 Emergency Numbers</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          ${[
+            { icon:'🚑', name:'SUME — National EMS', num:'911', color:'#dc2626', href:'tel:911' },
+            { icon:'👮', name:'Policía Nacional', num:'104', color:'#1d4ed8', href:'tel:104' },
+            { icon:'🚒', name:'Bomberos — Fire', num:'103', color:'#ea580c', href:'tel:103' },
+            { icon:'🏥', name:'Buenaventura EMTS', num:'507 6790-4807', color:'#059669', href:'tel:+5076790-4807' },
+            { icon:'🚔', name:'Río Hato Police Station', num:'507 993-3233', color:'#1d4ed8', href:'tel:+507993-3233' },
+            { icon:'🚔', name:'Farallón Police Station', num:'507 6590-4374', color:'#1d4ed8', href:'tel:+5076590-4374' },
+            { icon:'🚒', name:'Antón Fire Station', num:'507 906-1125', color:'#ea580c', href:'tel:+507906-1125' },
+          ].map(e => `
+            <a href="${e.href}" style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#f8fafc;border-radius:12px;border:1px solid var(--border);text-decoration:none;">
+              <span style="font-size:22px;">${e.icon}</span>
+              <div style="flex:1;">
+                <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${e.name}</div>
+              </div>
+              <div style="font-size:15px;font-weight:800;color:${e.color};">${e.num}</div>
+            </a>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- EMTS Panama -->
+      <div style="background:linear-gradient(135deg,#1d4ed8,#2563eb);border-radius:16px;padding:22px;margin-bottom:16px;color:white;">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+          <div style="width:54px;height:54px;background:white;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">🚑</div>
+          <div>
+            <div style="font-size:18px;font-weight:800;">EMTS Panama</div>
+            <div style="font-size:13px;opacity:.85;">Emergency Medical Technicians & Services</div>
+          </div>
+        </div>
+        <p style="font-size:14px;line-height:1.65;opacity:.95;margin:0 0 16px;">EMTS Panama provides professional emergency medical services and training across Panama. Their dedicated teams of EMTs and paramedics are on the front lines keeping our community safe.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a href="tel:911" style="padding:10px 20px;background:white;color:#1d4ed8;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">📞 Call 911</a>
+          <button onclick="showToast('Visit emtspanama.com for more info')" style="padding:10px 20px;background:rgba(255,255,255,0.2);color:white;border:1.5px solid rgba(255,255,255,0.5);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🌐 Learn More</button>
+        </div>
+      </div>
+
+      <!-- IERF Response -->
+      <div style="background:linear-gradient(135deg,#dc2626,#ef4444);border-radius:16px;padding:22px;margin-bottom:16px;color:white;">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+          <div style="width:54px;height:54px;background:white;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">🛡️</div>
+          <div>
+            <div style="font-size:18px;font-weight:800;">IERF Response</div>
+            <div style="font-size:13px;opacity:.85;">Non-Profit Emergency Response Organization</div>
+          </div>
+        </div>
+        <p style="font-size:14px;line-height:1.65;opacity:.95;margin:0 0 16px;">IERF Response is a non-profit organization committed to strengthening emergency response capabilities in Panama. They support first responders, provide community training, and bridge gaps in emergency coverage across the region.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="showToast('Contact IERF Response for volunteer & support opportunities')" style="padding:10px 20px;background:white;color:#dc2626;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:none;">❤️ Support IERF</button>
+          <button onclick="showToast('Visit ierFresponse.org for more info')" style="padding:10px 20px;background:rgba(255,255,255,0.2);color:white;border:1.5px solid rgba(255,255,255,0.5);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🌐 Learn More</button>
+        </div>
+      </div>
+
+      <!-- Community Tips -->
+      <div style="background:white;border-radius:16px;border:1px solid var(--border);padding:20px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;">⚡ What To Do In An Emergency</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          ${[
+            ['1️⃣', 'Call 911 immediately for any life-threatening emergency'],
+            ['2️⃣', 'Stay calm and give your exact location in Panama'],
+            ['3️⃣', 'Do not move an injured person unless there is immediate danger'],
+            ['4️⃣', 'Post a Safety Alert on the feed to warn neighbors'],
+            ['5️⃣', 'Contact IERF Response for non-critical community support'],
+          ].map(([n,t]) => `
+            <div style="display:flex;gap:12px;padding:12px;background:#f8fafc;border-radius:10px;">
+              <span style="font-size:18px;flex-shrink:0;">${n}</span>
+              <span style="font-size:14px;color:var(--text-dark);line-height:1.5;">${t}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="margin-top:16px;">
+          <button onclick="navigate('safety')" style="width:100%;padding:12px;background:#dc2626;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">🚨 Post a Safety Alert to Neighbors</button>
+        </div>
+      </div>
+    </div>
+  `;
+  lucide.createIcons();
 }
 
 // ─── Transportation ───────────────────────────────────────────────
