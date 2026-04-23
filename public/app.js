@@ -4038,85 +4038,84 @@ function renderFirstResponders(container) {
     <div style="max-width:680px;margin:0 auto;padding:0 0 40px;">
       <div style="margin-bottom:20px;">
         <h2 style="font-size:22px;font-weight:800;color:var(--text-dark);margin:0 0 4px;">🚨 First Responders</h2>
-        <p style="font-size:14px;color:var(--text-light);margin:0;">Emergency services, local heroes & community support organizations</p>
-      </div>
-
-      <!-- Emergency Numbers -->
-      <div style="background:white;border-radius:16px;border:1px solid var(--border);padding:20px;margin-bottom:16px;">
-        <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;">📞 Emergency Numbers</div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          ${[
-            { icon:'🚑', name:'SUME — National EMS', num:'911', color:'#dc2626', href:'tel:911' },
-            { icon:'👮', name:'Policía Nacional', num:'104', color:'#1d4ed8', href:'tel:104' },
-            { icon:'🚒', name:'Bomberos — Fire', num:'103', color:'#ea580c', href:'tel:103' },
-            { icon:'🏥', name:'Buenaventura EMTS', num:'507 6790-4807', color:'#059669', href:'tel:+5076790-4807' },
-            { icon:'🚔', name:'Río Hato Police Station', num:'507 993-3233', color:'#1d4ed8', href:'tel:+507993-3233' },
-            { icon:'🚔', name:'Farallón Police Station', num:'507 6590-4374', color:'#1d4ed8', href:'tel:+5076590-4374' },
-            { icon:'🚒', name:'Antón Fire Station', num:'507 906-1125', color:'#ea580c', href:'tel:+507906-1125' },
-          ].map(e => `
-            <a href="${e.href}" style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#f8fafc;border-radius:12px;border:1px solid var(--border);text-decoration:none;">
-              <span style="font-size:22px;">${e.icon}</span>
-              <div style="flex:1;">
-                <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${e.name}</div>
-              </div>
-              <div style="font-size:15px;font-weight:800;color:${e.color};">${e.num}</div>
-            </a>
-          `).join('')}
-        </div>
+        <p style="font-size:14px;color:var(--text-light);margin:0;">Professional emergency medical services & community support for Costa Blanca Villas</p>
       </div>
 
       <!-- EMTS Panama -->
-      <div style="background:linear-gradient(135deg,#1d4ed8,#2563eb);border-radius:16px;padding:22px;margin-bottom:16px;color:white;">
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
-          <div style="width:54px;height:54px;background:white;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">🚑</div>
-          <div>
-            <div style="font-size:18px;font-weight:800;">EMTS Panama</div>
-            <div style="font-size:13px;opacity:.85;">Emergency Medical Technicians & Services</div>
+      <div style="background:white;border-radius:16px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px;">
+        <div style="background:linear-gradient(135deg,#1d4ed8,#2563eb);padding:20px 22px;color:white;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="width:54px;height:54px;background:white;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">🚑</div>
+            <div>
+              <div style="font-size:20px;font-weight:800;">EMTS Panama</div>
+              <div style="font-size:13px;opacity:.85;">Emergency Medical Technicians & Services</div>
+            </div>
           </div>
         </div>
-        <p style="font-size:14px;line-height:1.65;opacity:.95;margin:0 0 16px;">EMTS Panama provides professional emergency medical services and training across Panama. Their dedicated teams of EMTs and paramedics are on the front lines keeping our community safe.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <a href="tel:911" style="padding:10px 20px;background:white;color:#1d4ed8;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">📞 Call 911</a>
-          <button onclick="showToast('Visit emtspanama.com for more info')" style="padding:10px 20px;background:rgba(255,255,255,0.2);color:white;border:1.5px solid rgba(255,255,255,0.5);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🌐 Learn More</button>
+        <div style="padding:20px 22px;">
+          <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">Services Offered</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
+            ${[
+              ['🫀', 'BLS', 'Basic Life Support — CPR, AED, airway management'],
+              ['⚡', 'ALS', 'Advanced Life Support — IV therapy, cardiac monitoring, advanced airway'],
+              ['🚑', 'Medical Transport', 'Safe patient transport to hospitals & medical facilities'],
+              ['🏥', 'Scene Response', 'On-site emergency response & stabilization'],
+              ['💊', 'Medication Admin', 'Paramedic-level medication administration'],
+              ['📋', 'Medical Training', 'CPR, First Aid & EMS certification courses'],
+            ].map(([icon, title, desc]) => `
+              <div style="padding:14px;background:#f0f4ff;border-radius:12px;border:1px solid #c7d7fd;">
+                <div style="font-size:22px;margin-bottom:6px;">${icon}</div>
+                <div style="font-size:13px;font-weight:800;color:#1d4ed8;margin-bottom:4px;">${title}</div>
+                <div style="font-size:12px;color:var(--text-mid);line-height:1.45;">${desc}</div>
+              </div>
+            `).join('')}
+          </div>
+          <a href="tel:+5076790-4807" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;background:#1d4ed8;color:white;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;">📞 Call EMTS Panama — 507 6790-4807</a>
         </div>
       </div>
 
       <!-- IERF Response -->
-      <div style="background:linear-gradient(135deg,#dc2626,#ef4444);border-radius:16px;padding:22px;margin-bottom:16px;color:white;">
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
-          <div style="width:54px;height:54px;background:white;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">🛡️</div>
-          <div>
-            <div style="font-size:18px;font-weight:800;">IERF Response</div>
-            <div style="font-size:13px;opacity:.85;">Non-Profit Emergency Response Organization</div>
+      <div style="background:white;border-radius:16px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px;">
+        <div style="background:linear-gradient(135deg,#dc2626,#ef4444);padding:20px 22px;color:white;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="width:54px;height:54px;background:white;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">🛡️</div>
+            <div>
+              <div style="font-size:20px;font-weight:800;">IERF Response</div>
+              <div style="font-size:13px;opacity:.85;">Non-Profit Emergency Response Organization</div>
+            </div>
           </div>
         </div>
-        <p style="font-size:14px;line-height:1.65;opacity:.95;margin:0 0 16px;">IERF Response is a non-profit organization committed to strengthening emergency response capabilities in Panama. They support first responders, provide community training, and bridge gaps in emergency coverage across the region.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button onclick="showToast('Contact IERF Response for volunteer & support opportunities')" style="padding:10px 20px;background:white;color:#dc2626;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:none;">❤️ Support IERF</button>
-          <button onclick="showToast('Visit ierFresponse.org for more info')" style="padding:10px 20px;background:rgba(255,255,255,0.2);color:white;border:1.5px solid rgba(255,255,255,0.5);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🌐 Learn More</button>
+        <div style="padding:20px 22px;">
+          <p style="font-size:14px;color:var(--text-mid);line-height:1.65;margin:0 0 16px;">IERF Response is a non-profit organization dedicated to bridging gaps in emergency response coverage across Panama — supporting first responders, funding equipment, and building community resilience.</p>
+          <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">How They Help</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;">
+            ${[
+              ['❤️', 'Community Support', 'Funding & resources for local first responder units'],
+              ['🎓', 'Training Programs', 'Free emergency response training for residents'],
+              ['🧰', 'Equipment Grants', 'Supplying gear & medical equipment to underserved areas'],
+              ['🤝', 'Volunteer Network', 'Connecting trained volunteers with communities in need'],
+            ].map(([icon, title, desc]) => `
+              <div style="display:flex;gap:12px;padding:12px 14px;background:#fef2f2;border-radius:12px;border:1px solid #fecaca;">
+                <span style="font-size:20px;flex-shrink:0;">${icon}</span>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#dc2626;">${title}</div>
+                  <div style="font-size:12px;color:var(--text-mid);margin-top:2px;">${desc}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <button onclick="showToast('Contact IERF Response to volunteer or donate')" style="width:100%;padding:12px;background:#dc2626;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">❤️ Support IERF Response</button>
         </div>
       </div>
 
-      <!-- Community Tips -->
-      <div style="background:white;border-radius:16px;border:1px solid var(--border);padding:20px;">
-        <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;">⚡ What To Do In An Emergency</div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          ${[
-            ['1️⃣', 'Call 911 immediately for any life-threatening emergency'],
-            ['2️⃣', 'Stay calm and give your exact location in Panama'],
-            ['3️⃣', 'Do not move an injured person unless there is immediate danger'],
-            ['4️⃣', 'Post a Safety Alert on the feed to warn neighbors'],
-            ['5️⃣', 'Contact IERF Response for non-critical community support'],
-          ].map(([n,t]) => `
-            <div style="display:flex;gap:12px;padding:12px;background:#f8fafc;border-radius:10px;">
-              <span style="font-size:18px;flex-shrink:0;">${n}</span>
-              <span style="font-size:14px;color:var(--text-dark);line-height:1.5;">${t}</span>
-            </div>
-          `).join('')}
+      <!-- Safety Alert CTA -->
+      <div style="background:#fff8f0;border:1.5px solid #f97316;border-radius:16px;padding:18px 22px;display:flex;align-items:center;gap:16px;">
+        <span style="font-size:32px;flex-shrink:0;">🚨</span>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:2px;">See something? Alert your neighbors.</div>
+          <div style="font-size:13px;color:var(--text-mid);">Post a safety alert instantly to everyone in the community.</div>
         </div>
-        <div style="margin-top:16px;">
-          <button onclick="navigate('safety')" style="width:100%;padding:12px;background:#dc2626;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">🚨 Post a Safety Alert to Neighbors</button>
-        </div>
+        <button onclick="navigate('safety')" style="padding:10px 16px;background:#f97316;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Post Alert</button>
       </div>
     </div>
   `;
