@@ -72,6 +72,7 @@ function formatAuthor(row) {
     username: row.author_username || row.username,
     name: row.author_name || row.name,
     avatar: row.author_avatar || row.avatar_hex,
+    avatarUrl: row.author_avatar_url || row.avatar_url || undefined,
     initials: row.author_initials || row.initials,
     verified: row.author_verified !== undefined ? row.author_verified : row.verified,
     address: row.author_address || row.address || undefined,
@@ -136,6 +137,7 @@ async function fetchPostsWithMeta(whereSql, userId) {
       u.username  AS author_username,
       u.name      AS author_name,
       u.avatar_hex AS author_avatar,
+      u.avatar_url AS author_avatar_url,
       u.initials  AS author_initials,
       u.verified  AS author_verified,
       u.address   AS author_address,
@@ -1264,6 +1266,17 @@ app.post('/api/admin/businesses', requireAdmin(async (req, res) => {
   res.json({ ok: true, business: formatBusiness(biz) });
 }));
 
+app.get('/api/admin/backfill-biz-avatars', requireAdmin(async (req, res) => {
+  const bizs = await sql`SELECT id, logo_url FROM businesses WHERE logo_url IS NOT NULL`;
+  let updated = 0;
+  for (const b of bizs) {
+    const avatarUrl = b.logo_url.startsWith('data:') ? `/api/businesses/${b.id}/logo-image` : b.logo_url;
+    await sql`UPDATE users SET avatar_url=${avatarUrl} WHERE business_id=${b.id} AND (avatar_url IS NULL OR avatar_url LIKE 'data:%')`;
+    updated++;
+  }
+  res.json({ ok: true, updated });
+}));
+
 app.get('/api/admin/businesses', requireAdmin(async (req, res) => {
   const rows = await sql`SELECT * FROM businesses ORDER BY created_at DESC`;
   res.json(rows.map(formatBusiness));
@@ -1316,7 +1329,10 @@ app.post('/api/businesses/:id/logo', requireAuth(async (req, res) => {
   }
   const url = await storeImage(dataUrl, 'biz-logo');
   await sql`UPDATE businesses SET logo_url=${url} WHERE id=${req.params.id}`;
-  res.json({ ok: true, logoUrl: url });
+  // Store image endpoint URL as avatar so posts show logo without embedding base64
+  const avatarUrl = url.startsWith('data:') ? `/api/businesses/${req.params.id}/logo-image` : url;
+  await sql`UPDATE users SET avatar_url=${avatarUrl} WHERE business_id=${req.params.id}::uuid OR id=${u.id}`;
+  res.json({ ok: true, logoUrl: avatarUrl });
 }));
 
 app.get('/api/my-business', requireAuth(async (req, res) => {
