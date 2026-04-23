@@ -2372,6 +2372,7 @@ async function renderBusinessPage(bizId, container) {
       <!-- Full-width banner -->
       <div class="biz-banner-area" style="position:relative;height:280px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#0077B6,#00B4D8);border-radius:12px 12px 0 0;">
         ${biz.bannerUrl ? `<img src="${biz.bannerUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" />` : ''}
+        <div style="position:absolute;inset:0;background:linear-gradient(to bottom, rgba(0,0,0,0) 40%, rgba(0,0,0,0.45) 100%);pointer-events:none;border-radius:12px 12px 0 0;"></div>
         ${isPageOwner ? `<label title="Change banner" style="position:absolute;bottom:14px;right:14px;background:rgba(0,0,0,0.55);color:white;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;z-index:1;"><input type="file" accept="image/*" style="display:none" onchange="uploadBizBanner('${biz.id}',this)">📷 Edit Cover</label>` : ''}
       </div>
       <!-- Logo overlapping banner (Facebook-style) -->
