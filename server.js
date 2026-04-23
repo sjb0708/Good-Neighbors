@@ -14,7 +14,38 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 const COOKIE_SECRET = process.env.COOKIE_SECRET || 'gn-secret-2026';
 app.use(cookieParser(COOKIE_SECRET));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use((req, res, next) => {
+  if (req.path.match(/\.(js|css)$/)) res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+app.use(express.static(path.join(__dirname, 'public'), { etag: false, lastModified: false }));
+
+const fs = require('fs');
+function assetVersion(filename) {
+  try { return fs.statSync(path.join(__dirname, 'public', filename)).mtimeMs.toString(36); }
+  catch { return Date.now().toString(36); }
+}
+const RELOAD_SCRIPT = `<script>
+(function(){
+  var v="${''}";
+  fetch('/api/version').then(r=>r.json()).then(function(d){v=d.v;});
+  setInterval(function(){
+    fetch('/api/version').then(r=>r.json()).then(function(d){if(v&&d.v!==v)location.reload();});
+  },5000);
+})();
+</script>`;
+function serveWithCacheBust(htmlFile) {
+  return (req, res) => {
+    let html = fs.readFileSync(path.join(__dirname, 'public', htmlFile), 'utf8');
+    html = html.replace(/(src|href)="\/([^"]+\.(js|css))"/g, (_, attr, file) =>
+      `${attr}="/${file}?v=${assetVersion(file)}"`
+    );
+    html = html.replace('</head>', RELOAD_SCRIPT + '</head>');
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  };
+}
 
 
 const upload       = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5  * 1024 * 1024 } });
@@ -72,6 +103,9 @@ function formatAuthor(row) {
     username: row.author_username || row.username,
     name: row.author_name || row.name,
     avatar: row.author_avatar || row.avatar_hex,
+    avatarUrl: (row.is_business_post && row.business_logo_url)
+      ? row.business_logo_url
+      : (row.author_avatar_url || row.avatar_url || undefined),
     initials: row.author_initials || row.initials,
     verified: row.author_verified !== undefined ? row.author_verified : row.verified,
     address: row.author_address || row.address || undefined,
@@ -136,14 +170,17 @@ async function fetchPostsWithMeta(whereSql, userId) {
       u.username  AS author_username,
       u.name      AS author_name,
       u.avatar_hex AS author_avatar,
+      u.avatar_url AS author_avatar_url,
       u.initials  AS author_initials,
       u.verified  AS author_verified,
       u.address   AS author_address,
       u.role      AS author_role,
-      rb.name     AS resolved_by_name
+      rb.name     AS resolved_by_name,
+      b.logo_url  AS business_logo_url
     FROM posts p
     JOIN users u ON p.author_id = u.id
     LEFT JOIN users rb ON p.resolved_by_user_id = rb.id
+    LEFT JOIN businesses b ON p.business_id = b.id
     ${whereSql}
     ORDER BY p.created_at DESC
   `);
@@ -2562,15 +2599,18 @@ app.get('/api/tides', (req, res) => {
   res.json(todayExtremes);
 });
 
+app.get('/api/version', (req, res) => res.json({ v: assetVersion('app.js') }));
+app.post('/api/debug-log', (req, res) => { console.log('[DEBUG]', JSON.stringify(req.body)); res.json({ok:true}); });
+
 // ─── HTML pages ───────────────────────────────────────────────────────────────
 
 app.get('/',                (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
 app.get('/login',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/admin',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
-app.get('/app',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'app.html')));
-app.get('/app.html',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'app.html')));
-app.get('/business',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'business.html')));
-app.get('/hoa',             (req, res) => res.sendFile(path.join(__dirname, 'public', 'hoa.html')));
+app.get('/app',             serveWithCacheBust('app.html'));
+app.get('/app.html',        serveWithCacheBust('app.html'));
+app.get('/business',        serveWithCacheBust('business.html'));
+app.get('/hoa',             serveWithCacheBust('hoa.html'));
 app.get('/reset-password',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
 app.get('/verify-email',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-email.html')));
 

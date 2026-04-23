@@ -35,6 +35,19 @@ function groupTimeAgo(iso) {
   return `${Math.floor(d / 1440)}d ago`;
 }
 
+// ─── Auto-reload when server JS changes ──────────────────────────
+(async () => {
+  const r = await fetch('/api/version').catch(() => null);
+  if (!r) return;
+  const { v: initialV } = await r.json();
+  setInterval(async () => {
+    const r2 = await fetch('/api/version').catch(() => null);
+    if (!r2) return;
+    const { v } = await r2.json();
+    if (v !== initialV) location.reload();
+  }, 10000);
+})();
+
 // ─── Init ────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   await checkAuth();
@@ -446,7 +459,7 @@ async function renderFeed(container) {
   compose.style.cssText = 'display:flex;align-items:center;gap:10px;background:white;border-radius:16px;padding:12px 16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.07);cursor:pointer;border:1.5px solid var(--border);';
   compose.onclick = () => openCreatePost();
   compose.innerHTML = `
-    <div style="width:38px;height:38px;border-radius:50%;background:${currentUser?.avatar||'#0077B6'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${currentUser?.initials||'?'}</div>
+    <div style="width:38px;height:38px;border-radius:50%;background-color:${currentUser?.avatar||'#0077B6'};${currentUser?.avatarUrl?`background-image:url(${currentUser.avatarUrl});background-size:cover;background-position:center;`:''}display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;">${currentUser?.avatarUrl ? '' : (currentUser?.initials||'?')}</div>
     <div style="flex:1;padding:9px 14px;background:var(--bg);border-radius:30px;font-size:14px;color:var(--text-light);font-family:inherit;">What's happening in Costa Blanca Villas?</div>
     <button onclick="event.stopPropagation();openCreatePost()" style="padding:8px 18px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">+ Post</button>
   `;
@@ -1571,7 +1584,6 @@ function buildPostCard(post) {
   const totalReactions = Object.values(post.reactions || {}).reduce((a, b) => a + b, 0);
   const topReactions = getTopReactions(post.reactions);
   const canResolve = (currentUser?.role === 'admin' || currentUser?.role === 'hoa') && post.type === 'safety' && post.severity !== 'resolved';
-
   card.innerHTML = `
     <div class="post-card-inner">
       ${post.alertType ? `<div class="alert-badge ${post.severity === 'resolved' ? 'resolved' : (post.severity || 'medium')}">${post.severity === 'resolved' ? '✅ Resolved' : `⚠ ${post.alertType}`}</div>` : ''}
@@ -1584,8 +1596,8 @@ function buildPostCard(post) {
 
       <div class="post-header">
         <div class="post-author">
-          <div class="avatar-post" style="background:${post.author?.avatar || '#0077B6'};overflow:hidden;">
-            ${post.author?.avatarUrl ? `<img src="${post.author.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (post.author?.initials || '??')}
+          <div class="avatar-post" id="pav-${post.id}" style="background:${post.author?.avatar || '#0077B6'};overflow:hidden;">
+            ${post.author?.avatarUrl ? '' : (post.author?.initials || '??')}
           </div>
           <div class="post-author-info">
             <div class="post-author-name">
@@ -1660,6 +1672,15 @@ function buildPostCard(post) {
       </div>
     </div>
   `;
+
+  if (post.author?.avatarUrl) {
+    const av = card.querySelector(`#pav-${post.id}`);
+    if (av) {
+      av.style.backgroundImage = `url(${post.author.avatarUrl})`;
+      av.style.backgroundSize = 'cover';
+      av.style.backgroundPosition = 'center';
+    }
+  }
 
   return card;
 }
@@ -2330,7 +2351,7 @@ async function renderBusinessPage(bizId, container) {
     <button class="group-back-btn" onclick="navigate('businesses')">← Back to Businesses</button>
 
     <!-- Header card -->
-    <div class="biz-page-header-card" style="flex-direction:column;padding:0;overflow:visible;">
+    <div class="biz-page-header-card" style="flex-direction:column;padding:0;overflow:visible;gap:0;">
       <!-- Full-width banner -->
       <div class="biz-banner-area" style="position:relative;height:280px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#0077B6,#00B4D8);border-radius:12px 12px 0 0;">
         ${biz.bannerUrl ? `<img src="${biz.bannerUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" />` : ''}
