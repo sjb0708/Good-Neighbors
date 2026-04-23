@@ -4044,6 +4044,72 @@ function switchFRTab(tab) {
   if (btn) { btn.style.background = 'transparent'; btn.style.color = '#1d4ed8'; btn.style.borderBottom = '3px solid #1d4ed8'; }
   const panel = document.getElementById('frpanel-' + tab);
   if (panel) panel.style.display = 'block';
+  if (tab === 'hospitals') loadHospitals();
+}
+
+const HOSPITAL_SERVICES = ['X-Ray / Radiology','Ultrasound','CT Scan','Laboratory','Pediatric Care','Major Surgery','Antivenom','Trauma Care','Blood Transfusion','Blood Donations','Minor Surgery','ICU / Critical Care','24/7 Emergency','English Speaking','Ambulance On-Site'];
+const CRITICAL_SERVICES = ['Antivenom','Trauma Care','Blood Transfusion','ICU / Critical Care','24/7 Emergency'];
+
+function hospitalVerifyBadge(h) {
+  if (!h.last_verified_at) return `<span style="background:#fef3c7;color:#d97706;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;border:1px solid #fde68a;">⚠️ Never verified</span>`;
+  const days = Math.floor((Date.now() - new Date(h.last_verified_at)) / 86400000);
+  if (days < 30) return `<span style="background:#f0fdf4;color:#059669;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;border:1px solid #bbf7d0;">✓ Verified ${days === 0 ? 'today' : days + 'd ago'}${h.verified_by_name ? ' by ' + escHtml(h.verified_by_name) : ''}</span>`;
+  if (days < 90) return `<span style="background:#fffbeb;color:#d97706;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;border:1px solid #fde68a;">⚠️ Verified ${days}d ago — please re-verify</span>`;
+  return `<span style="background:#fef2f2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;border:1px solid #fecaca;">🚨 ${days}d since last verification — may be outdated</span>`;
+}
+
+async function loadHospitals() {
+  const el = document.getElementById('hospitalsList');
+  if (!el) return;
+  const hospitals = await fetchJSON('/api/hospitals') || [];
+  if (!hospitals.length) {
+    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text-light);">
+      <div style="font-size:32px;margin-bottom:8px;">🏥</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px;">No hospitals added yet</div>
+      <div style="font-size:13px;">An admin is working on adding verified facilities.</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = hospitals.map(h => {
+    const services = Array.isArray(h.services) ? h.services : (JSON.parse(h.services||'[]'));
+    const criticalFound = services.filter(s => CRITICAL_SERVICES.includes(s));
+    return `
+    <div style="background:white;border:1.5px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;${h.open_reports > 0 ? 'border-color:#fca5a5;' : ''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
+        <div>
+          <div style="font-size:15px;font-weight:800;color:var(--text-dark);">${escHtml(h.name)}</div>
+          <div style="font-size:12px;color:var(--text-light);margin-top:2px;">${h.hospital_type || 'Facility'} ${h.distance_km ? '· 📍 ' + h.distance_km + ' away' : ''} ${h.drive_time ? '· 🚗 ' + h.drive_time : ''}</div>
+        </div>
+        ${h.open_reports > 0 ? `<span style="background:#fef2f2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;border:1px solid #fecaca;white-space:nowrap;">⚠️ ${h.open_reports} issue${h.open_reports>1?'s':''} reported</span>` : ''}
+      </div>
+      <div style="margin-bottom:10px;">${hospitalVerifyBadge(h)}</div>
+      ${criticalFound.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${criticalFound.map(s=>`<span style="background:#fef2f2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;border:1px solid #fecaca;">🔴 ${s}</span>`).join('')}</div>` : ''}
+      ${services.filter(s=>!CRITICAL_SERVICES.includes(s)).length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${services.filter(s=>!CRITICAL_SERVICES.includes(s)).map(s=>`<span style="background:#f0fdf4;color:#059669;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;border:1px solid #bbf7d0;">✓ ${s}</span>`).join('')}</div>` : ''}
+      <div style="font-size:12.5px;color:var(--text-mid);margin-bottom:4px;">${h.address ? '📍 ' + escHtml(h.address) : ''}</div>
+      <div style="font-size:12.5px;color:var(--text-mid);margin-bottom:4px;">${h.hours_weekday ? '🕐 Weekdays: ' + escHtml(h.hours_weekday) : ''} ${h.hours_weekend ? '· Weekends: ' + escHtml(h.hours_weekend) : ''}</div>
+      ${h.notes ? `<div style="font-size:12.5px;color:#d97706;background:#fffbeb;border-radius:8px;padding:8px 10px;margin-top:6px;margin-bottom:8px;border:1px solid #fde68a;">📝 ${escHtml(h.notes)}</div>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+        ${h.phone ? `<a href="tel:${h.phone.replace(/\s/g,'')}" style="padding:8px 14px;background:#1d4ed8;color:white;border-radius:10px;font-size:12.5px;font-weight:700;text-decoration:none;">📞 ${escHtml(h.phone)}</a>` : ''}
+        ${h.whatsapp ? `<a href="https://wa.me/${h.whatsapp.replace(/\D/g,'')}" target="_blank" style="padding:8px 14px;background:#25D366;color:white;border-radius:10px;font-size:12.5px;font-weight:700;text-decoration:none;">💬 WhatsApp</a>` : ''}
+        <button onclick="verifyHospital(${h.id})" style="padding:8px 14px;background:#f0fdf4;color:#059669;border:1.5px solid #bbf7d0;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">✓ Info is correct</button>
+        <button onclick="reportHospital(${h.id},'${escHtml(h.name).replace(/'/g,"\\'")}')" style="padding:8px 14px;background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">⚠️ Report issue</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function verifyHospital(id) {
+  const res = await fetch(`/api/hospitals/${id}/verify`, { method: 'POST', credentials: 'include' });
+  if (res.ok) { showToast('✓ Thank you for verifying!'); loadHospitals(); }
+  else showToast('Please log in to verify.');
+}
+
+async function reportHospital(id, name) {
+  const msg = prompt(`What's wrong with the info for ${name}?\n(e.g. "Wrong phone number", "Closed on weekends", "No longer has antivenom")`);
+  if (!msg) return;
+  const res = await fetch(`/api/hospitals/${id}/report`, { method: 'POST', credentials: 'include', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ message: msg }) });
+  if (res.ok) { showToast('Report submitted — thank you. An admin will review it.'); loadHospitals(); }
+  else showToast('Please log in to report.');
 }
 
 async function renderFirstResponders(container) {
@@ -4154,29 +4220,14 @@ async function renderFirstResponders(container) {
 
         <!-- Tab: Hospitals -->
         <div id="frpanel-hospitals" class="fr-tab-panel" style="padding:20px;display:none;">
-          <p style="font-size:13.5px;color:var(--text-mid);line-height:1.6;margin:0 0 16px;">Clinics and hospitals in Panama vary widely in capabilities, hours, and available medications. Know where to go <strong>before</strong> an emergency — especially for antivenoms, trauma care, and 24/7 coverage.</p>
-          <div style="background:#eff6ff;border-radius:12px;padding:14px;margin-bottom:16px;border:1px solid #bfdbfe;">
-            <div style="font-size:13px;font-weight:700;color:#1d4ed8;margin-bottom:10px;">✅ Services to Ask About</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-              ${['X-Ray / Radiology','Ultrasound','CT Scan','Laboratory','Pediatric Care','Major Surgery','Antivenom','Trauma Care','Blood Donations','Minor Surgery','ICU / Critical Care','English Speaking'].map(s=>`
-                <div style="font-size:12.5px;color:var(--text-dark);padding:6px 10px;background:white;border-radius:8px;border:1px solid #bfdbfe;">☐ ${s}</div>`).join('')}
-            </div>
+          <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+            <div style="font-size:13px;font-weight:800;color:#dc2626;margin-bottom:4px;">⚠️ Community-Maintained Information</div>
+            <p style="font-size:12.5px;color:var(--text-mid);line-height:1.55;margin:0;">Hospital capabilities in Panama change. Always call ahead in a non-emergency. If info is wrong, tap <strong>Report Issue</strong> so we can fix it. Every verification helps save lives.</p>
           </div>
-          <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Nearest Hospitals</div>
-          ${[
-            {name:'Hospital San Benito', city:'Penonomé', phone:'507 991-0014', note:'Nearest public hospital ~45 min', hours:'24/7'},
-            {name:'Clínica Hospital Curundu', city:'Antón', phone:'507 987-2311', note:'Local clinic', hours:'Mon–Sat 8am–5pm'},
-            {name:'Buenaventura Medical Center', city:'Buenaventura', phone:'507 6790-4807', note:'Private — EMTS Panama on call', hours:'By appointment / emergency'},
-          ].map(h=>`
-            <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;">
-              <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${h.name}</div>
-              <div style="font-size:12.5px;color:var(--text-mid);margin-top:2px;">📍 ${h.city} · 🕐 ${h.hours}</div>
-              <div style="font-size:12px;color:#059669;margin-top:2px;">${h.note}</div>
-              <a href="tel:${h.phone.replace(/\s/g,'')}" style="display:inline-block;margin-top:8px;padding:7px 14px;background:#f0fdf4;color:#059669;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;border:1px solid #bbf7d0;">📞 ${h.phone}</a>
-            </div>`).join('')}
-          <div style="background:#fff8f0;border-radius:12px;padding:14px;border:1px solid #fed7aa;">
-            <div style="font-size:13px;font-weight:700;color:#ea580c;margin-bottom:6px;">💡 If You Have Private Insurance</div>
-            <p style="font-size:12.5px;color:var(--text-mid);line-height:1.55;margin:0;">Understand your ambulance coverage — response times, travel distance, and which emergencies are prioritized. Fast access to the right care depends on how quickly help can physically reach you.</p>
+          <div id="hospitalsList"><div style="text-align:center;padding:30px;color:var(--text-light);">Loading hospitals...</div></div>
+          <div style="background:#fff8f0;border-radius:12px;padding:14px;border:1px solid #fed7aa;margin-top:4px;">
+            <div style="font-size:13px;font-weight:700;color:#ea580c;margin-bottom:4px;">💡 Private Insurance</div>
+            <p style="font-size:12.5px;color:var(--text-mid);line-height:1.55;margin:0;">Understand your ambulance coverage — response times and which emergencies are prioritized. Fast access to the right care depends on how quickly help can physically reach you.</p>
           </div>
         </div>
 

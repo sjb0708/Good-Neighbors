@@ -838,6 +838,111 @@ app.get('/api/emts-services', async (req, res) => {
   } catch { res.json([]); }
 });
 
+// ─── Hospital Directory ────────────────────────────────────────────
+async function initHospitalTables() {
+  await sql`CREATE TABLE IF NOT EXISTS hospitals (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    address TEXT,
+    phone TEXT,
+    whatsapp TEXT,
+    hours_weekday TEXT,
+    hours_weekend TEXT,
+    distance_km TEXT,
+    drive_time TEXT,
+    hospital_type TEXT,
+    services JSONB DEFAULT '[]',
+    notes TEXT,
+    is_active BOOLEAN DEFAULT true,
+    last_verified_at TIMESTAMPTZ,
+    last_verified_by INTEGER,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`;
+  await sql`CREATE TABLE IF NOT EXISTS hospital_reports (
+    id SERIAL PRIMARY KEY,
+    hospital_id INTEGER REFERENCES hospitals(id) ON DELETE CASCADE,
+    user_id INTEGER,
+    report_type TEXT NOT NULL,
+    message TEXT,
+    resolved BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`;
+}
+
+app.get('/api/hospitals', async (req, res) => {
+  try {
+    await initHospitalTables();
+    const rows = await sql`
+      SELECT h.*,
+        u.name AS verified_by_name,
+        (SELECT COUNT(*)::int FROM hospital_reports WHERE hospital_id=h.id AND resolved=false) AS open_reports
+      FROM hospitals h
+      LEFT JOIN users u ON h.last_verified_by = u.id
+      WHERE h.is_active = true
+      ORDER BY h.distance_km NULLS LAST, h.name
+    `;
+    res.json(rows);
+  } catch(err) { console.error(err); res.json([]); }
+});
+
+app.post('/api/hospitals/:id/verify', requireAuth(async (req, res) => {
+  await initHospitalTables();
+  const [h] = await sql`UPDATE hospitals SET last_verified_at=NOW(), last_verified_by=${req.currentUser.id}, updated_at=NOW() WHERE id=${req.params.id} RETURNING *`;
+  if (!h) return res.status(404).json({ error: 'Not found' });
+  res.json({ ok: true });
+}));
+
+app.post('/api/hospitals/:id/report', requireAuth(async (req, res) => {
+  await initHospitalTables();
+  const { message } = req.body;
+  await sql`INSERT INTO hospital_reports (hospital_id, user_id, report_type, message) VALUES (${req.params.id}, ${req.currentUser.id}, 'outdated', ${message||''})`;
+  res.json({ ok: true });
+}));
+
+app.get('/api/admin/hospitals', requireAdmin(async (req, res) => {
+  await initHospitalTables();
+  const rows = await sql`
+    SELECT h.*, u.name AS verified_by_name,
+      (SELECT COUNT(*)::int FROM hospital_reports WHERE hospital_id=h.id AND resolved=false) AS open_reports
+    FROM hospitals h LEFT JOIN users u ON h.last_verified_by=u.id
+    ORDER BY h.distance_km NULLS LAST, h.name
+  `;
+  res.json(rows);
+}));
+
+app.post('/api/admin/hospitals', requireAdmin(async (req, res) => {
+  await initHospitalTables();
+  const { name, address, phone, whatsapp, hours_weekday, hours_weekend, distance_km, drive_time, hospital_type, services, notes } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name required' });
+  const [row] = await sql`INSERT INTO hospitals (name, address, phone, whatsapp, hours_weekday, hours_weekend, distance_km, drive_time, hospital_type, services, notes)
+    VALUES (${name}, ${address||''}, ${phone||''}, ${whatsapp||''}, ${hours_weekday||''}, ${hours_weekend||''}, ${distance_km||null}, ${drive_time||''}, ${hospital_type||'Clinic'}, ${JSON.stringify(services||[])}, ${notes||''}) RETURNING *`;
+  res.json(row);
+}));
+
+app.patch('/api/admin/hospitals/:id', requireAdmin(async (req, res) => {
+  await initHospitalTables();
+  const { name, address, phone, whatsapp, hours_weekday, hours_weekend, distance_km, drive_time, hospital_type, services, notes, is_active } = req.body;
+  const [row] = await sql`UPDATE hospitals SET name=${name}, address=${address||''}, phone=${phone||''}, whatsapp=${whatsapp||''}, hours_weekday=${hours_weekday||''}, hours_weekend=${hours_weekend||''}, distance_km=${distance_km||null}, drive_time=${drive_time||''}, hospital_type=${hospital_type||'Clinic'}, services=${JSON.stringify(services||[])}, notes=${notes||''}, is_active=${is_active!==false}, updated_at=NOW() WHERE id=${req.params.id} RETURNING *`;
+  res.json(row);
+}));
+
+app.delete('/api/admin/hospitals/:id', requireAdmin(async (req, res) => {
+  await sql`DELETE FROM hospitals WHERE id=${req.params.id}`;
+  res.json({ ok: true });
+}));
+
+app.get('/api/admin/hospital-reports', requireAdmin(async (req, res) => {
+  await initHospitalTables();
+  const rows = await sql`SELECT r.*, h.name AS hospital_name, u.name AS reporter_name FROM hospital_reports r JOIN hospitals h ON r.hospital_id=h.id LEFT JOIN users u ON r.user_id=u.id WHERE r.resolved=false ORDER BY r.created_at DESC`;
+  res.json(rows);
+}));
+
+app.patch('/api/admin/hospital-reports/:id/resolve', requireAdmin(async (req, res) => {
+  await sql`UPDATE hospital_reports SET resolved=true WHERE id=${req.params.id}`;
+  res.json({ ok: true });
+}));
+
 app.post('/api/admin/email-config', requireOwner(async (req, res) => {
   const { gmailUser, gmailAppPassword } = req.body;
   if (!gmailUser || !gmailAppPassword) return res.status(400).json({ error: 'Gmail address and App Password required' });

@@ -431,6 +431,53 @@
           </div>
         </div>
 
+        <!-- Hospital Directory Panel -->
+        <div class="panel" style="margin-bottom:20px;">
+          <div class="panel-header">
+            <div>
+              <h2>🏥 Hospital Directory</h2>
+              <div class="panel-header-sub">Manage hospitals shown on the First Responders page</div>
+            </div>
+          </div>
+          <div style="padding:0 20px 20px;">
+            <!-- Add Hospital Form -->
+            <details style="margin-bottom:16px;">
+              <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1d4ed8;padding:10px 0;">+ Add New Hospital</summary>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+                <input id="hospName" type="text" placeholder="Hospital name *" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
+                <input id="hospAddress" type="text" placeholder="Address" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
+                <input id="hospPhone" type="text" placeholder="Phone (e.g. +507 123-4567)" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
+                <input id="hospWhatsapp" type="text" placeholder="WhatsApp number (optional)" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
+                <input id="hospHours" type="text" placeholder="Hours (e.g. 24/7 or Mon-Fri 8am-6pm)" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
+                <input id="hospDistance" type="text" placeholder="Distance from community (e.g. 2.3 km)" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
+                <input id="hospType" type="text" placeholder="Type (e.g. Public, Private, Clinic)" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
+                <input id="hospNotes" type="text" placeholder="Notes (e.g. accepts Seguro Social)" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
+              </div>
+              <div style="margin-top:8px;">
+                <div style="font-size:12px;font-weight:600;color:#4a6378;margin-bottom:6px;">Services (check all that apply):</div>
+                <div id="hospServicesCheck" style="display:flex;flex-wrap:wrap;gap:8px;">
+                  <!-- filled by JS -->
+                </div>
+              </div>
+              <button onclick="addHospital()" style="margin-top:12px;padding:10px 24px;background:#1d4ed8;color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;">Add Hospital</button>
+            </details>
+            <div id="adminHospitalsList"><div class="panel-empty">Loading...</div></div>
+          </div>
+        </div>
+
+        <!-- Hospital Community Reports Panel -->
+        <div class="panel" style="margin-bottom:20px;">
+          <div class="panel-header">
+            <div>
+              <h2>⚠️ Hospital Community Reports</h2>
+              <div class="panel-header-sub">Unresolved issues reported by residents</div>
+            </div>
+          </div>
+          <div style="padding:0 20px 20px;">
+            <div id="hospitalReportsList"><div class="panel-empty">Loading...</div></div>
+          </div>
+        </div>
+
         <!-- HOA Contacts Panel -->
         <div class="panel" style="margin-bottom:20px;">
           <div class="panel-header">
@@ -716,7 +763,8 @@
     }
 
     async function loadAll() {
-      await Promise.all([loadAccess(), loadMembers(), loadStats(), loadBanned(), loadReports(), loadHOAContacts(), loadAlertHistory(), loadCommunitySafety(), loadDecameronEmail(), loadClaims(), loadRealtors(), loadEmtsServices()]);
+      renderHospServicesChecks();
+      await Promise.all([loadAccess(), loadMembers(), loadStats(), loadBanned(), loadReports(), loadHOAContacts(), loadAlertHistory(), loadCommunitySafety(), loadDecameronEmail(), loadClaims(), loadRealtors(), loadEmtsServices(), loadAdminHospitals()]);
       renderDashAccess();
       if (currentAdmin?.isOwner) {
         document.getElementById('ownerSection').style.display = 'block';
@@ -1075,6 +1123,120 @@
       if (!confirm('Delete this service?')) return;
       await fetch(`/api/admin/emts-services/${id}`, { method: 'DELETE', credentials: 'include' });
       await loadEmtsServices();
+    }
+
+    // ─── Hospital Directory ──────────────────────────────────────────────────
+    const ADMIN_HOSP_SERVICES = ['Emergency Room','ICU','Surgery','Maternity','Pediatrics','Cardiology','Neurology','Orthopedics','Radiology','Lab / Blood Work','Pharmacy','Ambulance','Dialysis','Oncology','Psychiatry'];
+
+    async function loadAdminHospitals() {
+      const [hRes, rRes] = await Promise.all([
+        fetch('/api/admin/hospitals', { credentials: 'include' }),
+        fetch('/api/admin/hospital-reports', { credentials: 'include' })
+      ]);
+      const hospitals = hRes.ok ? await hRes.json() : [];
+      const reports = rRes.ok ? await rRes.json() : [];
+
+      // Render hospitals list
+      const el = document.getElementById('adminHospitalsList');
+      if (!hospitals.length) { el.innerHTML = '<div class="panel-empty">No hospitals added yet.</div>'; }
+      else {
+        el.innerHTML = hospitals.map(h => `
+          <div style="padding:14px;border:1.5px solid #dde4ed;border-radius:12px;margin-bottom:10px;background:#f8fafc;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+              <div style="flex:1;">
+                <div style="font-size:15px;font-weight:700;color:#1a2e44;">${h.name}</div>
+                <div style="font-size:12.5px;color:#4a6378;margin-top:2px;">${[h.type,h.address,h.distance?h.distance+' away':'',h.hours].filter(Boolean).join(' · ')}</div>
+                ${h.phone?`<div style="font-size:12.5px;color:#4a6378;">📞 ${h.phone}${h.whatsapp?' · 💬 '+h.whatsapp:''}</div>`:''}
+                ${h.notes?`<div style="font-size:12px;color:#6b7280;margin-top:4px;font-style:italic;">${h.notes}</div>`:''}
+                ${h.services&&h.services.length?`<div style="font-size:11px;color:#1d4ed8;margin-top:6px;">${h.services.join(', ')}</div>`:''}
+              </div>
+              <div style="display:flex;gap:6px;flex-shrink:0;">
+                <button onclick="editHospital(${h.id})" style="padding:6px 12px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;font-size:12px;font-weight:600;color:#1d4ed8;cursor:pointer;font-family:Inter,sans-serif;">Edit</button>
+                <button onclick="deleteHospital(${h.id})" style="padding:6px 12px;background:#fee;border:1.5px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:600;color:#E63946;cursor:pointer;font-family:Inter,sans-serif;">Delete</button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Render reports
+      const rEl = document.getElementById('hospitalReportsList');
+      if (!reports.length) { rEl.innerHTML = '<div class="panel-empty">No unresolved reports.</div>'; }
+      else {
+        rEl.innerHTML = reports.map(r => `
+          <div style="padding:14px;border:1.5px solid #fcd34d;border-radius:12px;margin-bottom:10px;background:#fffbeb;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:700;color:#92400e;">${r.hospital_name}</div>
+                <div style="font-size:13px;color:#1a2e44;margin-top:4px;">${r.issue}</div>
+                <div style="font-size:11.5px;color:#6b7280;margin-top:4px;">Reported by ${r.reported_by_name||'Anonymous'} · ${new Date(r.created_at).toLocaleDateString()}</div>
+              </div>
+              <button onclick="resolveReport(${r.id})" style="padding:6px 14px;background:#d1fae5;border:1.5px solid #6ee7b7;border-radius:8px;font-size:12px;font-weight:600;color:#065f46;cursor:pointer;font-family:Inter,sans-serif;flex-shrink:0;">Resolve</button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function renderHospServicesChecks(selected=[]) {
+      document.getElementById('hospServicesCheck').innerHTML = ADMIN_HOSP_SERVICES.map(s => `
+        <label style="display:flex;align-items:center;gap:4px;font-size:12.5px;color:#1a2e44;cursor:pointer;background:#fff;border:1px solid #dde4ed;border-radius:8px;padding:4px 8px;">
+          <input type="checkbox" value="${s}" ${selected.includes(s)?'checked':''} style="cursor:pointer;"> ${s}
+        </label>
+      `).join('');
+    }
+
+    function getCheckedServices() {
+      return [...document.querySelectorAll('#hospServicesCheck input:checked')].map(i => i.value);
+    }
+
+    async function addHospital() {
+      const name = document.getElementById('hospName').value.trim();
+      if (!name) { showToast('Hospital name is required'); return; }
+      const body = {
+        name,
+        address: document.getElementById('hospAddress').value.trim(),
+        phone: document.getElementById('hospPhone').value.trim(),
+        whatsapp: document.getElementById('hospWhatsapp').value.trim(),
+        hours: document.getElementById('hospHours').value.trim(),
+        distance: document.getElementById('hospDistance').value.trim(),
+        type: document.getElementById('hospType').value.trim(),
+        notes: document.getElementById('hospNotes').value.trim(),
+        services: getCheckedServices()
+      };
+      const res = await fetch('/api/admin/hospitals', { method: 'POST', credentials: 'include', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!res.ok) { showToast('Error adding hospital'); return; }
+      ['hospName','hospAddress','hospPhone','hospWhatsapp','hospHours','hospDistance','hospType','hospNotes'].forEach(id => document.getElementById(id).value='');
+      renderHospServicesChecks();
+      showToast('Hospital added');
+      await loadAdminHospitals();
+    }
+
+    async function editHospital(id) {
+      const res = await fetch('/api/admin/hospitals', { credentials: 'include' });
+      const hospitals = await res.json();
+      const h = hospitals.find(x => x.id === id);
+      if (!h) return;
+      const newName = prompt('Hospital name:', h.name); if (!newName) return;
+      const newPhone = prompt('Phone:', h.phone||'');
+      const newHours = prompt('Hours:', h.hours||'');
+      const newNotes = prompt('Notes:', h.notes||'');
+      await fetch(`/api/admin/hospitals/${id}`, { method: 'PATCH', credentials: 'include', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name: newName, phone: newPhone, hours: newHours, notes: newNotes }) });
+      showToast('Hospital updated');
+      await loadAdminHospitals();
+    }
+
+    async function deleteHospital(id) {
+      if (!confirm('Delete this hospital? This cannot be undone.')) return;
+      await fetch(`/api/admin/hospitals/${id}`, { method: 'DELETE', credentials: 'include' });
+      showToast('Hospital deleted');
+      await loadAdminHospitals();
+    }
+
+    async function resolveReport(id) {
+      await fetch(`/api/admin/hospital-reports/${id}/resolve`, { method: 'PATCH', credentials: 'include' });
+      showToast('Report resolved');
+      await loadAdminHospitals();
     }
 
     // ─── HOA Contacts ────────────────────────────────────────────────────────
