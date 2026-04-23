@@ -170,7 +170,7 @@ async function loadSidebarWidgets() {
   const nextEventEl = document.getElementById('nextEventCard');
   if (nextEventEl) {
     const upcoming = (events || [])
-      .filter(e => { const ds = (e.date || e.eventDate || '').substring(0,10); return ds && ds >= new Date().toISOString().substring(0,10); })
+      .filter(e => { const ds = (e.date || e.eventDate || '').substring(0,10); const n = new Date(); const today = `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; return ds && !e.cancelled && ds >= today; })
       .sort((a, b) => new Date((a.date||a.eventDate||'').substring(0,10)+'T12:00:00') - new Date((b.date||b.eventDate||'').substring(0,10)+'T12:00:00'))[0];
     if (upcoming) {
       const d = new Date((upcoming.date || upcoming.eventDate || '').substring(0,10) + 'T12:00:00');
@@ -599,11 +599,27 @@ function openListItemModal() {
   document.body.appendChild(modal);
 }
 
+function compressImage(dataUrl, maxW, maxH, quality) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    img.src = dataUrl;
+  });
+}
+
 function previewMarketImage(input) {
   if (!input.files || !input.files[0]) return;
   const reader = new FileReader();
-  reader.onload = e => {
-    marketImageData = e.target.result;
+  reader.onload = async e => {
+    marketImageData = await compressImage(e.target.result, 1200, 1200, 0.8);
     const prev = document.getElementById('liImagePreview');
     if (prev) prev.innerHTML = `<img src="${marketImageData}" style="height:70px;border-radius:8px;object-fit:cover;" />`;
   };
@@ -792,6 +808,7 @@ async function submitCreateEvent() {
       document.getElementById('createEventModal')?.remove();
       navigate('events');
       showToast('Event created! 📅');
+      loadSidebarWidgets();
     } else {
       const d = await res.json().catch(() => ({}));
       showToast('Error: ' + (d.error || `Server error ${res.status}`));
