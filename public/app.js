@@ -2328,23 +2328,23 @@ async function renderBusinessPage(bizId, container) {
 
     <!-- Header card -->
     <div class="biz-page-header-card" style="flex-direction:column;padding:0;overflow:visible;">
-      <!-- Banner -->
-      <div class="biz-banner-area" style="position:relative;height:140px;overflow:hidden;flex-shrink:0;background:#0077B6;">
-        ${biz.bannerUrl ? `<img src="${biz.bannerUrl}" style="width:100%;height:140px;object-fit:cover;display:block;" />` : ''}
-        ${isPageOwner ? `<label title="Change banner" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.45);color:white;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;z-index:1;"><input type="file" accept="image/*" style="display:none" onchange="uploadBizBanner('${biz.id}',this)">📷 Banner</label>` : ''}
+      <!-- Full-width banner -->
+      <div class="biz-banner-area" style="position:relative;height:280px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#0077B6,#00B4D8);border-radius:12px 12px 0 0;">
+        ${biz.bannerUrl ? `<img src="${biz.bannerUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" />` : ''}
+        ${isPageOwner ? `<label title="Change banner" style="position:absolute;bottom:14px;right:14px;background:rgba(0,0,0,0.55);color:white;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;z-index:1;"><input type="file" accept="image/*" style="display:none" onchange="uploadBizBanner('${biz.id}',this)">📷 Edit Cover</label>` : ''}
       </div>
-      <!-- Logo overlapping banner -->
-      <div style="display:flex;align-items:flex-end;gap:18px;padding:0 24px 0;margin-top:-44px;position:relative;z-index:1;">
+      <!-- Logo overlapping banner (Facebook-style) -->
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;padding:0 24px 0;margin-top:-52px;position:relative;z-index:1;">
         <div style="position:relative;flex-shrink:0;">
-          <div class="biz-logo-circle" style="background:${biz.logoUrl ? 'white' : bg};font-size:40px;width:88px;height:88px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.15);overflow:hidden;">
+          <div class="biz-logo-circle" style="background:${biz.logoUrl ? 'white' : bg};font-size:44px;width:108px;height:108px;border:4px solid white;box-shadow:0 2px 10px rgba(0,0,0,0.2);overflow:hidden;">
             ${biz.logoUrl ? `<img src="${biz.logoUrl}" style="width:100%;height:100%;object-fit:cover;">` : icon}
           </div>
-          ${isPageOwner ? `<label title="Change logo" style="position:absolute;bottom:0;right:0;width:26px;height:26px;background:var(--ocean);border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;"><input type="file" accept="image/*" style="display:none" onchange="uploadBizLogo('${biz.id}',this)">📷</label>` : `<div style="position:absolute;bottom:-3px;right:-3px;width:22px;height:22px;background:${biz.claimed ? 'var(--ocean)' : '#F59E0B'};border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:10px;color:white;font-weight:700;">${biz.claimed ? '✓' : '!'}</div>`}
+          ${isPageOwner ? `<label title="Change logo" style="position:absolute;bottom:4px;right:4px;width:30px;height:30px;background:var(--ocean);border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;"><input type="file" accept="image/*" style="display:none" onchange="uploadBizLogo('${biz.id}',this)">📷</label>` : `<div style="position:absolute;bottom:2px;right:2px;width:26px;height:26px;background:${biz.claimed ? 'var(--ocean)' : '#F59E0B'};border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:11px;color:white;font-weight:700;">${biz.claimed ? '✓' : '!'}</div>`}
         </div>
-        <div style="padding-bottom:12px;padding-top:48px;"></div>
+        <div style="padding-bottom:8px;"></div>
       </div>
       <!-- Name + category -->
-      <div style="padding:8px 24px 4px;">
+      <div style="padding:12px 24px 4px;">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
           <span style="font-size:22px;font-weight:800;color:var(--text-dark);">${escHtml(biz.name)}</span>
           ${!biz.claimed ? '<span style="font-size:11px;font-weight:700;color:#92400E;background:#FEF3C7;border:1px solid #F59E0B;padding:2px 8px;border-radius:20px;">📋 Unclaimed</span>' : ''}
