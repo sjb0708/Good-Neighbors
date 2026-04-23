@@ -2329,7 +2329,7 @@ async function renderBusinessPage(bizId, container) {
     <!-- Header card -->
     <div class="biz-page-header-card" style="flex-direction:column;padding:0;overflow:hidden;">
       <!-- Banner -->
-      <div class="biz-banner-area" style="position:relative;height:140px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,var(--ocean),var(--seafoam));">
+      <div class="biz-banner-area" style="position:relative;height:140px;overflow:hidden;flex-shrink:0;background-color:var(--ocean);background-image:linear-gradient(135deg,var(--ocean),var(--seafoam));background-size:cover;background-position:center;">
         ${isPageOwner ? `<label title="Change banner" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.45);color:white;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;z-index:1;"><input type="file" accept="image/*" style="display:none" onchange="uploadBizBanner('${biz.id}',this)">📷 Banner</label>` : ''}
       </div>
       <!-- Logo overlapping banner -->
@@ -2630,10 +2630,9 @@ async function renderBusinessPage(bizId, container) {
   if (biz.bannerUrl) {
     const bannerArea = wrap.querySelector('.biz-banner-area');
     if (bannerArea) {
-      const img = document.createElement('img');
-      img.src = biz.bannerUrl;
-      img.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0;';
-      bannerArea.insertBefore(img, bannerArea.firstChild);
+      bannerArea.style.backgroundImage = `url(${JSON.stringify(biz.bannerUrl)})`;
+      bannerArea.style.backgroundSize = 'cover';
+      bannerArea.style.backgroundPosition = 'center';
     }
   }
 }
