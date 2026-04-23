@@ -4057,6 +4057,10 @@ function renderFirstResponders(container) {
           </div>
         </div>
         <div style="padding:20px 22px;">
+          <div style="background:#f0f4ff;border-left:4px solid #1d4ed8;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+            <p style="font-size:15px;font-weight:700;color:#1d4ed8;margin:0 0 4px;font-style:italic;">"Don't wait until you have an emergency."</p>
+            <p style="font-size:13.5px;color:var(--text-mid);line-height:1.6;margin:0;">Our medics are trained to American standards — so when you need us most, we're ready. U.S.-level training, U.S.-level equipment, right here in Panama.</p>
+          </div>
           <p style="font-size:14px;color:var(--text-mid);line-height:1.65;margin:0 0 16px;">EMTS Panama is a private EMS provider serving the Buenaventura area. They maintain U.S.-level standards for equipment and training, ensuring a high quality of emergency medical care for our community.</p>
           <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">Services Offered</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
