@@ -1345,6 +1345,12 @@ app.get('/api/businesses', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
+app.get('/api/businesses/:id/banner-check', async (req, res) => {
+  const [biz] = await sql`SELECT id, name, banner_url FROM businesses WHERE id=${req.params.id}`;
+  if (!biz) return res.status(404).json({ error: 'Not found' });
+  res.json({ id: biz.id, name: biz.name, hasBanner: !!biz.banner_url, bannerLength: biz.banner_url ? biz.banner_url.length : 0 });
+});
+
 app.get('/api/businesses/:id', async (req, res) => {
   try {
     const user   = await getUser(req);
