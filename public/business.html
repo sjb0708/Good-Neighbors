@@ -1554,8 +1554,8 @@
       if (btn) btn.textContent = sel.value === 'es' ? '🌐 EN' : '🌐 ES';
     }
 
-    async function logout() {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    function logout() {
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(()=>{});
       window.location.href = '/login';
     }
 
