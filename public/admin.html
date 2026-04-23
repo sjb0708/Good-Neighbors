@@ -569,6 +569,74 @@
         </div>
       </div>
 
+      <!-- Realtors View -->
+      <div class="view" id="view-realtors">
+        <div class="panel" style="margin-bottom:20px;">
+          <div class="panel-header">
+            <div>
+              <h2>🏠 Add Realtor Account</h2>
+              <div class="panel-header-sub">Create a login for a real estate agent — share the credentials directly with them</div>
+            </div>
+          </div>
+          <div style="padding:0 20px 20px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+              <div>
+                <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Agent Name *</label>
+                <input id="rlName" type="text" placeholder="e.g. Maria Garcia" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
+              </div>
+              <div>
+                <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Email Address</label>
+                <input id="rlEmail" type="email" placeholder="e.g. agent@realestate.com" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+              <div>
+                <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Username *</label>
+                <input id="rlUsername" type="text" placeholder="e.g. maria-garcia" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
+              </div>
+              <div>
+                <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Password *</label>
+                <input id="rlPassword" type="text" placeholder="Set a strong password" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
+              </div>
+            </div>
+            <div style="margin-bottom:16px;">
+              <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Bio</label>
+              <textarea id="rlBio" rows="2" placeholder="e.g. Licensed real estate agent specializing in Costa Blanca Villas…" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;resize:vertical;box-sizing:border-box;"></textarea>
+            </div>
+            <div id="rlError" style="display:none;color:#E63946;font-size:13px;margin-bottom:12px;"></div>
+            <button onclick="createRealtorAccount()" style="padding:11px 24px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;">+ Add Realtor</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>🏠 Realtor Accounts</h2>
+              <div class="panel-header-sub">Accounts with the <strong>realtor</strong> role can post and delete real estate listings</div>
+            </div>
+          </div>
+          <div id="realtorsList"><div class="panel-empty">Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- Manage Businesses View -->
+      <div class="view" id="view-businesses">
+        <div class="panel-header"><h2>🗂️ Manage Businesses</h2><div class="panel-header-sub">View and remove business listings</div></div>
+        <div id="bizManageList"></div>
+      </div>
+
+      <!-- Business Claims View -->
+      <div class="view" id="view-claims">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>🏪 Business Claims</h2>
+              <div class="panel-header-sub">Review and approve businesses claiming their listing on the platform</div>
+            </div>
+          </div>
+          <div id="claimsList" style="padding:0 0 8px;"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -597,79 +665,6 @@
         <button onclick="closeBanModal()" style="flex:1;padding:11px;background:#f0f3f7;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;">Cancel</button>
         <button onclick="confirmBan()" style="flex:1;padding:11px;background:#E63946;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;">Ban Member</button>
       </div>
-    </div>
-
-      <!-- Realtors View -->
-      <div class="view" id="view-realtors">
-    <!-- Add Realtor Form -->
-    <div class="panel" style="margin-bottom:20px;">
-      <div class="panel-header">
-        <div>
-          <h2>🏠 Add Realtor Account</h2>
-          <div class="panel-header-sub">Create a login for a real estate agent — share the credentials directly with them</div>
-        </div>
-      </div>
-      <div style="padding:0 20px 20px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-          <div>
-            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Agent Name *</label>
-            <input id="rlName" type="text" placeholder="e.g. Maria Garcia" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
-          </div>
-          <div>
-            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Email Address</label>
-            <input id="rlEmail" type="email" placeholder="e.g. agent@realestate.com" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-          <div>
-            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Username *</label>
-            <input id="rlUsername" type="text" placeholder="e.g. maria-garcia" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
-          </div>
-          <div>
-            <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Password *</label>
-            <input id="rlPassword" type="text" placeholder="Set a strong password" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
-          </div>
-        </div>
-        <div style="margin-bottom:16px;">
-          <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Bio</label>
-          <textarea id="rlBio" rows="2" placeholder="e.g. Licensed real estate agent specializing in Costa Blanca Villas…" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;resize:vertical;box-sizing:border-box;"></textarea>
-        </div>
-        <div id="rlError" style="display:none;color:#E63946;font-size:13px;margin-bottom:12px;"></div>
-        <button onclick="createRealtorAccount()" style="padding:11px 24px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;">+ Add Realtor</button>
-      </div>
-    </div>
-
-    <!-- Realtor List -->
-    <div class="panel">
-      <div class="panel-header">
-        <div>
-          <h2>🏠 Realtor Accounts</h2>
-          <div class="panel-header-sub">Accounts with the <strong>realtor</strong> role can post and delete real estate listings</div>
-        </div>
-      </div>
-      <div id="realtorsList"><div class="panel-empty">Loading…</div></div>
-    </div>
-      </div>
-
-      <!-- Manage Businesses View -->
-      <div class="view" id="view-businesses">
-        <div class="panel-header"><h2>🗂️ Manage Businesses</h2><div class="panel-header-sub">View and remove business listings</div></div>
-        <div id="bizManageList"></div>
-      </div>
-
-      <!-- Business Claims View -->
-      <div class="view" id="view-claims">
-        <div class="panel">
-          <div class="panel-header">
-            <div>
-              <h2>🏪 Business Claims</h2>
-              <div class="panel-header-sub">Review and approve businesses claiming their listing on the platform</div>
-            </div>
-          </div>
-          <div id="claimsList" style="padding:0 0 8px;"></div>
-        </div>
-      </div>
-
     </div>
   </div>
 
