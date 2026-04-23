@@ -4376,6 +4376,7 @@ async function renderFirstResponders(container) {
               </div>
             </div>
             <button onclick="saveFRMyInfo()" style="width:100%;padding:13px;background:#1d4ed8;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">💾 Save My Emergency Info</button>
+            <button onclick="generateEmergencyCard()" style="width:100%;padding:13px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">📲 Generate Emergency Card (English / Español)</button>
           </div>
         </div>
 
@@ -4438,6 +4439,122 @@ function loadFRMyInfo() {
       if (el) el.checked = true;
     });
   } catch(e) {}
+}
+
+function generateEmergencyCard() {
+  const data = JSON.parse(localStorage.getItem('frMyInfo') || '{}');
+  const fieldDefs = [
+    { en: 'Blood Type', es: 'Tipo de Sangre', key: 'blood' },
+    { en: 'Severe Allergies', es: 'Alergias Graves', key: 'allergies' },
+    { en: 'Current Medications', es: 'Medicamentos', key: 'meds' },
+    { en: 'Emergency Contact', es: 'Contacto de Emergencia', key: 'contact' },
+    { en: 'Family Doctor & Phone', es: 'Medico de Familia', key: 'doctor' },
+    { en: 'Insurance', es: 'Seguro Medico', key: 'insurance' },
+    { en: 'Preferred Hospital', es: 'Hospital Preferido', key: 'hospital' },
+  ];
+  const filled = fieldDefs.filter(f => data[f.key]);
+  const hasConds = data.conditions && data.conditions.length;
+  if (!filled.length && !hasConds) { showToast('Fill in your emergency info first, then generate the card.'); return; }
+
+  const W = 400, headerH = 120, footerH = 50, fieldH = 60, condH = hasConds ? 72 : 0, pad = 16;
+  const H = headerH + pad + filled.length * fieldH + condH + pad + footerH;
+  const scale = 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = W * scale; canvas.height = H * scale;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  // White bg
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+
+  // Header
+  const grad = ctx.createLinearGradient(0, 0, W, headerH);
+  grad.addColorStop(0, '#1e3a8a'); grad.addColorStop(1, '#1d4ed8');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, headerH);
+
+  // Red cross
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(16, 20, 28, 10); ctx.fillRect(21, 15, 18, 20);
+
+  // Header text
+  ctx.fillStyle = 'white'; ctx.font = 'bold 15px system-ui,Arial';
+  ctx.fillText('EMERGENCY MEDICAL INFO', 54, 30);
+  ctx.font = '13px system-ui,Arial'; ctx.fillStyle = 'rgba(255,255,255,.75)';
+  ctx.fillText('INFORMACION MEDICA DE EMERGENCIA', 54, 48);
+  ctx.font = '11px system-ui,Arial'; ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.fillText('Stored only on this device · Solo en este dispositivo', 16, 68);
+  ctx.fillText('Show to first responder · Mostrar al socorrista en emergencia', 16, 84);
+  ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(16, 98); ctx.lineTo(W - 16, 98); ctx.stroke();
+  ctx.font = 'bold 11px system-ui,Arial'; ctx.fillStyle = 'rgba(255,255,255,.5)';
+  ctx.fillText('Generated ' + new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}), 16, 112);
+
+  let y = headerH + pad;
+
+  const drawRR = (x, yy, w, h, r) => {
+    ctx.beginPath(); ctx.moveTo(x+r,yy);
+    ctx.lineTo(x+w-r,yy); ctx.quadraticCurveTo(x+w,yy,x+w,yy+r);
+    ctx.lineTo(x+w,yy+h-r); ctx.quadraticCurveTo(x+w,yy+h,x+w-r,yy+h);
+    ctx.lineTo(x+r,yy+h); ctx.quadraticCurveTo(x,yy+h,x,yy+h-r);
+    ctx.lineTo(x,yy+r); ctx.quadraticCurveTo(x,yy,x+r,yy); ctx.closePath();
+  };
+
+  const fitText = (txt, maxW) => {
+    let t = String(txt);
+    while (ctx.measureText(t).width > maxW && t.length > 4) t = t.slice(0,-3) + '…';
+    return t;
+  };
+
+  for (const f of filled) {
+    ctx.fillStyle = '#f8fafc'; drawRR(12, y, W-24, 54, 8); ctx.fill();
+    ctx.fillStyle = '#1d4ed8'; ctx.fillRect(12, y, 4, 54);
+    ctx.font = 'bold 9.5px system-ui,Arial'; ctx.fillStyle = '#6b7280';
+    ctx.fillText((f.en + ' / ' + f.es).toUpperCase(), 24, y + 15);
+    ctx.font = 'bold 14px system-ui,Arial'; ctx.fillStyle = '#111827';
+    ctx.fillText(fitText(data[f.key], W - 40), 24, y + 38);
+    y += fieldH;
+  }
+
+  if (hasConds) {
+    const condMap = { diabetes:'Diabetes', epilepsy:'Epilepsy', hemophilia:'Hemophilia', heartcondition:'Heart Condition', asthma:'Asthma', other:'Other' };
+    ctx.fillStyle = '#fef2f2'; drawRR(12, y, W-24, 64, 8); ctx.fill();
+    ctx.strokeStyle = '#fecaca'; ctx.lineWidth = 1.5; drawRR(12, y, W-24, 64, 8); ctx.stroke();
+    ctx.fillStyle = '#dc2626'; ctx.fillRect(12, y, 4, 64);
+    ctx.font = 'bold 9.5px system-ui,Arial'; ctx.fillStyle = '#dc2626';
+    ctx.fillText('MEDICAL CONDITIONS / CONDICIONES MEDICAS', 24, y + 15);
+    ctx.font = 'bold 13px system-ui,Arial'; ctx.fillStyle = '#111827';
+    ctx.fillText(fitText(data.conditions.map(c => condMap[c]||c).join('  ·  '), W - 40), 24, y + 44);
+    y += condH;
+  }
+
+  // Footer
+  ctx.fillStyle = '#1e3a8a'; ctx.fillRect(0, H - footerH, W, footerH);
+  ctx.font = '11px system-ui,Arial'; ctx.fillStyle = 'rgba(255,255,255,.6)';
+  ctx.textAlign = 'center';
+  ctx.fillText('Good Neighbors App · Costa Blanca Villas, Farallon, Panama', W/2, H - 30);
+  ctx.fillText('In emergency show this card / En emergencia muestre esta tarjeta', W/2, H - 14);
+  ctx.textAlign = 'left';
+
+  // Show modal
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:14px;overflow-y:auto;';
+  const img = document.createElement('img');
+  img.src = canvas.toDataURL('image/png');
+  img.style.cssText = 'max-width:100%;max-height:55vh;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.6);';
+  const tip = document.createElement('div');
+  tip.style.cssText = 'color:white;text-align:center;font-size:13px;line-height:1.7;max-width:320px;font-family:inherit;';
+  tip.innerHTML = '<strong style="font-size:15px;">Save to your phone 📱</strong><br>Mobile: <strong>long-press the card → Save Image</strong><br>Desktop: <strong>right-click → Save image as</strong>';
+  const dlBtn = document.createElement('a');
+  dlBtn.href = canvas.toDataURL('image/png'); dlBtn.download = 'emergency-medical-card.png';
+  dlBtn.style.cssText = 'padding:12px 32px;background:#1d4ed8;color:white;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;display:inline-block;font-family:inherit;';
+  dlBtn.textContent = '⬇️ Download Card';
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕ Close'; closeBtn.onclick = () => modal.remove();
+  closeBtn.style.cssText = 'padding:9px 24px;background:rgba(255,255,255,.1);color:white;border:1px solid rgba(255,255,255,.3);border-radius:10px;font-size:13px;cursor:pointer;font-family:inherit;';
+  modal.append(img, tip, dlBtn, closeBtn);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
 }
 
 // ─── Transportation ───────────────────────────────────────────────
