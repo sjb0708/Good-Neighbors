@@ -1001,6 +1001,8 @@ const BIZ_CATEGORIES = [
   { label: 'Immigration',     icon: '🛂' },
   { label: 'Relocation',      icon: '🚚' },
   { label: 'Veterans',        icon: '🎖️' },
+  { label: 'Fresh Market',    icon: '🥦' },
+  { label: 'Fish Market',     icon: '🐟' },
   { label: 'Other',           icon: '📌' },
 ];
 
