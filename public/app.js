@@ -1092,6 +1092,9 @@ function renderBizList() {
   });
 }
 
+const MEDICAL_BIZ_CATEGORIES = ['Health & Medical', 'LEO/Fire/EMS'];
+const MEDICAL_BIZ_SERVICES = ['Emergency Room','ICU / Critical Care','Surgery','Maternity','Pediatrics','Cardiology','Neurology','Orthopedics','X-Ray / Radiology','CT Scan','Ultrasound','Laboratory','Pharmacy','Ambulance / Transport','Antivenom','Blood Donations','Dialysis','Oncology','Psychiatry','English Speaking Staff'];
+
 function openAddBusinessModal() {
   const existing = document.getElementById('addBizModal');
   if (existing) existing.remove();
@@ -1124,11 +1127,18 @@ function openAddBusinessModal() {
 
       <div style="padding:0 24px 24px;">
         <div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">NAME *</label><input id="abName" type="text" placeholder="e.g. Costa Coffee" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/></div>
-        <div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">CATEGORY</label><select id="abCategory" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;background:white;"><option value="">Select a category…</option>${BIZ_CATEGORIES.map(c=>`<option value="${c.label}">${c.icon} ${c.label}</option>`).join('')}</select></div>
-        ${['ADDRESS:abAddress:text:Street address','PHONE:abPhone:tel:+507 xxx xxxx','HOURS:abHours:text:Mon–Fri 9am–6pm','WEBSITE:abWebsite:url:https://...','INSTAGRAM:abInstagram:url:https://instagram.com/yourbusiness','FACEBOOK:abFacebook:url:https://facebook.com/yourbusiness'].map(f => {
+        <div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">CATEGORY</label><select id="abCategory" onchange="toggleAbMedical(this.value)" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;background:white;"><option value="">Select a category…</option>${BIZ_CATEGORIES.map(c=>`<option value="${c.label}">${c.icon} ${c.label}</option>`).join('')}</select></div>
+        ${['ADDRESS:abAddress:text:Street address','PHONE:abPhone:tel:+507 xxx xxxx','HOURS:abHours:text:Mon–Fri 9am–6pm, 24/7, etc.','WEBSITE:abWebsite:url:https://...','INSTAGRAM:abInstagram:url:https://instagram.com/yourbusiness','FACEBOOK:abFacebook:url:https://facebook.com/yourbusiness'].map(f => {
           const [label, id, type, placeholder] = f.split(':');
           return `<div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">${label}</label><input id="${id}" type="${type}" placeholder="${placeholder}" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/></div>`;
         }).join('')}
+        <!-- Medical/EMS extra fields — shown only for health categories -->
+        <div id="abMedicalSection" style="display:none;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:14px;margin-bottom:12px;">
+          <div style="font-size:12px;font-weight:700;color:#059669;margin-bottom:10px;">🏥 Medical / Emergency Services Info</div>
+          <div style="margin-bottom:10px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">WHATSAPP</label><input id="abWhatsapp" type="tel" placeholder="+507 xxx xxxx (for quick emergency contact)" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;background:white;"/></div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:8px;">SERVICES OFFERED</div>
+          <div id="abServicesCheck" style="display:flex;flex-wrap:wrap;gap:6px;">${MEDICAL_BIZ_SERVICES.map(s=>`<label style="display:flex;align-items:center;gap:4px;font-size:12.5px;color:#1a2e44;cursor:pointer;background:white;border:1px solid #dde4ed;border-radius:8px;padding:4px 8px;"><input type="checkbox" value="${s}" style="cursor:pointer;"> ${s}</label>`).join('')}</div>
+        </div>
         <div style="margin-bottom:18px;">
           <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">DESCRIPTION</label>
           <textarea id="abDesc" placeholder="What does this business offer?" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:none;height:80px;box-sizing:border-box;"></textarea>
@@ -1140,6 +1150,11 @@ function openAddBusinessModal() {
   `;
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
   document.body.appendChild(modal);
+}
+
+function toggleAbMedical(cat) {
+  const sec = document.getElementById('abMedicalSection');
+  if (sec) sec.style.display = MEDICAL_BIZ_CATEGORIES.includes(cat) ? 'block' : 'none';
 }
 
 function previewAbBanner(input) {
@@ -1178,6 +1193,8 @@ async function submitAddBusiness() {
       address: document.getElementById('abAddress')?.value.trim() || null,
       phone: document.getElementById('abPhone')?.value.trim() || null,
       hours: document.getElementById('abHours')?.value.trim() || null,
+      whatsapp: document.getElementById('abWhatsapp')?.value.trim() || null,
+      services: [...(document.querySelectorAll('#abServicesCheck input:checked')||[])].map(i=>i.value),
       website: document.getElementById('abWebsite')?.value.trim() || null,
       instagramUrl: document.getElementById('abInstagram')?.value.trim() || null,
       facebookUrl: document.getElementById('abFacebook')?.value.trim() || null,
@@ -2412,6 +2429,7 @@ async function renderBusinessPage(bizId, container) {
             <button class="btn-biz-more" onclick="toggleBizMoreMenu('${biz.id}')">⋯</button>
             <div class="biz-more-dropdown" id="bizMoreMenu-${biz.id}" style="display:none;">
               ${isPageOwner ? `<div class="biz-more-item" onclick="setBizContactEmail('${biz.id}','${escHtml(biz.contactEmail||'')}');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">✉️</span><div><div class="biz-more-item-text">Set Contact Email</div><div class="biz-more-item-sub">${biz.contactEmail ? escHtml(biz.contactEmail) : 'Add an email for the Email Us button'}</div></div></div>` : ''}
+              ${isPageOwner && MEDICAL_BIZ_CATEGORIES.includes(biz.category) ? `<div class="biz-more-item" onclick="editBizServices('${biz.id}');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🏥</span><div><div class="biz-more-item-text">Edit Services & Hours</div><div class="biz-more-item-sub">Update services offered and opening hours</div></div></div>` : ''}
               <div class="biz-more-item" onclick="showToast('${escHtml(biz.name)} muted.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔇</span><div><div class="biz-more-item-text">Mute</div><div class="biz-more-item-sub">Hide all posts from ${escHtml(biz.name)}</div></div></div>
               <div class="biz-more-item" onclick="openReportModal('business','${biz.id}','${escHtml(biz.name).replace(/'/g,"\\'")}');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">⚑</span><div><div class="biz-more-item-text">Report</div><div class="biz-more-item-sub">Flag for review</div></div></div>
             </div>
@@ -2450,6 +2468,16 @@ async function renderBusinessPage(bizId, container) {
             ${biz.instagramUrl ? `<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-size:18px;flex-shrink:0;">📸</span><div><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:2px;">Instagram</div><a href="${escHtml(biz.instagramUrl)}" target="_blank" rel="noopener" style="font-size:14px;color:#E1306C;font-weight:500;text-decoration:none;">${escHtml(biz.instagramUrl).replace('https://','')}</a></div></div>` : ''}
             ${biz.facebookUrl ? `<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;"><span style="font-size:18px;flex-shrink:0;">👤</span><div><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:2px;">Facebook</div><a href="${escHtml(biz.facebookUrl)}" target="_blank" rel="noopener" style="font-size:14px;color:#1877F2;font-weight:500;text-decoration:none;">${escHtml(biz.facebookUrl).replace('https://','')}</a></div></div>` : ''}
           </div>
+
+          <!-- Services (Health & Medical) -->
+          ${(biz.services||[]).length ? `
+          <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;">Services Offered</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              ${(biz.services||[]).map(s=>`<span style="background:#f0fdf4;color:#059669;font-size:13px;font-weight:600;padding:5px 14px;border-radius:20px;border:1px solid #bbf7d0;">✓ ${escHtml(s)}</span>`).join('')}
+            </div>
+            ${biz.lastVerifiedAt ? `<div style="font-size:12px;color:var(--text-light);margin-top:10px;">Last verified ${timeAgo(new Date(biz.lastVerifiedAt).getTime())}</div>` : '<div style="font-size:12px;color:#d97706;margin-top:10px;">⚠️ Not yet community-verified — <button onclick="verifyBizInfo('+biz.id+')" style="background:none;border:none;color:#059669;font-weight:700;font-size:12px;cursor:pointer;padding:0;font-family:inherit;">Mark as accurate</button></div>'}
+          </div>` : ''}
 
           <!-- Tags / Specialties -->
           ${(biz.tags||[]).length ? `
@@ -2691,6 +2719,61 @@ async function setBizContactEmail(bizId, current) {
   });
   if (res.ok) { showToast('Contact email saved!'); navigate('business/' + bizId); }
   else showToast('Could not save email.');
+}
+
+async function verifyBizInfo(bizId) {
+  const res = await fetch(`/api/businesses/${bizId}/verify`, { method: 'POST', credentials: 'include' });
+  if (res.ok) { showToast('✓ Thank you for verifying!'); navigate('business/' + bizId); }
+  else showToast('Please log in to verify.');
+}
+
+async function editBizServices(bizId) {
+  const biz = allBusinesses.find(b => String(b.id) === String(bizId)) || (await fetchJSON(`/api/businesses/${bizId}`));
+  if (!biz) return;
+  const modal = document.createElement('div');
+  modal.id = 'editBizServicesModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:justify-content;padding:16px;justify-content:center;';
+  const currentServices = biz.services || [];
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h3 style="margin:0;font-size:17px;font-weight:800;">Edit Services & Hours</h3>
+        <button onclick="document.getElementById('editBizServicesModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:6px;">HOURS</label>
+        <input id="esHours" type="text" value="${escHtml(biz.hours||'')}" placeholder="e.g. 24/7 or Mon–Fri 8am–6pm" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:6px;">WHATSAPP</label>
+        <input id="esWhatsapp" type="tel" value="${escHtml(biz.whatsapp||'')}" placeholder="+507 xxx xxxx" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:8px;">SERVICES OFFERED</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;">
+        ${MEDICAL_BIZ_SERVICES.map(s=>`<label style="display:flex;align-items:center;gap:4px;font-size:12.5px;cursor:pointer;background:${currentServices.includes(s)?'#f0fdf4':'#f8fafc'};border:1px solid ${currentServices.includes(s)?'#bbf7d0':'#dde4ed'};border-radius:8px;padding:5px 10px;">
+          <input type="checkbox" value="${s}" ${currentServices.includes(s)?'checked':''} style="cursor:pointer;"> ${s}
+        </label>`).join('')}
+      </div>
+      <button onclick="saveEditBizServices('${bizId}')" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Save Changes</button>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function saveEditBizServices(bizId) {
+  const services = [...document.querySelectorAll('#editBizServicesModal input[type=checkbox]:checked')].map(i => i.value);
+  const hours = document.getElementById('esHours')?.value.trim() || null;
+  const whatsapp = document.getElementById('esWhatsapp')?.value.trim() || null;
+  const res = await fetch(`/api/businesses/${bizId}`, {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ services, hours, whatsapp })
+  });
+  if (res.ok) {
+    document.getElementById('editBizServicesModal')?.remove();
+    showToast('Services updated!');
+    navigate('business/' + bizId);
+  } else showToast('Could not save changes.');
 }
 
 async function uploadBizBanner(bizId, input) {
@@ -4044,7 +4127,6 @@ function switchFRTab(tab) {
   if (btn) { btn.style.background = 'transparent'; btn.style.color = '#1d4ed8'; btn.style.borderBottom = '3px solid #1d4ed8'; }
   const panel = document.getElementById('frpanel-' + tab);
   if (panel) panel.style.display = 'block';
-  if (tab === 'hospitals') loadHospitals();
 }
 
 const HOSPITAL_SERVICES = ['X-Ray / Radiology','Ultrasound','CT Scan','Laboratory','Pediatric Care','Major Surgery','Antivenom','Trauma Care','Blood Transfusion','Blood Donations','Minor Surgery','ICU / Critical Care','24/7 Emergency','English Speaking','Ambulance On-Site'];
@@ -4124,7 +4206,7 @@ async function renderFirstResponders(container) {
       <!-- Tabs -->
       <div style="background:white;border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px;">
         <div style="display:flex;overflow-x:auto;border-bottom:1px solid var(--border);padding:0 4px;">
-          ${[['services','🚑 Services'],['call','📞 Call for Help'],['hospitals','🏥 Hospitals'],['prepared','⚡ Be Prepared'],['myinfo','👤 My Info'],['guide','📄 Guide']].map(([id,label]) => `
+          ${[['services','🚑 Services'],['call','📞 Call for Help'],['prepared','⚡ Be Prepared'],['myinfo','👤 My Info'],['guide','📄 Guide']].map(([id,label]) => `
             <button id="frtab-${id}" class="fr-tab-btn" onclick="switchFRTab('${id}')" style="padding:13px 14px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:inherit;white-space:nowrap;background:transparent;color:var(--text-mid);border-bottom:3px solid transparent;transition:all .15s;">${label}</button>
           `).join('')}
         </div>
@@ -4216,19 +4298,6 @@ async function renderFirstResponders(container) {
                   </div>`).join('')}
               </div>
             </div>`).join('')}
-        </div>
-
-        <!-- Tab: Hospitals -->
-        <div id="frpanel-hospitals" class="fr-tab-panel" style="padding:20px;display:none;">
-          <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
-            <div style="font-size:13px;font-weight:800;color:#dc2626;margin-bottom:4px;">⚠️ Community-Maintained Information</div>
-            <p style="font-size:12.5px;color:var(--text-mid);line-height:1.55;margin:0;">Hospital capabilities in Panama change. Always call ahead in a non-emergency. If info is wrong, tap <strong>Report Issue</strong> so we can fix it. Every verification helps save lives.</p>
-          </div>
-          <div id="hospitalsList"><div style="text-align:center;padding:30px;color:var(--text-light);">Loading hospitals...</div></div>
-          <div style="background:#fff8f0;border-radius:12px;padding:14px;border:1px solid #fed7aa;margin-top:4px;">
-            <div style="font-size:13px;font-weight:700;color:#ea580c;margin-bottom:4px;">💡 Private Insurance</div>
-            <p style="font-size:12.5px;color:var(--text-mid);line-height:1.55;margin:0;">Understand your ambulance coverage — response times and which emergencies are prioritized. Fast access to the right care depends on how quickly help can physically reach you.</p>
-          </div>
         </div>
 
         <!-- Tab: Be Prepared -->
@@ -4340,15 +4409,6 @@ async function renderFirstResponders(container) {
         </div>
       </div>
 
-      <!-- Safety Alert CTA -->
-      <div style="background:#fff8f0;border:1.5px solid #f97316;border-radius:16px;padding:18px 22px;display:flex;align-items:center;gap:16px;">
-        <span style="font-size:32px;flex-shrink:0;">🚨</span>
-        <div style="flex:1;">
-          <div style="font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:2px;">See something? Alert your neighbors.</div>
-          <div style="font-size:13px;color:var(--text-mid);">Post a safety alert instantly to everyone in the community.</div>
-        </div>
-        <button onclick="navigate('safety')" style="padding:10px 16px;background:#f97316;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Post Alert</button>
-      </div>
     </div>
   `;
   switchFRTab('services');

@@ -1414,6 +1414,7 @@ function formatBusiness(b) {
   return {
     id: b.id, name: b.name, category: b.category, description: b.description,
     address: b.address, phone: b.phone, hours: b.hours, website: b.website,
+    whatsapp: b.whatsapp||null,
     contactEmail: b.contact_email||null,
     instagramUrl: b.instagram_url||null, facebookUrl: b.facebook_url||null,
     photos: (b.photos||[]).map((p,i) => p && p.startsWith('data:') ? `/api/businesses/${b.id}/photo/${i}` : p),
@@ -1424,17 +1425,22 @@ function formatBusiness(b) {
     logoUrl: b.logo_url ? (b.logo_url.startsWith('data:') ? `/api/businesses/${b.id}/logo-image` : b.logo_url) : null,
     menuUrl: b.menu_url||null, menuText: b.menu_text||null,
     addedByUserId: b.added_by_user_id||null, claimedByUserId: b.claimed_by_user_id||null,
+    services: b.services || [],
+    lastVerifiedAt: b.last_verified_at||null,
   };
 }
 
 app.post('/api/businesses', requireAuth(async (req, res) => {
-  const { name, category, description, address, phone, hours, website, instagramUrl, facebookUrl } = req.body;
+  const { name, category, description, address, phone, hours, website, instagramUrl, facebookUrl, whatsapp, services } = req.body;
   if (!name) return res.status(400).json({ error: 'Business name required' });
   await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS instagram_url TEXT`;
   await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS facebook_url TEXT`;
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS whatsapp TEXT`;
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS services JSONB DEFAULT '[]'`;
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS last_verified_at TIMESTAMPTZ`;
   const [biz] = await sql`
-    INSERT INTO businesses (name, category, description, address, phone, hours, website, instagram_url, facebook_url, added_by_user_id, claimed)
-    VALUES (${name}, ${category||null}, ${description||''}, ${address||null}, ${phone||null}, ${hours||null}, ${website||null}, ${instagramUrl||null}, ${facebookUrl||null}, ${req.currentUser.id}, false)
+    INSERT INTO businesses (name, category, description, address, phone, hours, website, instagram_url, facebook_url, whatsapp, services, added_by_user_id, claimed)
+    VALUES (${name}, ${category||null}, ${description||''}, ${address||null}, ${phone||null}, ${hours||null}, ${website||null}, ${instagramUrl||null}, ${facebookUrl||null}, ${whatsapp||null}, ${JSON.stringify(services||[])}, ${req.currentUser.id}, false)
     RETURNING *
   `;
   res.json({ ok: true, business: formatBusiness(biz) });
@@ -1473,9 +1479,23 @@ app.patch('/api/businesses/:id', requireAuth(async (req, res) => {
   const isOwner = req.currentUser.id === biz.claimed_by_user_id || req.currentUser.id === biz.added_by_user_id || req.currentUser.role === 'admin';
   if (!isOwner) return res.status(403).json({ error: 'Forbidden' });
   await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS contact_email TEXT`;
-  const { contactEmail } = req.body;
-  const [updated] = await sql`UPDATE businesses SET contact_email=${contactEmail||null} WHERE id=${req.params.id} RETURNING *`;
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS whatsapp TEXT`;
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS services JSONB DEFAULT '[]'`;
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS last_verified_at TIMESTAMPTZ`;
+  const { contactEmail, whatsapp, services, hours } = req.body;
+  const [updated] = await sql`UPDATE businesses SET
+    contact_email=${contactEmail !== undefined ? contactEmail||null : biz.contact_email},
+    whatsapp=${whatsapp !== undefined ? whatsapp||null : biz.whatsapp},
+    services=${services !== undefined ? JSON.stringify(services||[]) : biz.services||'[]'},
+    hours=${hours !== undefined ? hours||null : biz.hours}
+    WHERE id=${req.params.id} RETURNING *`;
   res.json({ ok: true, business: formatBusiness(updated) });
+}));
+
+app.post('/api/businesses/:id/verify', requireAuth(async (req, res) => {
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS last_verified_at TIMESTAMPTZ`;
+  await sql`UPDATE businesses SET last_verified_at=NOW() WHERE id=${req.params.id}`;
+  res.json({ ok: true });
 }));
 
 app.post('/api/businesses/:id/banner', requireAuth(async (req, res) => {
