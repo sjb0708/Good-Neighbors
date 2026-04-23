@@ -1000,6 +1000,7 @@ const BIZ_CATEGORIES = [
   { label: 'Pool Service',    icon: '🏊' },
   { label: 'Immigration',     icon: '🛂' },
   { label: 'Relocation',      icon: '🚚' },
+  { label: 'Veterans',        icon: '🎖️' },
   { label: 'Other',           icon: '📌' },
 ];
 
