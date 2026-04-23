@@ -1231,7 +1231,8 @@ function formatBusiness(b) {
     id: b.id, name: b.name, category: b.category, description: b.description,
     address: b.address, phone: b.phone, hours: b.hours, website: b.website,
     instagramUrl: b.instagram_url||null, facebookUrl: b.facebook_url||null,
-    photos: b.photos||[], tags: b.tags||[], rating: parseFloat(b.rating)||0,
+    photos: (b.photos||[]).map((p,i) => p && p.startsWith('data:') ? `/api/businesses/${b.id}/photo/${i}` : p),
+    tags: b.tags||[], rating: parseFloat(b.rating)||0,
     reviewCount: b.review_count||0, recommendedBy: b.recommended_by||0,
     claimed: b.claimed,
     bannerUrl: b.banner_url ? (b.banner_url.startsWith('data:') ? `/api/businesses/${b.id}/banner-image` : b.banner_url) : null,
@@ -1373,6 +1374,16 @@ app.get('/api/businesses/:id/logo-image', async (req, res) => {
   if (!biz?.logo_url) return res.status(404).end();
   if (!biz.logo_url.startsWith('data:')) return res.redirect(biz.logo_url);
   const [header, data] = biz.logo_url.split(',');
+  const mime = (header.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
+  res.set('Content-Type', mime).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(data, 'base64'));
+});
+
+app.get('/api/businesses/:id/photo/:index', async (req, res) => {
+  const [biz] = await sql`SELECT photos FROM businesses WHERE id=${req.params.id}`;
+  const photo = (biz?.photos || [])[parseInt(req.params.index)];
+  if (!photo) return res.status(404).end();
+  if (!photo.startsWith('data:')) return res.redirect(photo);
+  const [header, data] = photo.split(',');
   const mime = (header.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
   res.set('Content-Type', mime).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(data, 'base64'));
 });
