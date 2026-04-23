@@ -805,6 +805,39 @@ app.delete('/api/admin/hoa-contacts/:id', requireAdmin(async (req, res) => {
   res.json({ ok: true });
 }));
 
+app.get('/api/admin/emts-services', requireAdmin(async (req, res) => {
+  await sql`CREATE TABLE IF NOT EXISTS emts_services (id SERIAL PRIMARY KEY, name TEXT NOT NULL, description TEXT, cost TEXT, icon TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`;
+  const rows = await sql`SELECT * FROM emts_services ORDER BY id`;
+  res.json(rows);
+}));
+
+app.post('/api/admin/emts-services', requireAdmin(async (req, res) => {
+  await sql`CREATE TABLE IF NOT EXISTS emts_services (id SERIAL PRIMARY KEY, name TEXT NOT NULL, description TEXT, cost TEXT, icon TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`;
+  const { name, description, cost, icon } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name required' });
+  const [row] = await sql`INSERT INTO emts_services (name, description, cost, icon) VALUES (${name}, ${description||''}, ${cost||''}, ${icon||'🚑'}) RETURNING *`;
+  res.json(row);
+}));
+
+app.patch('/api/admin/emts-services/:id', requireAdmin(async (req, res) => {
+  const { name, description, cost, icon } = req.body;
+  const [row] = await sql`UPDATE emts_services SET name=${name}, description=${description||''}, cost=${cost||''}, icon=${icon||'🚑'} WHERE id=${req.params.id} RETURNING *`;
+  res.json(row);
+}));
+
+app.delete('/api/admin/emts-services/:id', requireAdmin(async (req, res) => {
+  await sql`DELETE FROM emts_services WHERE id=${req.params.id}`;
+  res.json({ ok: true });
+}));
+
+app.get('/api/emts-services', async (req, res) => {
+  try {
+    await sql`CREATE TABLE IF NOT EXISTS emts_services (id SERIAL PRIMARY KEY, name TEXT NOT NULL, description TEXT, cost TEXT, icon TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`;
+    const rows = await sql`SELECT * FROM emts_services ORDER BY id`;
+    res.json(rows);
+  } catch { res.json([]); }
+});
+
 app.post('/api/admin/email-config', requireOwner(async (req, res) => {
   const { gmailUser, gmailAppPassword } = req.body;
   if (!gmailUser || !gmailAppPassword) return res.status(400).json({ error: 'Gmail address and App Password required' });

@@ -446,7 +446,7 @@ async function renderSection(section, container) {
     case 'settings':    renderSettings(container); break;
     case 'realestate':  await renderRealEstate(container); break;
     case 'transport':        await renderTransport(container); break;
-    case 'firstresponders':  renderFirstResponders(container); break;
+    case 'firstresponders':  await renderFirstResponders(container); break;
     default:                 await renderFeed(container);
   }
   lucide.createIcons();
@@ -4046,7 +4046,8 @@ function switchFRTab(tab) {
   if (panel) panel.style.display = 'block';
 }
 
-function renderFirstResponders(container) {
+async function renderFirstResponders(container) {
+  const emtsServices = await fetchJSON('/api/emts-services') || [];
   container.innerHTML = `
     <div style="max-width:680px;margin:0 auto;padding:0 0 40px;">
       <div style="margin-bottom:16px;">
@@ -4074,14 +4075,15 @@ function renderFirstResponders(container) {
               <p style="font-size:14px;font-weight:700;margin:0 0 3px;font-style:italic;">"Don't wait until you have an emergency."</p>
               <p style="font-size:12.5px;opacity:.9;line-height:1.55;margin:0;">Our medics are trained to American standards — U.S.-level training & equipment, right here in Panama.</p>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-              ${[['🫀','BLS','Basic Life Support — CPR, AED, airway'],['⚡','ALS','Advanced Life Support — IV, cardiac monitoring'],['🚑','Medical Transport','Safe transport to hospitals'],['🏥','Scene Response','On-site stabilization'],['💊','Medication Admin','Paramedic-level medications'],['📋','Training','CPR, First Aid & EMS certification']].map(([ic,t,d])=>`
+            ${emtsServices.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+              ${emtsServices.map(s=>`
                 <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:12px;">
-                  <div style="font-size:20px;margin-bottom:4px;">${ic}</div>
-                  <div style="font-size:12px;font-weight:800;">${t}</div>
-                  <div style="font-size:11px;opacity:.85;margin-top:2px;line-height:1.4;">${d}</div>
+                  <div style="font-size:20px;margin-bottom:4px;">${s.icon||'🚑'}</div>
+                  <div style="font-size:12px;font-weight:800;">${escHtml(s.name)}</div>
+                  ${s.description ? `<div style="font-size:11px;opacity:.85;margin-top:2px;line-height:1.4;">${escHtml(s.description)}</div>` : ''}
+                  ${s.cost ? `<div style="font-size:12px;font-weight:800;color:#fde68a;margin-top:4px;">${escHtml(s.cost)}</div>` : ''}
                 </div>`).join('')}
-            </div>
+            </div>` : ''}
             <div style="display:flex;gap:8px;">
               <a href="tel:+5076790-4807" style="flex:1;text-align:center;padding:11px;background:white;color:#1d4ed8;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">📞 507 6790-4807</a>
               <a href="https://www.instagram.com/emtspanama" target="_blank" style="flex:1;text-align:center;padding:11px;background:rgba(255,255,255,0.2);color:white;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;border:1.5px solid rgba(255,255,255,0.4);">📸 @emtspanama</a>
@@ -4325,151 +4327,6 @@ function loadFRMyInfo() {
       if (el) el.checked = true;
     });
   } catch(e) {}
-}
-
-      <!-- EMTS Panama -->
-      <div style="background:white;border-radius:16px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px;">
-        <div style="background:linear-gradient(135deg,#1d4ed8,#2563eb);padding:20px 22px;color:white;">
-          <div style="display:flex;align-items:center;gap:14px;">
-            <div style="width:54px;height:54px;background:white;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">🚑</div>
-            <div>
-              <div style="font-size:20px;font-weight:800;">EMTS Panama</div>
-              <div style="font-size:13px;opacity:.85;">Private EMS Provider — Buenaventura & Surrounding Communities</div>
-            </div>
-          </div>
-        </div>
-        <div style="padding:20px 22px;">
-          <div style="background:#f0f4ff;border-left:4px solid #1d4ed8;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
-            <p style="font-size:15px;font-weight:700;color:#1d4ed8;margin:0 0 4px;font-style:italic;">"Don't wait until you have an emergency."</p>
-            <p style="font-size:13.5px;color:var(--text-mid);line-height:1.6;margin:0;">Our medics are trained to American standards — so when you need us most, we're ready. U.S.-level training, U.S.-level equipment, right here in Panama.</p>
-          </div>
-          <p style="font-size:14px;color:var(--text-mid);line-height:1.65;margin:0 0 16px;">EMTS Panama is a private EMS provider serving the Buenaventura area. They maintain U.S.-level standards for equipment and training, ensuring a high quality of emergency medical care for our community.</p>
-          <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">Services Offered</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
-            ${[
-              ['🫀', 'BLS', 'Basic Life Support — CPR, AED, airway management'],
-              ['⚡', 'ALS', 'Advanced Life Support — IV therapy, cardiac monitoring, advanced airway'],
-              ['🚑', 'Medical Transport', 'Safe patient transport to hospitals & medical facilities'],
-              ['🏥', 'Scene Response', 'On-site emergency response & stabilization'],
-              ['💊', 'Medication Admin', 'Paramedic-level medication administration'],
-              ['📋', 'Medical Training', 'CPR, First Aid & EMS certification courses'],
-            ].map(([icon, title, desc]) => `
-              <div style="padding:14px;background:#f0f4ff;border-radius:12px;border:1px solid #c7d7fd;">
-                <div style="font-size:22px;margin-bottom:6px;">${icon}</div>
-                <div style="font-size:13px;font-weight:800;color:#1d4ed8;margin-bottom:4px;">${title}</div>
-                <div style="font-size:12px;color:var(--text-mid);line-height:1.45;">${desc}</div>
-              </div>
-            `).join('')}
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <a href="tel:+5076790-4807" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;background:#1d4ed8;color:white;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;">📞 507 6790-4807</a>
-            <a href="https://www.instagram.com/emtspanama" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;background:#f0f4ff;color:#1d4ed8;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;border:1.5px solid #c7d7fd;">📸 @emtspanama</a>
-          </div>
-        </div>
-      </div>
-
-      <!-- IERF Response -->
-      <div style="background:white;border-radius:16px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px;">
-        <div style="background:linear-gradient(135deg,#dc2626,#ef4444);padding:20px 22px;color:white;">
-          <div style="display:flex;align-items:center;gap:14px;">
-            <div style="width:54px;height:54px;background:white;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#dc2626;font-size:18px;flex-shrink:0;">IERF</div>
-            <div>
-              <div style="font-size:20px;font-weight:800;">IERF Response</div>
-              <div style="font-size:13px;opacity:.85;">U.S.-Based 501(c)(3) Non-Profit · ierfresponse.org</div>
-            </div>
-          </div>
-        </div>
-        <div style="padding:20px 22px;">
-          <p style="font-size:14px;color:var(--text-mid);line-height:1.65;margin:0 0 16px;">The International Emergency Resilience Foundation (IERF) is dedicated to improving community safety, preparedness, and emergency response. Founded by a dual U.S.–Panamanian emergency services professional with over 20 years of experience in fire, EMS, police, and emergency management.</p>
-          <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">How They Help</div>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;">
-            ${[
-              ['❤️', 'Community Training', 'Accessible preparedness training for residents, travelers & expats'],
-              ['🧰', 'Equipment Support', 'Helping acquire lifesaving equipment for local responders'],
-              ['📋', 'Emergency Guides', 'Practical bilingual guides like the Panama Emergency Guide (2025)'],
-              ['🤝', 'Volunteer Network', 'Connecting trained volunteers with communities in need'],
-            ].map(([icon, title, desc]) => `
-              <div style="display:flex;gap:12px;padding:12px 14px;background:#fef2f2;border-radius:12px;border:1px solid #fecaca;">
-                <span style="font-size:20px;flex-shrink:0;">${icon}</span>
-                <div>
-                  <div style="font-size:13px;font-weight:700;color:#dc2626;">${title}</div>
-                  <div style="font-size:12px;color:var(--text-mid);margin-top:2px;">${desc}</div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-          <a href="https://www.ierfresponse.org" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;background:#dc2626;color:white;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;">🌐 Visit ierfresponse.org — Donate & Learn More</a>
-        </div>
-      </div>
-
-      <!-- Spanish Phrases -->
-      <div style="background:white;border-radius:16px;border:1px solid var(--border);padding:20px 22px;margin-bottom:16px;">
-        <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;">🗣️ Emergency Spanish Phrases</div>
-        <p style="font-size:13px;color:var(--text-mid);margin:0 0 14px;font-style:italic;">"Esta es una emergencia. Necesito ayuda en..." — This is an emergency. I need help at...</p>
-        ${[
-          { cat:'🔥 Fire / Fuego', color:'#ea580c', bg:'#fff7ed', border:'#fed7aa', rows:[
-            ['There is a fire','Hay un incendio','Eye oon in-SEN-dee-oh'],
-            ['My house is on fire','Mi casa está en llamas','Mee CAH-sah es-TAH en YA-mas'],
-            ['Person trapped','Hay una persona atrapada','Eye OO-nah per-SOH-nah ah-trah-PAH-dah'],
-            ['Gas leak','Hay una fuga de gas','Eye OO-nah FOO-gah deh gahs'],
-          ]},
-          { cat:'🚑 Medical / Médico', color:'#059669', bg:'#f0fdf4', border:'#bbf7d0', rows:[
-            ['Not breathing','No está respirando','No es-TAH res-pee-RAN-doh'],
-            ['Severe bleeding','Está sangrando mucho','Es-TAH san-GRAN-doh MOO-choh'],
-            ['Unconscious','Está inconsciente','Es-TAH in-con-syen-TEE-ehn-teh'],
-            ['Chest pain','Dolor en el pecho','Doh-LOR en el PEH-choh'],
-            ['Allergic reaction','Reacción alérgica','Ree-ak-SEE-on ah-LER-hee-kah'],
-            ['Drowning','Persona ahogándose','Per-SOH-nah ah-oh-GAN-doh-seh'],
-          ]},
-          { cat:'👮 Police / Policía', color:'#1d4ed8', bg:'#eff6ff', border:'#bfdbfe', rows:[
-            ['Break-in','Hay un robo','Eye oon ROH-boh'],
-            ['Someone trying to hurt me','Alguien intenta hacerme daño','AHL-gyen in-TEN-tah ah-SER-meh DAHN-yoh'],
-            ['Suspicious person','Hay una persona sospechosa','Eye OO-nah pair-SOH-nah soh-speh-CHOH-sah'],
-            ['I was attacked','Fui agredido','Fwee ah-greh-DEE-doh'],
-          ]},
-        ].map(s => `
-          <div style="margin-bottom:14px;">
-            <div style="font-size:13px;font-weight:700;color:${s.color};margin-bottom:8px;">${s.cat}</div>
-            <div style="display:flex;flex-direction:column;gap:6px;">
-              ${s.rows.map(([en,es,ph]) => `
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 12px;background:${s.bg};border-radius:10px;border:1px solid ${s.border};">
-                  <div style="font-size:12.5px;font-weight:600;color:var(--text-dark);">${en}</div>
-                  <div>
-                    <div style="font-size:12.5px;font-weight:700;color:${s.color};">${es}</div>
-                    <div style="font-size:11px;color:var(--text-light);font-style:italic;">${ph}</div>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `).join('')}
-      </div>
-
-      <!-- Preparedness Tips -->
-      <div style="background:white;border-radius:16px;border:1px solid var(--border);padding:20px 22px;margin-bottom:16px;">
-        <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;">⚡ Preparedness Essentials</div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          ${[
-            ['🔦','Flashlights','Keep 2+ flashlights with backup batteries. Power outages are common in beach communities in Panama.'],
-            ['🧰','Vehicle Emergency Kit','Flashlight, tire inflator, Fix-a-Flat, first aid kit, batteries, power bank, and basic tools.'],
-            ['🔋','Backup Power','A generator or battery power station keeps fridges, medical equipment, fans & phones running during outages.'],
-            ['💊','First Aid Kit','Include bandages, gauze, antiseptic wipes, gloves, burn gel, pain relievers, CPR shield, tourniquet & QuickClot.'],
-            ['📱','Emergency WhatsApp','Create an emergency WhatsApp group for your neighborhood to coordinate help fast while waiting for responders.'],
-            ['❤️','Know Your AED','Find out if your community has an AED (defibrillator) and exactly where it is — it saves lives in cardiac emergencies.'],
-          ].map(([icon, title, desc]) => `
-            <div style="display:flex;gap:12px;padding:13px;background:#f8fafc;border-radius:12px;border:1px solid var(--border);">
-              <span style="font-size:22px;flex-shrink:0;">${icon}</span>
-              <div>
-                <div style="font-size:13px;font-weight:700;color:var(--text-dark);">${title}</div>
-                <div style="font-size:12.5px;color:var(--text-mid);margin-top:2px;line-height:1.5;">${desc}</div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    </div>
-  `;
-  lucide.createIcons();
 }
 
 // ─── Transportation ───────────────────────────────────────────────
