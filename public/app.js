@@ -170,8 +170,8 @@ async function loadSidebarWidgets() {
   const nextEventEl = document.getElementById('nextEventCard');
   if (nextEventEl) {
     const upcoming = (events || [])
-      .filter(e => { const ds = (e.date || e.eventDate || '').substring(0,10); const n = new Date(); const today = `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; return ds && !e.cancelled && ds >= today; })
-      .sort((a, b) => new Date((a.date||a.eventDate||'').substring(0,10)+'T12:00:00') - new Date((b.date||b.eventDate||'').substring(0,10)+'T12:00:00'))[0];
+      .filter(e => !e.cancelled)
+      .sort((a, b) => new Date((b.date||b.eventDate||'').substring(0,10)+'T12:00:00') - new Date((a.date||a.eventDate||'').substring(0,10)+'T12:00:00'))[0];
     if (upcoming) {
       const d = new Date((upcoming.date || upcoming.eventDate || '').substring(0,10) + 'T12:00:00');
       const month = d.toLocaleString('en', { month: 'short' }).toUpperCase();
@@ -2156,6 +2156,7 @@ async function rsvpEvent(eventId, status, btn) {
 
     const msgs = { going: '🎉 You\'re going!', maybe: '🤔 Marked as maybe!', cantGo: 'Marked as can\'t go.' };
     showToast(msgs[status] || 'RSVP updated!');
+    loadSidebarWidgets();
   } catch {
     showToast('Could not update RSVP. Please try again.');
   }
