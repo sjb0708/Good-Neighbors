@@ -967,6 +967,9 @@ const BIZ_CATEGORIES = [
   { label: 'Sports & Fitness', icon: '⚽' },
   { label: 'Professional Services', icon: '💼' },
   { label: 'Entertainment',   icon: '🎉' },
+  { label: 'Pool Service',    icon: '🏊' },
+  { label: 'Immigration',     icon: '🛂' },
+  { label: 'Relocation',      icon: '🚚' },
   { label: 'Other',           icon: '📌' },
 ];
 
