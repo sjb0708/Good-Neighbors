@@ -1276,6 +1276,7 @@ function formatBusiness(b) {
   return {
     id: b.id, name: b.name, category: b.category, description: b.description,
     address: b.address, phone: b.phone, hours: b.hours, website: b.website,
+    contactEmail: b.contact_email||null,
     instagramUrl: b.instagram_url||null, facebookUrl: b.facebook_url||null,
     photos: (b.photos||[]).map((p,i) => p && p.startsWith('data:') ? `/api/businesses/${b.id}/photo/${i}` : p),
     tags: b.tags||[], rating: parseFloat(b.rating)||0,
@@ -1326,6 +1327,17 @@ app.delete('/api/admin/businesses/:id', requireAdmin(async (req, res) => {
   await sql`UPDATE users SET business_id = NULL WHERE business_id = ${id}`;
   await sql`DELETE FROM businesses WHERE id = ${id}`;
   res.json({ ok: true });
+}));
+
+app.patch('/api/businesses/:id', requireAuth(async (req, res) => {
+  const [biz] = await sql`SELECT * FROM businesses WHERE id=${req.params.id}`;
+  if (!biz) return res.status(404).json({ error: 'Not found' });
+  const isOwner = req.currentUser.id === biz.claimed_by_user_id || req.currentUser.id === biz.added_by_user_id || req.currentUser.role === 'admin';
+  if (!isOwner) return res.status(403).json({ error: 'Forbidden' });
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS contact_email TEXT`;
+  const { contactEmail } = req.body;
+  const [updated] = await sql`UPDATE businesses SET contact_email=${contactEmail||null} WHERE id=${req.params.id} RETURNING *`;
+  res.json({ ok: true, business: formatBusiness(updated) });
 }));
 
 app.post('/api/businesses/:id/banner', requireAuth(async (req, res) => {

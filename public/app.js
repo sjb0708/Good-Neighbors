@@ -2401,10 +2401,12 @@ async function renderBusinessPage(bizId, container) {
       <div style="padding:0 24px 12px;">
         <div class="biz-action-bar">
           <button class="btn-biz-message" onclick="switchBizTab('reviews');document.getElementById('bizReviewBox')?.focus();">✍️ Write a Review</button>
+          ${biz.contactEmail ? `<a href="mailto:${escHtml(biz.contactEmail)}" class="btn-biz-message" style="text-decoration:none;">✉️ Email Us</a>` : ''}
 
           <div style="position:relative;">
             <button class="btn-biz-more" onclick="toggleBizMoreMenu('${biz.id}')">⋯</button>
             <div class="biz-more-dropdown" id="bizMoreMenu-${biz.id}" style="display:none;">
+              ${isPageOwner ? `<div class="biz-more-item" onclick="setBizContactEmail('${biz.id}','${escHtml(biz.contactEmail||'')}');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">✉️</span><div><div class="biz-more-item-text">Set Contact Email</div><div class="biz-more-item-sub">${biz.contactEmail ? escHtml(biz.contactEmail) : 'Add an email for the Email Us button'}</div></div></div>` : ''}
               <div class="biz-more-item" onclick="showToast('${escHtml(biz.name)} muted.');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">🔇</span><div><div class="biz-more-item-text">Mute</div><div class="biz-more-item-sub">Hide all posts from ${escHtml(biz.name)}</div></div></div>
               <div class="biz-more-item" onclick="openReportModal('business','${biz.id}','${escHtml(biz.name).replace(/'/g,"\\'")}');toggleBizMoreMenu('${biz.id}')"><span class="biz-more-item-icon">⚑</span><div><div class="biz-more-item-text">Report</div><div class="biz-more-item-sub">Flag for review</div></div></div>
             </div>
@@ -2672,6 +2674,18 @@ async function renderBusinessPage(bizId, container) {
 
   container.innerHTML = '';
   container.appendChild(wrap);
+}
+
+async function setBizContactEmail(bizId, current) {
+  const email = prompt('Enter contact email for this business:', current || '');
+  if (email === null) return;
+  const res = await fetch(`/api/businesses/${bizId}`, {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contactEmail: email.trim() })
+  });
+  if (res.ok) { showToast('Contact email saved!'); navigate('business/' + bizId); }
+  else showToast('Could not save email.');
 }
 
 async function uploadBizBanner(bizId, input) {
