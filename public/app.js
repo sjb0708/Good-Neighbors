@@ -4033,17 +4033,299 @@ async function submitListing() {
 }
 
 // ─── First Responders ─────────────────────────────────────────────
+function switchFRTab(tab) {
+  document.querySelectorAll('.fr-tab-btn').forEach(b => {
+    b.style.background = 'transparent';
+    b.style.color = 'var(--text-mid)';
+    b.style.borderBottom = '3px solid transparent';
+  });
+  document.querySelectorAll('.fr-tab-panel').forEach(p => p.style.display = 'none');
+  const btn = document.getElementById('frtab-' + tab);
+  if (btn) { btn.style.background = 'transparent'; btn.style.color = '#1d4ed8'; btn.style.borderBottom = '3px solid #1d4ed8'; }
+  const panel = document.getElementById('frpanel-' + tab);
+  if (panel) panel.style.display = 'block';
+}
+
 function renderFirstResponders(container) {
   container.innerHTML = `
     <div style="max-width:680px;margin:0 auto;padding:0 0 40px;">
       <div style="margin-bottom:16px;">
         <h2 style="font-size:22px;font-weight:800;color:var(--text-dark);margin:0 0 4px;">🚨 First Responders</h2>
-        <p style="font-size:14px;color:var(--text-light);margin:0 0 14px;">Professional emergency medical services & community support for Costa Blanca Villas</p>
-        <!-- Download Guide -->
-        <a href="/panama-emergency-guide.pdf" download style="display:inline-flex;align-items:center;gap:8px;padding:11px 20px;background:linear-gradient(135deg,#dc2626,#ef4444);color:white;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;box-shadow:0 2px 8px rgba(220,38,38,0.3);">
-          📄 Download IERF Panama Emergency Guide (2025)
-        </a>
+        <p style="font-size:14px;color:var(--text-light);margin:0;">Emergency medical services, preparedness & community support</p>
       </div>
+
+      <!-- Tabs -->
+      <div style="background:white;border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px;">
+        <div style="display:flex;overflow-x:auto;border-bottom:1px solid var(--border);padding:0 4px;">
+          ${[['services','🚑 Services'],['call','📞 Call for Help'],['hospitals','🏥 Hospitals'],['prepared','⚡ Be Prepared'],['myinfo','👤 My Info'],['guide','📄 Guide']].map(([id,label]) => `
+            <button id="frtab-${id}" class="fr-tab-btn" onclick="switchFRTab('${id}')" style="padding:13px 14px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:inherit;white-space:nowrap;background:transparent;color:var(--text-mid);border-bottom:3px solid transparent;transition:all .15s;">${label}</button>
+          `).join('')}
+        </div>
+
+        <!-- Tab: Services -->
+        <div id="frpanel-services" class="fr-tab-panel" style="padding:20px;">
+          <!-- EMTS Panama -->
+          <div style="background:linear-gradient(135deg,#1d4ed8,#2563eb);border-radius:14px;padding:18px;color:white;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+              <div style="width:48px;height:48px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🚑</div>
+              <div><div style="font-size:18px;font-weight:800;">EMTS Panama</div><div style="font-size:12px;opacity:.85;">Private EMS — Buenaventura & Surrounding Communities</div></div>
+            </div>
+            <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:12px;margin-bottom:14px;">
+              <p style="font-size:14px;font-weight:700;margin:0 0 3px;font-style:italic;">"Don't wait until you have an emergency."</p>
+              <p style="font-size:12.5px;opacity:.9;line-height:1.55;margin:0;">Our medics are trained to American standards — U.S.-level training & equipment, right here in Panama.</p>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+              ${[['🫀','BLS','Basic Life Support — CPR, AED, airway'],['⚡','ALS','Advanced Life Support — IV, cardiac monitoring'],['🚑','Medical Transport','Safe transport to hospitals'],['🏥','Scene Response','On-site stabilization'],['💊','Medication Admin','Paramedic-level medications'],['📋','Training','CPR, First Aid & EMS certification']].map(([ic,t,d])=>`
+                <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:12px;">
+                  <div style="font-size:20px;margin-bottom:4px;">${ic}</div>
+                  <div style="font-size:12px;font-weight:800;">${t}</div>
+                  <div style="font-size:11px;opacity:.85;margin-top:2px;line-height:1.4;">${d}</div>
+                </div>`).join('')}
+            </div>
+            <div style="display:flex;gap:8px;">
+              <a href="tel:+5076790-4807" style="flex:1;text-align:center;padding:11px;background:white;color:#1d4ed8;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">📞 507 6790-4807</a>
+              <a href="https://www.instagram.com/emtspanama" target="_blank" style="flex:1;text-align:center;padding:11px;background:rgba(255,255,255,0.2);color:white;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;border:1.5px solid rgba(255,255,255,0.4);">📸 @emtspanama</a>
+            </div>
+          </div>
+          <!-- IERF -->
+          <div style="background:linear-gradient(135deg,#dc2626,#ef4444);border-radius:14px;padding:18px;color:white;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+              <div style="width:48px;height:48px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#dc2626;font-size:16px;flex-shrink:0;">IERF</div>
+              <div><div style="font-size:18px;font-weight:800;">IERF Response</div><div style="font-size:12px;opacity:.85;">U.S. 501(c)(3) Non-Profit · ierfresponse.org</div></div>
+            </div>
+            <p style="font-size:13px;line-height:1.6;opacity:.95;margin:0 0 14px;">Founded by a dual U.S.–Panamanian emergency services professional with 20+ years in fire, EMS, police & emergency management. Dedicated to equipping communities with lifesaving information before emergencies occur.</p>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+              ${[['❤️','Community Training','Preparedness training for residents, travelers & expats'],['🧰','Equipment Support','Acquiring lifesaving equipment for local responders'],['📋','Emergency Guides','Practical bilingual guides including this Panama Emergency Guide'],['🤝','Volunteer Network','Connecting trained volunteers with communities in need']].map(([ic,t,d])=>`
+                <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:10px 12px;display:flex;gap:10px;">
+                  <span style="font-size:18px;flex-shrink:0;">${ic}</span>
+                  <div><div style="font-size:12.5px;font-weight:700;">${t}</div><div style="font-size:11.5px;opacity:.85;margin-top:2px;">${d}</div></div>
+                </div>`).join('')}
+            </div>
+            <a href="https://www.ierfresponse.org" target="_blank" style="display:block;text-align:center;padding:11px;background:white;color:#dc2626;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">🌐 ierfresponse.org — Donate & Learn More</a>
+          </div>
+        </div>
+
+        <!-- Tab: Call for Help -->
+        <div id="frpanel-call" class="fr-tab-panel" style="padding:20px;display:none;">
+          <div style="background:#fef2f2;border-radius:12px;padding:14px 16px;margin-bottom:16px;border:1px solid #fecaca;">
+            <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:6px;">Step 1 — Opening Statement</div>
+            <div style="font-size:13.5px;color:var(--text-dark);font-weight:600;">English: <span style="font-weight:400;">"This is an emergency. I need help at [your address]"</span></div>
+            <div style="font-size:13.5px;color:#dc2626;font-weight:600;margin-top:4px;">Spanish: <span style="font-weight:400;color:var(--text-dark);">"Esta es una emergencia. Necesito ayuda en..."</span></div>
+          </div>
+          ${[
+            {cat:'🔥 Fire / Fuego', color:'#ea580c', bg:'#fff7ed', border:'#fed7aa', rows:[
+              ['There is a fire','Hay un incendio','Eye oon in-SEN-dee-oh'],
+              ['My house is on fire','Mi casa está en llamas','Mee CAH-sah es-TAH en YA-mas'],
+              ['Smoke inside','Hay humo adentro','Eye OO-moh ah-DEN-tro'],
+              ['Person trapped','Hay una persona atrapada','Eye OO-nah per-SOH-nah ah-trah-PAH-dah'],
+              ['Gas leak','Hay una fuga de gas','Eye OO-nah FOO-gah deh gahs'],
+              ['Car accident','Hay un accidente de carro','Eye oon ahk-see-DEN-teh deh CAH-roh'],
+            ]},
+            {cat:'🚑 Medical / Médico', color:'#059669', bg:'#f0fdf4', border:'#bbf7d0', rows:[
+              ['Not breathing','No está respirando','No es-TAH res-pee-RAN-doh'],
+              ['Severe bleeding','Está sangrando mucho','Es-TAH san-GRAN-doh MOO-choh'],
+              ['Unconscious','Está inconsciente','Es-TAH in-con-syen-TEE-ehn-teh'],
+              ['Chest pain','Dolor en el pecho','Doh-LOR en el PEH-choh'],
+              ['Allergic reaction','Reacción alérgica','Ree-ak-SEE-on ah-LER-hee-kah'],
+              ['Broken bone','Hueso roto','WEH-soh ROH-toh'],
+              ['Drowning','Persona ahogándose','Per-SOH-nah ah-oh-GAN-doh-seh'],
+            ]},
+            {cat:'👮 Police / Policía', color:'#1d4ed8', bg:'#eff6ff', border:'#bfdbfe', rows:[
+              ['Break-in','Hay un robo','Eye oon ROH-boh'],
+              ['Someone trying to hurt me','Alguien intenta hacerme daño','AHL-gyen in-TEN-tah ah-SER-meh DAHN-yoh'],
+              ['Suspicious person','Hay una persona sospechosa','Eye OO-nah pair-SOH-nah soh-speh-CHOH-sah'],
+              ['I was attacked','Fui agredido','Fwee ah-greh-DEE-doh'],
+              ['Someone stole my belongings','Alguien se llevó mis cosas','AHL-gee-en seh yeh-BOH mees COH-sahs'],
+            ]},
+          ].map(s=>`
+            <div style="margin-bottom:14px;">
+              <div style="font-size:13px;font-weight:700;color:${s.color};margin-bottom:8px;">${s.cat}</div>
+              <div style="display:flex;flex-direction:column;gap:5px;">
+                ${s.rows.map(([en,es,ph])=>`
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:9px 12px;background:${s.bg};border-radius:10px;border:1px solid ${s.border};">
+                    <div style="font-size:12.5px;font-weight:600;color:var(--text-dark);">${en}</div>
+                    <div><div style="font-size:12.5px;font-weight:700;color:${s.color};">${es}</div><div style="font-size:11px;color:var(--text-light);font-style:italic;">${ph}</div></div>
+                  </div>`).join('')}
+              </div>
+            </div>`).join('')}
+        </div>
+
+        <!-- Tab: Hospitals -->
+        <div id="frpanel-hospitals" class="fr-tab-panel" style="padding:20px;display:none;">
+          <p style="font-size:13.5px;color:var(--text-mid);line-height:1.6;margin:0 0 16px;">Clinics and hospitals in Panama vary widely in capabilities, hours, and available medications. Know where to go <strong>before</strong> an emergency — especially for antivenoms, trauma care, and 24/7 coverage.</p>
+          <div style="background:#eff6ff;border-radius:12px;padding:14px;margin-bottom:16px;border:1px solid #bfdbfe;">
+            <div style="font-size:13px;font-weight:700;color:#1d4ed8;margin-bottom:10px;">✅ Services to Ask About</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              ${['X-Ray / Radiology','Ultrasound','CT Scan','Laboratory','Pediatric Care','Major Surgery','Antivenom','Trauma Care','Blood Donations','Minor Surgery','ICU / Critical Care','English Speaking'].map(s=>`
+                <div style="font-size:12.5px;color:var(--text-dark);padding:6px 10px;background:white;border-radius:8px;border:1px solid #bfdbfe;">☐ ${s}</div>`).join('')}
+            </div>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Nearest Hospitals</div>
+          ${[
+            {name:'Hospital San Benito', city:'Penonomé', phone:'507 991-0014', note:'Nearest public hospital ~45 min', hours:'24/7'},
+            {name:'Clínica Hospital Curundu', city:'Antón', phone:'507 987-2311', note:'Local clinic', hours:'Mon–Sat 8am–5pm'},
+            {name:'Buenaventura Medical Center', city:'Buenaventura', phone:'507 6790-4807', note:'Private — EMTS Panama on call', hours:'By appointment / emergency'},
+          ].map(h=>`
+            <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;">
+              <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${h.name}</div>
+              <div style="font-size:12.5px;color:var(--text-mid);margin-top:2px;">📍 ${h.city} · 🕐 ${h.hours}</div>
+              <div style="font-size:12px;color:#059669;margin-top:2px;">${h.note}</div>
+              <a href="tel:${h.phone.replace(/\s/g,'')}" style="display:inline-block;margin-top:8px;padding:7px 14px;background:#f0fdf4;color:#059669;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;border:1px solid #bbf7d0;">📞 ${h.phone}</a>
+            </div>`).join('')}
+          <div style="background:#fff8f0;border-radius:12px;padding:14px;border:1px solid #fed7aa;">
+            <div style="font-size:13px;font-weight:700;color:#ea580c;margin-bottom:6px;">💡 If You Have Private Insurance</div>
+            <p style="font-size:12.5px;color:var(--text-mid);line-height:1.55;margin:0;">Understand your ambulance coverage — response times, travel distance, and which emergencies are prioritized. Fast access to the right care depends on how quickly help can physically reach you.</p>
+          </div>
+        </div>
+
+        <!-- Tab: Be Prepared -->
+        <div id="frpanel-prepared" class="fr-tab-panel" style="padding:20px;display:none;">
+          ${[
+            {title:'🔦 Flashlights', color:'#ea580c', bg:'#fff7ed', border:'#fed7aa', items:[
+              'Keep at least 2 flashlights — one in living area, one in bedroom',
+              'Include extra batteries or use rechargeable + power bank',
+              'Headlamps are extremely useful — they free your hands',
+              'Power outages are common in Panama beach communities',
+            ]},
+            {title:'💊 First Aid Kit — Essentials', color:'#059669', bg:'#f0fdf4', border:'#bbf7d0', items:[
+              'Bandages (various sizes), gauze pads & roller gauze, tape',
+              'Antiseptic wipes, tweezers, scissors, gloves',
+              'Elastic bandage (ACE wrap), burn gel, pain relievers',
+              'Allergy medication (antihistamine), saline solution',
+              'CPR face shield, emergency blanket',
+            ]},
+            {title:'🩹 First Aid Kit — Advanced (Recommended)', color:'#7c3aed', bg:'#f5f3ff', border:'#ddd6fe', items:[
+              'Tourniquet (quality — not imitation)',
+              'QuickClot or hemostatic gauze',
+              'Extra gloves, triangle bandage',
+              'AED (Automated External Defibrillator)',
+            ]},
+            {title:'🚗 Vehicle Emergency Kit', color:'#1d4ed8', bg:'#eff6ff', border:'#bfdbfe', items:[
+              'Flashlight, portable tire inflator, Fix-a-Flat or tire plug kit',
+              'First aid kit, batteries, power bank',
+              'Basic tools — being stuck on a Panama road is dangerous',
+            ]},
+            {title:'🔋 Backup Power & Generators', color:'#d97706', bg:'#fffbeb', border:'#fde68a', items:[
+              'Keeps fridge running — protects food & temperature-sensitive medications',
+              'Fans — critical for children, elderly & pets in Panama heat',
+              'Portable oxygen equipment for respiratory needs',
+              'Phone chargers & lights — stay connected during outages',
+              'Always use generators with proper ventilation & safe fuel storage',
+            ]},
+            {title:'📱 Community Preparedness', color:'#0891b2', bg:'#ecfeff', border:'#a5f3fc', items:[
+              'Create an Emergency WhatsApp group for your neighborhood',
+              'Know if your community has an AED and exactly where it is',
+              'AEDs dramatically increase cardiac arrest survival rates',
+              'Know your community admin\'s emergency protocol (Munily, security, etc.)',
+            ]},
+          ].map(s=>`
+            <div style="background:${s.bg};border:1px solid ${s.border};border-radius:14px;padding:16px;margin-bottom:12px;">
+              <div style="font-size:14px;font-weight:700;color:${s.color};margin-bottom:10px;">${s.title}</div>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                ${s.items.map(i=>`<div style="display:flex;gap:8px;font-size:13px;color:var(--text-dark);line-height:1.5;"><span style="color:${s.color};flex-shrink:0;font-weight:700;">•</span>${i}</div>`).join('')}
+              </div>
+            </div>`).join('')}
+        </div>
+
+        <!-- Tab: My Info -->
+        <div id="frpanel-myinfo" class="fr-tab-panel" style="padding:20px;display:none;">
+          <p style="font-size:13.5px;color:var(--text-mid);line-height:1.6;margin:0 0 16px;">Fill in your personal emergency information. This is stored privately on your device and can be shown to first responders in an emergency.</p>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            ${[
+              ['Blood Type','frmi-blood','text','e.g. A+, O-, B+'],
+              ['Severe Allergies','frmi-allergies','text','e.g. Penicillin, bee stings'],
+              ['Current Medications','frmi-meds','text','e.g. Metformin 500mg, Lisinopril'],
+              ['Family Doctor & Phone','frmi-doctor','text','e.g. Dr. Gomez — 507 123-4567'],
+              ['Emergency Contact','frmi-contact','text','Name & phone number'],
+              ['Insurance Provider & Policy #','frmi-insurance','text','e.g. Blue Cross #12345'],
+              ['Preferred Hospital','frmi-hospital','text','e.g. Hospital San Benito, Penonomé'],
+            ].map(([label, id, type, placeholder])=>`
+              <div>
+                <label style="font-size:12.5px;font-weight:700;color:var(--text-dark);display:block;margin-bottom:5px;">${label}</label>
+                <input id="${id}" type="${type}" placeholder="${placeholder}" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13.5px;font-family:inherit;box-sizing:border-box;" />
+              </div>`).join('')}
+            <div>
+              <label style="font-size:12.5px;font-weight:700;color:var(--text-dark);display:block;margin-bottom:8px;">Medical Conditions</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                ${['Diabetes','Epilepsy','Hemophilia','Heart Condition','Asthma','Other'].map(c=>`
+                  <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#f8fafc;border-radius:10px;border:1.5px solid var(--border);font-size:13px;cursor:pointer;">
+                    <input type="checkbox" id="frmi-cond-${c.toLowerCase().replace(/\s/g,'')}" style="width:16px;height:16px;" /> ${c}
+                  </label>`).join('')}
+              </div>
+            </div>
+            <button onclick="saveFRMyInfo()" style="width:100%;padding:13px;background:#1d4ed8;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">💾 Save My Emergency Info</button>
+          </div>
+        </div>
+
+        <!-- Tab: Guide -->
+        <div id="frpanel-guide" class="fr-tab-panel" style="padding:20px;display:none;">
+          <div style="background:linear-gradient(135deg,#dc2626,#ef4444);border-radius:14px;padding:20px;color:white;margin-bottom:16px;text-align:center;">
+            <div style="font-size:32px;margin-bottom:8px;">📄</div>
+            <div style="font-size:18px;font-weight:800;margin-bottom:4px;">Panama Emergency Guide</div>
+            <div style="font-size:13px;opacity:.85;margin-bottom:16px;">2025 Edition · Prepared by IERF Response</div>
+            <a href="/panama-emergency-guide.pdf" download style="display:inline-block;padding:12px 28px;background:white;color:#dc2626;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;">⬇️ Download Full Guide (PDF)</a>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">What's Inside</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+            ${[
+              ['📞','Emergency Contact Directory','National & local numbers for police, fire & EMS'],
+              ['🗣️','Emergency Spanish Phrases','Fire, medical & police phrases with phonetics'],
+              ['🏥','Local Hospitals & Clinics','Template to record your nearest facilities & services'],
+              ['🏘️','Gated Community Guide','AED locations, WhatsApp groups, security protocols'],
+              ['⚡','Preparedness Essentials','First aid kit, vehicle kit, generators & flashlights'],
+              ['👤','Emergency Info Form','Personal medical info form for first responders'],
+            ].map(([ic,t,d])=>`
+              <div style="display:flex;gap:12px;padding:12px;background:#f8fafc;border-radius:12px;border:1px solid var(--border);">
+                <span style="font-size:20px;flex-shrink:0;">${ic}</span>
+                <div><div style="font-size:13px;font-weight:700;color:var(--text-dark);">${t}</div><div style="font-size:12px;color:var(--text-mid);margin-top:2px;">${d}</div></div>
+              </div>`).join('')}
+          </div>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;">
+            <p style="font-size:13px;color:#059669;font-weight:700;margin:0 0 4px;">💡 IERF Recommends</p>
+            <p style="font-size:12.5px;color:var(--text-mid);line-height:1.55;margin:0;">Print this guide and keep it in a binder with your first aid kit, flashlights & batteries. Store emergency contacts in your phone. The more prepared you are, the safer your family will be.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Safety Alert CTA -->
+      <div style="background:#fff8f0;border:1.5px solid #f97316;border-radius:16px;padding:18px 22px;display:flex;align-items:center;gap:16px;">
+        <span style="font-size:32px;flex-shrink:0;">🚨</span>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:2px;">See something? Alert your neighbors.</div>
+          <div style="font-size:13px;color:var(--text-mid);">Post a safety alert instantly to everyone in the community.</div>
+        </div>
+        <button onclick="navigate('safety')" style="padding:10px 16px;background:#f97316;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Post Alert</button>
+      </div>
+    </div>
+  `;
+  switchFRTab('services');
+  loadFRMyInfo();
+  lucide.createIcons();
+}
+
+function saveFRMyInfo() {
+  const fields = ['blood','allergies','meds','doctor','contact','insurance','hospital'];
+  const data = {};
+  fields.forEach(f => { data[f] = document.getElementById('frmi-' + f)?.value || ''; });
+  const conds = ['diabetes','epilepsy','hemophilia','heartcondition','asthma','other'];
+  data.conditions = conds.filter(c => document.getElementById('frmi-cond-' + c)?.checked);
+  localStorage.setItem('frMyInfo', JSON.stringify(data));
+  showToast('Emergency info saved!');
+}
+
+function loadFRMyInfo() {
+  try {
+    const data = JSON.parse(localStorage.getItem('frMyInfo') || '{}');
+    ['blood','allergies','meds','doctor','contact','insurance','hospital'].forEach(f => {
+      const el = document.getElementById('frmi-' + f);
+      if (el && data[f]) el.value = data[f];
+    });
+    (data.conditions || []).forEach(c => {
+      const el = document.getElementById('frmi-cond-' + c);
+      if (el) el.checked = true;
+    });
+  } catch(e) {}
+}
 
       <!-- EMTS Panama -->
       <div style="background:white;border-radius:16px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px;">
