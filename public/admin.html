@@ -595,8 +595,8 @@
                 <input id="rlUsername" type="text" value="uncover-panama" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
               </div>
               <div>
-                <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Password *</label>
-                <input id="rlPassword" type="text" placeholder="Set a strong password" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
+                <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Password <span style="color:#a0aec0;font-weight:400">(leave blank to set later)</span></label>
+                <input id="rlPassword" type="text" placeholder="Leave blank to auto-generate" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;box-sizing:border-box;" />
               </div>
             </div>
             <div style="margin-bottom:16px;">
@@ -1311,24 +1311,24 @@
       const displayName = document.getElementById('rlName').value.trim();
       const email = document.getElementById('rlEmail').value.trim();
       const username = document.getElementById('rlUsername').value.trim();
-      const password = document.getElementById('rlPassword').value.trim();
+      let password = document.getElementById('rlPassword').value.trim();
       const bio = document.getElementById('rlBio').value.trim();
       const errEl = document.getElementById('rlError');
       errEl.style.display = 'none';
 
-      if (!displayName || !username || !password) { errEl.textContent = 'Agent name, username, and password are required.'; errEl.style.display = 'block'; return; }
+      if (!displayName || !username) { errEl.textContent = 'Agent name and username are required.'; errEl.style.display = 'block'; return; }
       if (!/^[a-z0-9_-]{3,30}$/.test(username)) { errEl.textContent = 'Username: 3–30 lowercase letters, numbers, hyphens, underscores.'; errEl.style.display = 'block'; return; }
+      const autoPassword = !password;
+      if (!password) password = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6).toUpperCase();
 
       const res = await fetch('/api/admin/create-account', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName, role: 'realtor', username, password, email, bio }) });
       const data = await res.json();
       if (!res.ok) { errEl.textContent = data.error || 'Error creating account'; errEl.style.display = 'block'; return; }
 
-      document.getElementById('rlName').value = '';
-      document.getElementById('rlEmail').value = '';
-      document.getElementById('rlUsername').value = '';
       document.getElementById('rlPassword').value = '';
       document.getElementById('rlBio').value = '';
-      showToast(`Realtor @${data.user.username} created — share credentials securely`);
+      if (autoPassword) showToast(`✓ Realtor created — temp password: ${password}`);
+      else showToast(`✓ Realtor @${data.user.username} created — share credentials securely`);
       loadRealtors();
     }
 
