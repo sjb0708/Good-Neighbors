@@ -967,11 +967,14 @@
 
     async function init() {
       try {
-        const res = await fetch('/api/business/me', { credentials: 'include' });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch('/api/business/me', { credentials: 'include', signal: controller.signal });
+        clearTimeout(timeout);
         if (!res.ok) { window.location.href = '/login'; return; }
         bizData = await res.json();
       } catch(e) {
-        document.getElementById('bizName').textContent = 'Error loading — please refresh';
+        document.getElementById('bizName').textContent = 'Server unavailable — please refresh or sign out';
         return;
       }
       renderProfile();
@@ -1559,8 +1562,8 @@
       if (btn) btn.textContent = sel.value === 'es' ? '🌐 EN' : '🌐 ES';
     }
 
-    async function logout() {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    function logout() {
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
       window.location.href = '/login';
     }
 
