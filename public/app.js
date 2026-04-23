@@ -2630,10 +2630,7 @@ async function renderBusinessPage(bizId, container) {
   if (biz.bannerUrl) {
     const bannerArea = wrap.querySelector('.biz-banner-area');
     if (bannerArea) {
-      const img = document.createElement('img');
-      img.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;';
-      bannerArea.insertBefore(img, bannerArea.firstChild);
-      img.src = biz.bannerUrl;
+      bannerArea.style.background = `url('${biz.bannerUrl.replace(/'/g, "\\'")}') center/cover no-repeat`;
     }
   }
 }

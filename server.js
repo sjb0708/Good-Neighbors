@@ -1277,7 +1277,7 @@ app.post('/api/businesses/:id/banner', requireAuth(async (req, res) => {
   const u = req.currentUser;
   const [biz] = await sql`SELECT claimed_by_user_id, added_by_user_id FROM businesses WHERE id=${req.params.id}`;
   if (!biz) return res.status(404).json({ error: 'Not found' });
-  const isOwner = biz.claimed_by_user_id === u.id || biz.added_by_user_id === u.id || u.business_id === req.params.id;
+  const isOwner = biz.claimed_by_user_id === u.id || biz.added_by_user_id === u.id || String(u.business_id) === String(req.params.id);
   if (!isOwner && u.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
   // Accept either JSON base64 or multipart file
   let dataUrl;
@@ -1297,7 +1297,7 @@ app.post('/api/businesses/:id/logo', requireAuth(async (req, res) => {
   const u = req.currentUser;
   const [biz] = await sql`SELECT claimed_by_user_id, added_by_user_id FROM businesses WHERE id=${req.params.id}`;
   if (!biz) return res.status(404).json({ error: 'Not found' });
-  const isOwner = biz.claimed_by_user_id === u.id || biz.added_by_user_id === u.id || u.business_id === req.params.id;
+  const isOwner = biz.claimed_by_user_id === u.id || biz.added_by_user_id === u.id || String(u.business_id) === String(req.params.id);
   if (!isOwner && u.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
   let dataUrl;
   if (req.body?.dataUrl) {
