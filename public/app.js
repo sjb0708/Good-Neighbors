@@ -4291,7 +4291,7 @@ async function renderFirstResponders(container) {
                 ${[
                   '⚡ ~10 minute response time from Buenaventura',
                   '🇺🇸 English-speaking paramedics — no language barrier in a crisis',
-                  '🎓 CAPCE-certified training · Partner with HSI Training Center (U.S.)',
+                  '🎓 Partner with HSI Training Center (U.S.)',
                   '🔬 Striving to maintain U.S. EMS standards — protocols, equipment & care',
                   '💳 Accepts credit cards — no cash required during an emergency',
                   '🌐 Works with international insurance providers',
