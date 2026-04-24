@@ -4214,27 +4214,75 @@ async function renderFirstResponders(container) {
         <!-- Tab: Services -->
         <div id="frpanel-services" class="fr-tab-panel" style="padding:20px;">
           <!-- EMTS Panama -->
-          <div style="background:linear-gradient(135deg,#1d4ed8,#2563eb);border-radius:14px;padding:18px;color:white;margin-bottom:14px;">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-              <div style="width:48px;height:48px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🚑</div>
-              <div><div style="font-size:18px;font-weight:800;">EMTS Panama</div><div style="font-size:12px;opacity:.85;">Private EMS — Buenaventura & Surrounding Communities</div></div>
+          <div style="background:linear-gradient(160deg,#1e3a8a,#1d4ed8);border-radius:16px;padding:20px;color:white;margin-bottom:14px;">
+            <!-- Header -->
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+              <div style="width:56px;height:56px;background:white;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,0.2);">🚑</div>
+              <div>
+                <div style="font-size:20px;font-weight:900;letter-spacing:-.3px;">EMTS Panama</div>
+                <div style="font-size:12px;opacity:.8;margin-top:1px;">Private EMS · Buenaventura & Surrounding Communities</div>
+                <div style="font-size:11px;margin-top:3px;background:rgba(255,255,255,.15);display:inline-block;padding:2px 8px;border-radius:20px;">🇺🇸 U.S.-Trained · English Speaking</div>
+              </div>
             </div>
-            <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:12px;margin-bottom:14px;">
-              <p style="font-size:14px;font-weight:700;margin:0 0 3px;font-style:italic;">"Don't wait until you have an emergency."</p>
-              <p style="font-size:12.5px;opacity:.9;line-height:1.55;margin:0;">Our medics are trained to American standards — U.S.-level training & equipment, right here in Panama.</p>
+
+            <!-- Slogan -->
+            <div style="background:rgba(255,255,255,0.12);border-left:3px solid rgba(255,255,255,0.5);border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:16px;">
+              <p style="font-size:14px;font-weight:700;margin:0 0 4px;font-style:italic;">"Don't wait until you have an emergency."</p>
+              <p style="font-size:12px;opacity:.85;line-height:1.55;margin:0;">The nearest private EMS to Costa Blanca Villas. Medics trained to American standards with U.S.-level equipment — right here in Panama. When every second counts, we're already close.</p>
             </div>
-            ${emtsServices.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+
+            <!-- Expat Highlight Banner -->
+            <div style="background:rgba(250,204,21,0.18);border:1px solid rgba(250,204,21,0.4);border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+              <span style="font-size:20px;flex-shrink:0;">🌎</span>
+              <div style="font-size:12px;line-height:1.55;"><strong style="font-size:12.5px;">Built for Expats.</strong> English-speaking paramedics, U.S. medical protocols, and staff who understand the challenges foreigners face during a medical emergency in Panama.</div>
+            </div>
+
+            <!-- Core Services Grid -->
+            <div style="font-size:11px;font-weight:700;opacity:.6;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">What We Provide</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+              ${[
+                ['🚑','ALS Response','Advanced Life Support on every call — IV, airway, cardiac monitoring'],
+                ['👨‍⚕️','Paramedic at Every Call','A licensed paramedic & first responder respond together, every time'],
+                ['🏥','Clinic in Buenaventura','Walk-in medical clinic on-site — non-emergency care & evaluation'],
+                ['📱','Telehealth with Doctor','Virtual doctor consultations — right from your home, in English'],
+                ['🫀','BLS / Basic Life Support','CPR, bleeding control, oxygen & stabilization for all emergencies'],
+                ['🚐','Medical Transport','Safe, medically-supervised transport to hospital with your team'],
+              ].map(([ic,name,desc]) => `
+                <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px;">
+                  <div style="font-size:22px;margin-bottom:5px;">${ic}</div>
+                  <div style="font-size:12.5px;font-weight:800;margin-bottom:3px;">${name}</div>
+                  <div style="font-size:11px;opacity:.8;line-height:1.4;">${desc}</div>
+                </div>`).join('')}
+            </div>
+
+            <!-- Admin-editable service pricing -->
+            ${emtsServices.length ? `
+            <div style="font-size:11px;font-weight:700;opacity:.6;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Service Pricing</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
               ${emtsServices.map(s=>`
-                <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:12px;">
-                  <div style="font-size:20px;margin-bottom:4px;">${s.icon||'🚑'}</div>
-                  <div style="font-size:12px;font-weight:800;">${escHtml(s.name)}</div>
-                  ${s.description ? `<div style="font-size:11px;opacity:.85;margin-top:2px;line-height:1.4;">${escHtml(s.description)}</div>` : ''}
-                  ${s.cost ? `<div style="font-size:12px;font-weight:800;color:#fde68a;margin-top:4px;">${escHtml(s.cost)}</div>` : ''}
+                <div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
+                  <span style="font-size:18px;flex-shrink:0;">${s.icon||'🚑'}</span>
+                  <div>
+                    <div style="font-size:12px;font-weight:800;">${escHtml(s.name)}</div>
+                    ${s.description ? `<div style="font-size:10.5px;opacity:.8;margin-top:1px;line-height:1.35;">${escHtml(s.description)}</div>` : ''}
+                    ${s.cost ? `<div style="font-size:13px;font-weight:900;color:#fde68a;margin-top:4px;">${escHtml(s.cost)}</div>` : ''}
+                  </div>
                 </div>`).join('')}
             </div>` : ''}
+
+            <!-- Why choose EMTS for expats -->
+            <div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+              <div style="font-size:12px;font-weight:800;margin-bottom:8px;">✅ Why Expats Choose EMTS Panama</div>
+              <div style="display:flex;flex-direction:column;gap:5px;">
+                ${['English-speaking paramedics — no language barrier in a crisis','U.S. medical training & protocols you can trust','Nearest private EMS to Buenaventura & Costa Blanca Villas','Works with international insurance providers','Clinic + Telehealth means care before AND after an emergency'].map(t=>`
+                  <div style="display:flex;gap:8px;font-size:11.5px;opacity:.9;"><span style="flex-shrink:0;">→</span><span>${t}</span></div>`).join('')}
+              </div>
+            </div>
+
+            <!-- Call buttons -->
             <div style="display:flex;gap:8px;">
-              <a href="tel:+5076790-4807" style="flex:1;text-align:center;padding:11px;background:white;color:#1d4ed8;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">📞 507 6790-4807</a>
-              <a href="https://www.instagram.com/emtspanama" target="_blank" style="flex:1;text-align:center;padding:11px;background:rgba(255,255,255,0.2);color:white;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;border:1.5px solid rgba(255,255,255,0.4);">📸 @emtspanama</a>
+              <a href="tel:+5076790-4807" style="flex:1;text-align:center;padding:12px;background:white;color:#1d4ed8;border-radius:11px;font-size:13.5px;font-weight:800;text-decoration:none;">📞 507 6790-4807</a>
+              <a href="https://www.instagram.com/emtspanama" target="_blank" style="flex:1;text-align:center;padding:12px;background:rgba(255,255,255,0.15);color:white;border-radius:11px;font-size:13.5px;font-weight:700;text-decoration:none;border:1.5px solid rgba(255,255,255,0.35);">📸 @emtspanama</a>
             </div>
           </div>
           <!-- IERF -->
