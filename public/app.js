@@ -4231,10 +4231,16 @@ async function renderFirstResponders(container) {
               <p style="font-size:12px;opacity:.85;line-height:1.55;margin:0;">The nearest private EMS to Costa Blanca Villas. Medics trained to American standards with U.S.-level equipment — right here in Panama. When every second counts, we're already close.</p>
             </div>
 
+            <!-- Mission Statement -->
+            <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+              <div style="font-size:12px;font-weight:800;margin-bottom:6px;">❤️ Our Mission</div>
+              <p style="font-size:12px;line-height:1.65;opacity:.9;margin:0;">We strive for excellence in our people and our service — medical response is our passion. Our team is proud to serve the Panamanian community, and equally committed to ensuring that visitors, expats, and travelers from other countries receive the same high standard of care. No one should face a medical emergency alone in a foreign country.</p>
+            </div>
+
             <!-- Expat Highlight Banner -->
             <div style="background:rgba(250,204,21,0.18);border:1px solid rgba(250,204,21,0.4);border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
               <span style="font-size:20px;flex-shrink:0;">🌎</span>
-              <div style="font-size:12px;line-height:1.55;"><strong style="font-size:12.5px;">Built for Expats.</strong> English-speaking paramedics, U.S. medical protocols, and staff who understand the challenges foreigners face during a medical emergency in Panama.</div>
+              <div style="font-size:12px;line-height:1.55;"><strong style="font-size:12.5px;">Serving Everyone.</strong> Proudly rooted in Panama and deeply committed to our Panamanian community — with specialized training and English-speaking staff to ensure visitors and expats from any country receive expert care when they need it most.</div>
             </div>
 
             <!-- Core Services Grid -->
