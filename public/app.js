@@ -4293,7 +4293,7 @@ async function renderFirstResponders(container) {
                   '🇺🇸 English-speaking paramedics — no language barrier in a crisis',
                   '🎓 Partner with HSI Training Center (U.S.)',
                   '🔬 Striving to maintain U.S. EMS standards — protocols, equipment & care',
-                  '💳 Accepts credit cards — no cash required during an emergency',
+                  '💳 Non-members can pay by credit card — flexible payment, no cash required during an emergency',
                   '🌐 Works with international insurance providers',
                   '🏥 Clinic + Telehealth means care before AND after an emergency',
                 ].map(t=>`<div style="display:flex;gap:8px;font-size:11.5px;opacity:.9;line-height:1.45;"><span style="flex-shrink:0;margin-top:1px;">→</span><span>${t}</span></div>`).join('')}
