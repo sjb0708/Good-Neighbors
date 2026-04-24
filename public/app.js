@@ -3241,15 +3241,28 @@ async function renderGroupPage(groupId, container) {
     <button class="group-back-btn" onclick="navigate('groups')">← Back to Groups</button>
 
     <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;">
-      <div class="group-page-banner" style="${bannerStyle}"></div>
+      <!-- Banner -->
+      <div class="group-page-banner" style="${bannerStyle};position:relative;">
+        ${(group.isCreator || group.isAdmin) ? `
+        <label style="position:absolute;top:10px;right:10px;padding:7px 12px;background:rgba(0,0,0,0.5);color:white;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;backdrop-filter:blur(4px);">
+          <input type="file" accept="image/*" style="display:none;" onchange="uploadGroupBanner('${group.id}',this)">
+          📷 Change Cover
+        </label>` : ''}
+      </div>
       <div class="group-page-header">
-        <div class="group-page-icon" style="overflow:hidden;">${/^(data:|https?:)/.test(group.icon) ? `<img src="${group.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:18px;">` : group.icon}</div>
+        <!-- Icon with click-to-change for admin -->
+        <div class="group-page-icon" style="overflow:hidden;${(group.isCreator||group.isAdmin)?'cursor:pointer;':''}" ${(group.isCreator||group.isAdmin)?`onclick="document.getElementById('groupIconInput-${group.id}').click()"`:''}>
+          ${/^(data:|https?:)/.test(group.icon) ? `<img src="${group.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:18px;">` : group.icon}
+          ${(group.isCreator||group.isAdmin) ? `<div style="position:absolute;inset:0;background:rgba(0,0,0,0);border-radius:18px;display:flex;align-items:center;justify-content:center;transition:.15s;" onmouseover="this.style.background='rgba(0,0,0,0.35)'" onmouseout="this.style.background='rgba(0,0,0,0)'"><span style="color:white;font-size:18px;opacity:0;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">📷</span></div>` : ''}
+        </div>
+        ${(group.isCreator||group.isAdmin) ? `<input id="groupIconInput-${group.id}" type="file" accept="image/*" style="display:none;" onchange="uploadGroupIcon('${group.id}',this)">` : ''}
         <div class="group-page-info">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div class="group-page-name">${escHtml(group.name)}</div>
-            <div style="display:flex;gap:8px;flex-shrink:0;margin-top:4px;">
-              <button onclick="reportGroup('${group.id}')" style="padding:7px 13px;background:none;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text-mid);font-family:inherit;display:flex;align-items:center;gap:5px;">⚑ Report</button>
-              ${group.isAdmin ? `<button onclick="deleteGroup('${group.id}',null,true)" style="padding:7px 13px;background:none;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;color:var(--coral);font-family:inherit;">🗑️ Delete</button>` : ''}
+            <div style="display:flex;gap:8px;flex-shrink:0;margin-top:4px;flex-wrap:wrap;">
+              ${(group.isCreator||group.isAdmin) ? `<button onclick="openEditGroupModal('${group.id}')" style="padding:7px 13px;background:var(--ocean);color:white;border:none;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;">✏️ Edit Group</button>` : ''}
+              <button onclick="reportGroup('${group.id}')" style="padding:7px 13px;background:none;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text-mid);font-family:inherit;">⚑ Report</button>
+              ${(group.isCreator||group.isAdmin) ? `<button onclick="deleteGroup('${group.id}',null,true)" style="padding:7px 13px;background:none;border:1.5px solid #fca5a5;border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;color:var(--coral);font-family:inherit;">🗑️ Delete</button>` : ''}
             </div>
           </div>
           <div class="group-page-meta">
@@ -3277,7 +3290,10 @@ async function renderGroupPage(groupId, container) {
     </div>` : ''}
 
     <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
-      <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:12px;">👥 Members (${(group.memberList||[]).length})</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text-dark);">👥 Members (${(group.memberList||[]).length})</div>
+        ${(group.isCreator||group.isAdmin) ? `<button onclick="openInviteNeighborModal('${group.id}')" style="padding:6px 13px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">+ Invite Neighbor</button>` : ''}
+      </div>
       <div style="display:flex;flex-direction:column;gap:8px;">
         ${(group.memberList||[]).map(m => `
           <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -3434,6 +3450,136 @@ async function removeGroupMember(groupId, username) {
   if (!confirm(`Remove ${username} from this group?`)) return;
   const res = await fetch(`/api/groups/${groupId}/members/${username}`, { method: 'DELETE', credentials: 'include' });
   if (res.ok) { await renderGroupPage(groupId, document.getElementById('sectionContent')); showToast('Member removed.'); }
+}
+
+async function uploadGroupBanner(groupId, input) {
+  if (!input.files?.[0]) return;
+  openImageCropper(input.files[0], { aspectRatio: 4, circular: false, onCrop: async (dataUrl) => {
+    if (!dataUrl) return;
+    showToast('Uploading…');
+    const res = await fetch(`/api/groups/${groupId}`, {
+      method: 'PATCH', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coverPhoto: dataUrl })
+    });
+    if (res.ok) { showToast('Cover photo updated!'); await renderGroupPage(groupId, document.getElementById('sectionContent')); }
+    else showToast('Upload failed.');
+  }});
+}
+
+async function uploadGroupIcon(groupId, input) {
+  if (!input.files?.[0]) return;
+  openImageCropper(input.files[0], { aspectRatio: 1, circular: true, onCrop: async (dataUrl) => {
+    if (!dataUrl) return;
+    showToast('Uploading…');
+    const res = await fetch(`/api/groups/${groupId}`, {
+      method: 'PATCH', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ icon: dataUrl })
+    });
+    if (res.ok) { showToast('Group icon updated!'); await renderGroupPage(groupId, document.getElementById('sectionContent')); }
+    else showToast('Upload failed.');
+  }});
+}
+
+function openEditGroupModal(groupId) {
+  const group = { id: groupId };
+  document.getElementById('editGroupModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'editGroupModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;width:100%;max-width:420px;padding:24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <h3 style="margin:0;font-size:17px;font-weight:800;">Edit Group</h3>
+        <button onclick="document.getElementById('editGroupModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">GROUP NAME</label><input id="egName" type="text" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" /></div>
+      <div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">DESCRIPTION</label><textarea id="egDesc" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:none;height:80px;box-sizing:border-box;"></textarea></div>
+      <div style="margin-bottom:18px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">PRIVACY</label>
+        <select id="egPrivacy" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:white;">
+          <option value="public">🌐 Public — anyone can join</option>
+          <option value="private">🔒 Private — invite only</option>
+        </select>
+      </div>
+      <button onclick="saveEditGroup('${groupId}')" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Save Changes</button>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  // Pre-fill with current group data
+  fetchJSON(`/api/groups/${groupId}`).then(g => {
+    if (!g) return;
+    document.getElementById('egName').value = g.name || '';
+    document.getElementById('egDesc').value = g.description || '';
+    document.getElementById('egPrivacy').value = g.privacy || 'public';
+  });
+}
+
+async function saveEditGroup(groupId) {
+  const name = document.getElementById('egName')?.value.trim();
+  const description = document.getElementById('egDesc')?.value.trim();
+  const privacy = document.getElementById('egPrivacy')?.value;
+  if (!name) { showToast('Group name is required'); return; }
+  const res = await fetch(`/api/groups/${groupId}`, {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description, privacy })
+  });
+  if (res.ok) {
+    document.getElementById('editGroupModal')?.remove();
+    showToast('Group updated!');
+    await renderGroupPage(groupId, document.getElementById('sectionContent'));
+  } else showToast('Could not save changes.');
+}
+
+async function openInviteNeighborModal(groupId) {
+  const neighbors = await fetchJSON('/api/neighbors') || [];
+  document.getElementById('inviteNeighborModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'inviteNeighborModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;width:100%;max-width:400px;max-height:80vh;overflow-y:auto;padding:24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h3 style="margin:0;font-size:17px;font-weight:800;">Invite a Neighbor</h3>
+        <button onclick="document.getElementById('inviteNeighborModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <input id="neighborSearchInput" type="text" placeholder="Search neighbors…" oninput="filterInviteList(this.value)" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:12px;" />
+      <div id="inviteNeighborList" style="display:flex;flex-direction:column;gap:8px;">
+        ${neighbors.map(n => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);" data-name="${escHtml(n.name).toLowerCase()}">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;border-radius:50%;background:${n.avatar};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;overflow:hidden;flex-shrink:0;">
+                ${n.avatarUrl ? `<img src="${n.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(n.initials)}
+              </div>
+              <div style="font-size:13.5px;font-weight:600;color:var(--text-dark);">${escHtml(n.name)}</div>
+            </div>
+            <button onclick="inviteToGroup('${groupId}','${n.username}',this)" style="padding:6px 14px;background:var(--ocean);color:white;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Invite</button>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function filterInviteList(query) {
+  document.querySelectorAll('#inviteNeighborList [data-name]').forEach(row => {
+    row.style.display = row.dataset.name.includes(query.toLowerCase()) ? '' : 'none';
+  });
+}
+
+async function inviteToGroup(groupId, username, btn) {
+  const res = await fetch(`/api/groups/${groupId}/invite`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username })
+  });
+  if (res.ok) {
+    btn.textContent = '✓ Added';
+    btn.style.background = '#059669';
+    btn.disabled = true;
+    showToast(`${username} added to group!`);
+  } else showToast('Could not invite — they may already be a member.');
 }
 
 async function pinGroupPost(groupId, postId) {

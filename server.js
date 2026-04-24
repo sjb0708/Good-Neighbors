@@ -2256,6 +2256,34 @@ app.delete('/api/groups/:id', requireAdmin(async (req, res) => {
   res.json({ ok: true });
 }));
 
+app.patch('/api/groups/:id', requireAuth(async (req, res) => {
+  const [g] = await sql`SELECT * FROM groups WHERE id=${req.params.id}`;
+  if (!g) return res.status(404).json({ error: 'Not found' });
+  const u = req.currentUser;
+  const isCreator = g.created_by_user_id === u.id;
+  const [mem] = await sql`SELECT is_admin FROM group_members WHERE group_id=${g.id} AND user_id=${u.id}`;
+  if (!isCreator && !mem?.is_admin && u.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+  const { name, description, privacy, icon, coverPhoto } = req.body;
+  const [updated] = await sql`UPDATE groups SET
+    name=${name||g.name}, description=${description||g.description}, privacy=${privacy||g.privacy},
+    icon=${icon||g.icon}, cover_photo=${coverPhoto||g.cover_photo}
+    WHERE id=${g.id} RETURNING *`;
+  res.json({ ok: true, group: updated });
+}));
+
+app.post('/api/groups/:id/invite', requireAuth(async (req, res) => {
+  const [g] = await sql`SELECT * FROM groups WHERE id=${req.params.id}`;
+  if (!g) return res.status(404).json({ error: 'Not found' });
+  const u = req.currentUser;
+  const [mem] = await sql`SELECT is_admin FROM group_members WHERE group_id=${g.id} AND user_id=${u.id}`;
+  if (!mem) return res.status(403).json({ error: 'Not a member' });
+  const { username } = req.body;
+  const [target] = await sql`SELECT id, username, name FROM users WHERE username=${username}`;
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  await sql`INSERT INTO group_members (group_id, user_id) VALUES (${g.id}, ${target.id}) ON CONFLICT DO NOTHING`;
+  res.json({ ok: true });
+}));
+
 app.post('/api/groups/:id/join', requireAuth(async (req, res) => {
   const [g] = await sql`SELECT * FROM groups WHERE id=${req.params.id}`;
   if (!g) return res.status(404).json({ error: 'Group not found' });
