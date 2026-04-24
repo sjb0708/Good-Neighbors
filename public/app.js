@@ -902,16 +902,12 @@ function openSafetyReportModal() {
           </div>
         </div>
         <div style="margin-bottom:18px;">
-          <input id="safetyPhotoInput" type="file" accept="image/*" capture="environment" style="display:none;" onchange="attachSafetyPhoto(this)" />
-          <input id="safetyPhotoInputGallery" type="file" accept="image/*" style="display:none;" onchange="attachSafetyPhoto(this)" />
+          <input id="safetyPhotoInput" type="file" accept="image/*" style="display:none;" onchange="attachSafetyPhoto(this)" />
           <div id="safetyPhotoPreview" style="display:none;position:relative;margin-bottom:8px;">
             <img id="safetyPhotoImg" src="" alt="" style="width:100%;border-radius:10px;object-fit:cover;max-height:180px;display:block;" />
             <button onclick="removeSafetyPhoto()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);color:white;border:none;border-radius:50%;width:26px;height:26px;font-size:15px;cursor:pointer;">✕</button>
           </div>
-          <div style="display:flex;gap:8px;">
-            <button onclick="document.getElementById('safetyPhotoInput').click()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-mid);">📷 Camera</button>
-            <button onclick="document.getElementById('safetyPhotoInputGallery').click()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-mid);">🖼️ Gallery</button>
-          </div>
+          <button onclick="document.getElementById('safetyPhotoInput').click()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-mid);">📷 Add Photo</button>
         </div>
         <button onclick="submitSafetyReport()" style="width:100%;padding:12px;background:#E63946;color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Post Alert</button>
         <div id="safetyErr" style="color:var(--coral);font-size:13px;margin-top:8px;display:none;"></div>
