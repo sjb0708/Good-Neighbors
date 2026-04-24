@@ -3299,7 +3299,20 @@ async function renderGroupPage(groupId, container) {
         <div style="font-size:13px;font-weight:700;color:var(--text-dark);">👥 Members (${(group.memberList||[]).length})</div>
         ${(group.isCreator||group.isAdmin) ? `<button onclick="openInviteNeighborModal('${group.id}')" style="padding:6px 13px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">+ Invite Neighbor</button>` : ''}
       </div>
-      <div style="display:flex;flex-direction:column;gap:8px;">
+      <!-- Avatar strip: first 8 -->
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+        ${(group.memberList||[]).slice(0,8).map(m => `
+          <div title="${escHtml(m.name)}" style="width:38px;height:38px;border-radius:50%;background:${m.avatar};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;overflow:hidden;flex-shrink:0;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.12);">
+            ${m.avatarUrl ? `<img src="${m.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(m.initials)}
+          </div>
+        `).join('')}
+        ${(group.memberList||[]).length > 8 ? `<div style="width:38px;height:38px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-mid);flex-shrink:0;">+${(group.memberList||[]).length - 8}</div>` : ''}
+      </div>
+      ${(group.memberList||[]).length > 0 ? `
+      <button onclick="toggleGroupMembers('${group.id}')" id="membersToggleBtn-${group.id}" style="width:100%;padding:7px;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;font-size:12px;font-weight:600;color:var(--text-mid);cursor:pointer;font-family:inherit;">
+        See all ${(group.memberList||[]).length} members ▾
+      </button>
+      <div id="membersFull-${group.id}" style="display:none;margin-top:10px;display:none;flex-direction:column;gap:8px;">
         ${(group.memberList||[]).map(m => `
           <div style="display:flex;align-items:center;justify-content:space-between;">
             <div style="display:flex;align-items:center;gap:10px;">
@@ -3313,7 +3326,7 @@ async function renderGroupPage(groupId, container) {
             ` : ''}
           </div>
         `).join('')}
-      </div>
+      </div>` : ''}
     </div>
 
     <div class="group-compose-box" id="groupComposeBox">
@@ -3449,6 +3462,15 @@ async function submitGroupPost(groupId) {
     await renderGroupPage(groupId, document.getElementById('sectionContent'));
     showToast('Posted to the group! 🎉');
   }
+}
+
+function toggleGroupMembers(groupId) {
+  const panel = document.getElementById(`membersFull-${groupId}`);
+  const btn = document.getElementById(`membersToggleBtn-${groupId}`);
+  if (!panel) return;
+  const open = panel.style.display === 'flex';
+  panel.style.display = open ? 'none' : 'flex';
+  if (btn) btn.textContent = open ? `See all members ▾` : `Hide members ▴`;
 }
 
 async function removeGroupMember(groupId, username) {
