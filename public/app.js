@@ -3206,10 +3206,24 @@ async function toggleGroup(groupId, btn) {
     const data = await res.json();
     if (data.requested) {
       showToast('Request sent — the group owner will review it.');
+      if (btn) { btn.textContent = 'Requested'; btn.disabled = true; btn.style.cssText += ';background:#f0f3f7;color:var(--text-mid);'; }
+    } else if (data.joined) {
+      showToast('You joined the group! 🎉');
+      // Re-render to get fresh state
+      await renderGroups(document.getElementById('sectionContent'));
     } else {
-      showToast(data.joined ? 'You joined the group! 🎉' : 'You left the group.');
+      showToast('You left the group.');
+      // Find the card's action area and swap back to Join button
+      const card = btn?.closest('.group-card');
+      if (card) {
+        const actions = card.querySelector('.group-card-actions');
+        if (actions) {
+          actions.innerHTML = `<button class="btn-join-group" id="group-btn-${groupId}" onclick="toggleGroup('${groupId}',this)">Join Group</button>`;
+        }
+      } else {
+        await renderGroups(document.getElementById('sectionContent'));
+      }
     }
-    await renderGroups(document.getElementById('sectionContent'));
   } catch {
     showToast('Could not update group membership.');
   }
