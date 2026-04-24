@@ -3177,7 +3177,7 @@ function buildGroupCard(group) {
           : group.pendingRequest
             ? `<button class="btn-join-group" style="background:#f0f3f7;color:var(--text-mid);cursor:default;" disabled>Requested</button>`
             : `<button class="btn-join-group" id="group-btn-${group.id}" onclick="toggleGroup('${group.id}',this)">${group.privacy === 'private' ? '🔒 Request to Join' : 'Join Group'}</button>`}
-        ${group.joined ? `<button class="btn-join-group" id="group-btn-${group.id}" onclick="toggleGroup('${group.id}',this)" style="flex:0 0 auto;padding:8px 14px;background:#fee2e2;color:#dc2626;border-color:#fca5a5;">Leave</button>` : ''}
+        ${(group.joined && !group.isCreator) ? `<button class="btn-join-group" id="group-btn-${group.id}" onclick="toggleGroup('${group.id}',this)" style="flex:0 0 auto;padding:8px 14px;background:#fee2e2;color:#dc2626;border-color:#fca5a5;">Leave</button>` : ''}
         ${group.isAdmin ? `<button onclick="deleteGroup('${group.id}',this)" title="Delete group" style="padding:7px 10px;background:none;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;font-size:14px;color:var(--coral);flex-shrink:0;">🗑️</button>` : ''}
       </div>
     </div>
@@ -3213,16 +3213,7 @@ async function toggleGroup(groupId, btn) {
       await renderGroups(document.getElementById('sectionContent'));
     } else {
       showToast('You left the group.');
-      // Find the card's action area and swap back to Join button
-      const card = btn?.closest('.group-card');
-      if (card) {
-        const actions = card.querySelector('.group-card-actions');
-        if (actions) {
-          actions.innerHTML = `<button class="btn-join-group" id="group-btn-${groupId}" onclick="toggleGroup('${groupId}',this)">Join Group</button>`;
-        }
-      } else {
-        await renderGroups(document.getElementById('sectionContent'));
-      }
+      await renderGroups(document.getElementById('sectionContent'));
     }
   } catch {
     showToast('Could not update group membership.');
