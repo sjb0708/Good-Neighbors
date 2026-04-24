@@ -3204,16 +3204,22 @@ async function toggleGroup(groupId, btn) {
     });
     if (!res.ok) throw new Error();
     const data = await res.json();
+    const actions = btn?.closest('.group-card-actions');
     if (data.requested) {
       showToast('Request sent — the group owner will review it.');
       if (btn) { btn.textContent = 'Requested'; btn.disabled = true; btn.style.cssText += ';background:#f0f3f7;color:var(--text-mid);'; }
     } else if (data.joined) {
       showToast('You joined the group! 🎉');
-      // Re-render to get fresh state
-      await renderGroups(document.getElementById('sectionContent'));
+      if (actions) {
+        actions.innerHTML = `
+          <button class="btn-group-open" onclick="openGroupPage('${groupId}')" style="flex:1;">View Group →</button>
+          <button class="btn-join-group" id="group-btn-${groupId}" onclick="toggleGroup('${groupId}',this)" style="flex:0 0 auto;padding:8px 16px;background:#fee2e2;color:#dc2626;border-color:#fca5a5;">Leave</button>`;
+      }
     } else {
       showToast('You left the group.');
-      await renderGroups(document.getElementById('sectionContent'));
+      if (actions) {
+        actions.innerHTML = `<button class="btn-join-group" id="group-btn-${groupId}" onclick="toggleGroup('${groupId}',this)">Join Group</button>`;
+      }
     }
   } catch {
     showToast('Could not update group membership.');
