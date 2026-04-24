@@ -2136,6 +2136,7 @@ async function formatGroupRow(g, userId, isAdminUser) {
 }
 
 app.get('/api/groups', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   try {
     const user        = await getUser(req);
     const userId      = user?.id || null;

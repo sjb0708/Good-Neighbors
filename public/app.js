@@ -1263,7 +1263,7 @@ async function renderGroups(container) {
     </button>`;
   container.appendChild(topBar);
 
-  const groups = await fetchJSON('/api/groups');
+  const groups = await fetchJSON('/api/groups?t=' + Date.now());
   if (!groups || !groups.length) {
     container.appendChild(Object.assign(document.createElement('div'), { innerHTML: emptyStateHTML('👥', 'No groups yet', 'Be the first to create one!') }));
     return;
@@ -3173,11 +3173,11 @@ function buildGroupCard(group) {
       <div class="group-card-desc">${escHtml(group.description)}</div>
       <div class="group-card-actions">
         ${group.joined
-          ? `<button class="btn-group-open" onclick="openGroupPage('${group.id}')">View Group →</button>`
+          ? `<button class="btn-group-open" onclick="openGroupPage('${group.id}')" style="flex:1;">View Group →</button>`
           : group.pendingRequest
             ? `<button class="btn-join-group" style="background:#f0f3f7;color:var(--text-mid);cursor:default;" disabled>Requested</button>`
             : `<button class="btn-join-group" id="group-btn-${group.id}" onclick="toggleGroup('${group.id}',this)">${group.privacy === 'private' ? '🔒 Request to Join' : 'Join Group'}</button>`}
-        ${(group.joined && group.createdBy !== currentUser?.username) ? `<button class="btn-join-group" id="group-btn-${group.id}" onclick="toggleGroup('${group.id}',this)" style="flex:0 0 auto;padding:8px 14px;background:#fee2e2;color:#dc2626;border-color:#fca5a5;">Leave</button>` : ''}
+        ${(group.joined && group.createdBy !== currentUser?.username) ? `<button id="group-btn-${group.id}" onclick="toggleGroup('${group.id}',this)" title="Leave group" style="padding:8px 10px;background:none;border:1.5px solid #fca5a5;border-radius:20px;font-size:15px;cursor:pointer;flex-shrink:0;color:#dc2626;">↩</button>` : ''}
         ${group.isAdmin ? `<button onclick="deleteGroup('${group.id}',this)" title="Delete group" style="padding:7px 10px;background:none;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;font-size:14px;color:var(--coral);flex-shrink:0;">🗑️</button>` : ''}
       </div>
     </div>
