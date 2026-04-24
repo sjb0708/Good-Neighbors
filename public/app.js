@@ -4270,13 +4270,41 @@ async function renderFirstResponders(container) {
                 </div>`).join('')}
             </div>` : ''}
 
-            <!-- Why choose EMTS for expats -->
-            <div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+            <!-- Why Private EMS -->
+            <div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+              <div style="font-size:12px;font-weight:800;margin-bottom:8px;">🚨 Why Private EMS — Not Public?</div>
+              <div style="display:flex;flex-direction:column;gap:5px;">
+                ${[
+                  '🕐 Public EMS response in Panama can take 45–90+ min — private gets there in ~10 min from Buenaventura',
+                  '🏥 Public units are often understaffed, under-equipped, or unavailable on weekends & holidays',
+                  '🗣️ Public responders rarely speak English — a language barrier in a crisis costs lives',
+                  '💳 EMTS Panama accepts credit cards — no cash scramble during an emergency',
+                  '📋 Private means a dedicated team who knows your community, your roads, your needs',
+                ].map(t=>`<div style="display:flex;gap:8px;font-size:11.5px;opacity:.9;line-height:1.45;"><span style="flex-shrink:0;margin-top:1px;">→</span><span>${t}</span></div>`).join('')}
+              </div>
+            </div>
+
+            <!-- Why Expats Choose EMTS -->
+            <div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;margin-bottom:10px;">
               <div style="font-size:12px;font-weight:800;margin-bottom:8px;">✅ Why Expats Choose EMTS Panama</div>
               <div style="display:flex;flex-direction:column;gap:5px;">
-                ${['English-speaking paramedics — no language barrier in a crisis','U.S. medical training & protocols you can trust','Nearest private EMS to Buenaventura & Costa Blanca Villas','Works with international insurance providers','Clinic + Telehealth means care before AND after an emergency'].map(t=>`
-                  <div style="display:flex;gap:8px;font-size:11.5px;opacity:.9;"><span style="flex-shrink:0;">→</span><span>${t}</span></div>`).join('')}
+                ${[
+                  '⚡ ~10 minute response time from Buenaventura',
+                  '🇺🇸 English-speaking paramedics — no language barrier in a crisis',
+                  '🎓 CAPCE-certified training · Partner with HSI Training Center (U.S.)',
+                  '🔬 Striving to maintain U.S. EMS standards — protocols, equipment & care',
+                  '💳 Accepts credit cards — no cash required during an emergency',
+                  '🌐 Works with international insurance providers',
+                  '🏥 Clinic + Telehealth means care before AND after an emergency',
+                ].map(t=>`<div style="display:flex;gap:8px;font-size:11.5px;opacity:.9;line-height:1.45;"><span style="flex-shrink:0;margin-top:1px;">→</span><span>${t}</span></div>`).join('')}
               </div>
+            </div>
+
+            <!-- Game Plan CTA -->
+            <div style="background:rgba(250,204,21,0.2);border:1px solid rgba(250,204,21,0.5);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+              <div style="font-size:13px;font-weight:800;margin-bottom:5px;">📋 Have a Game Plan Before You Need One</div>
+              <p style="font-size:12px;line-height:1.6;opacity:.9;margin:0 0 10px;">Don't wait for an emergency to figure out your options. Call EMTS Panama today to discuss a personalized plan for you and your family — before a crisis happens.</p>
+              <a href="tel:+5076790-4807" style="display:block;text-align:center;padding:10px;background:white;color:#1d4ed8;border-radius:9px;font-size:13px;font-weight:800;text-decoration:none;">📞 Call Now to Make a Plan</a>
             </div>
 
             <!-- Call buttons -->
