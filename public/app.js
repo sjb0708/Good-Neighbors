@@ -4206,7 +4206,7 @@ async function renderFirstResponders(container) {
       <!-- Tabs -->
       <div style="background:white;border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px;">
         <div style="display:flex;overflow-x:auto;border-bottom:1px solid var(--border);padding:0 4px;">
-          ${[['services','🚑 Services'],['call','📞 Call for Help'],['prepared','⚡ Be Prepared'],['myinfo','👤 My Info'],['guide','📄 Guide']].map(([id,label]) => `
+          ${[['services','🚑 Services'],['call','📞 Emergency Phrases'],['prepared','⚡ Be Prepared'],['myinfo','👤 My Info'],['guide','📄 Guide']].map(([id,label]) => `
             <button id="frtab-${id}" class="fr-tab-btn" onclick="switchFRTab('${id}')" style="padding:13px 14px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:inherit;white-space:nowrap;background:transparent;color:var(--text-mid);border-bottom:3px solid transparent;transition:all .15s;">${label}</button>
           `).join('')}
         </div>
