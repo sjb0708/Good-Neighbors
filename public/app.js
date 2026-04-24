@@ -4217,7 +4217,7 @@ async function renderFirstResponders(container) {
           <div style="background:linear-gradient(160deg,#1e3a8a,#1d4ed8);border-radius:16px;padding:20px;color:white;margin-bottom:14px;">
             <!-- Header -->
             <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
-              <div style="width:56px;height:56px;background:white;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,0.2);">🚑</div>
+              <div style="width:56px;height:56px;background:white;border-radius:14px;overflow:hidden;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,0.2);"><img src="/emts-logo.png" style="width:100%;height:100%;object-fit:cover;" alt="EMTS Panama"/></div>
               <div>
                 <div style="font-size:20px;font-weight:900;letter-spacing:-.3px;">EMTS Panama</div>
                 <div style="font-size:12px;opacity:.8;margin-top:1px;">Private EMS · Buenaventura & Surrounding Communities</div>
