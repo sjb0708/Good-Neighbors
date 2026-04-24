@@ -4726,11 +4726,11 @@ function generateEmergencyCard() {
   ctx.lineTo(0, 18); ctx.quadraticCurveTo(0, 0, 18, 0); ctx.closePath();
   ctx.fill(); ctx.restore();
 
-  // Star of Life (white circle bg + blue 3-rect star)
+  // Star of Life (white circle bg + red 3-rect star)
   const solCx = leftW / 2, solCy = 90, solR = 38;
   ctx.fillStyle = 'white';
   ctx.beginPath(); ctx.arc(solCx, solCy, solR + 6, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#1d4ed8';
+  ctx.fillStyle = '#ef4444';
   const armW = solR * 0.34, armH = solR * 1.85;
   for (let i = 0; i < 3; i++) {
     ctx.save(); ctx.translate(solCx, solCy); ctx.rotate(i * Math.PI / 3);
