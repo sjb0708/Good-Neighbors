@@ -902,12 +902,16 @@ function openSafetyReportModal() {
           </div>
         </div>
         <div style="margin-bottom:18px;">
-          <input id="safetyPhotoInput" type="file" accept="image/*" style="display:none;" onchange="attachSafetyPhoto(this)" />
+          <input id="safetyPhotoInput" type="file" accept="image/*" capture="environment" style="display:none;" onchange="attachSafetyPhoto(this)" />
+          <input id="safetyPhotoInputGallery" type="file" accept="image/*" style="display:none;" onchange="attachSafetyPhoto(this)" />
           <div id="safetyPhotoPreview" style="display:none;position:relative;margin-bottom:8px;">
             <img id="safetyPhotoImg" src="" alt="" style="width:100%;border-radius:10px;object-fit:cover;max-height:180px;display:block;" />
             <button onclick="removeSafetyPhoto()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);color:white;border:none;border-radius:50%;width:26px;height:26px;font-size:15px;cursor:pointer;">✕</button>
           </div>
-          <button onclick="document.getElementById('safetyPhotoInput').click()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-mid);">📷 Add Photo</button>
+          <div style="display:flex;gap:8px;">
+            <button onclick="document.getElementById('safetyPhotoInput').click()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-mid);">📷 Camera</button>
+            <button onclick="document.getElementById('safetyPhotoInputGallery').click()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-mid);">🖼️ Gallery</button>
+          </div>
         </div>
         <button onclick="submitSafetyReport()" style="width:100%;padding:12px;background:#E63946;color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Post Alert</button>
         <div id="safetyErr" style="color:var(--coral);font-size:13px;margin-top:8px;display:none;"></div>
@@ -948,9 +952,22 @@ function attachSafetyPhoto(input) {
   if (!input.files || !input.files[0]) return;
   const reader = new FileReader();
   reader.onload = e => {
-    safetyPhotoDataUrl = e.target.result;
-    document.getElementById('safetyPhotoImg').src = safetyPhotoDataUrl;
-    document.getElementById('safetyPhotoPreview').style.display = 'block';
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1200;
+      let { width: w, height: h } = img;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      safetyPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      document.getElementById('safetyPhotoImg').src = safetyPhotoDataUrl;
+      document.getElementById('safetyPhotoPreview').style.display = 'block';
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(input.files[0]);
 }
@@ -968,14 +985,19 @@ async function submitSafetyReport() {
   if (!desc) { errEl.textContent = 'Please add a description.'; errEl.style.display = 'block'; return; }
   const body = { type: 'safety', section: 'safety', content: desc, alertType: safetySelectedCategory, severity: selectedSafetySev };
   if (safetyPhotoDataUrl) body.image = safetyPhotoDataUrl;
-  const res = await fetch('/api/posts', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  if (res.ok) {
-    document.getElementById('safetyReportModal')?.remove();
-    await renderSafety(document.getElementById('sectionContent'));
-    showToast('Safety alert posted 🚨');
-  } else {
-    const d = await res.json();
-    errEl.textContent = d.error || 'Something went wrong.';
+  try {
+    const res = await fetch('/api/posts', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (res.ok) {
+      document.getElementById('safetyReportModal')?.remove();
+      await renderSafety(document.getElementById('sectionContent'));
+      showToast('Safety alert posted 🚨');
+    } else {
+      const d = await res.json().catch(() => ({}));
+      errEl.textContent = d.error || `Error ${res.status} — try again.`;
+      errEl.style.display = 'block';
+    }
+  } catch(e) {
+    errEl.textContent = 'Network error — check connection and try again.';
     errEl.style.display = 'block';
   }
 }
