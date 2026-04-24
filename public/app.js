@@ -4285,22 +4285,6 @@ async function renderFirstResponders(container) {
               <a href="https://www.instagram.com/emtspanama" target="_blank" style="flex:1;text-align:center;padding:12px;background:rgba(255,255,255,0.15);color:white;border-radius:11px;font-size:13.5px;font-weight:700;text-decoration:none;border:1.5px solid rgba(255,255,255,0.35);">📸 @emtspanama</a>
             </div>
           </div>
-          <!-- IERF -->
-          <div style="background:linear-gradient(135deg,#dc2626,#ef4444);border-radius:14px;padding:18px;color:white;">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-              <div style="width:48px;height:48px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#dc2626;font-size:16px;flex-shrink:0;">IERF</div>
-              <div><div style="font-size:18px;font-weight:800;">IERF Response</div><div style="font-size:12px;opacity:.85;">U.S. 501(c)(3) Non-Profit · ierfresponse.org</div></div>
-            </div>
-            <p style="font-size:13px;line-height:1.6;opacity:.95;margin:0 0 14px;">Founded by a dual U.S.–Panamanian emergency services professional with 20+ years in fire, EMS, police & emergency management. Dedicated to equipping communities with lifesaving information before emergencies occur.</p>
-            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
-              ${[['❤️','Community Training','Preparedness training for residents, travelers & expats'],['🧰','Equipment Support','Acquiring lifesaving equipment for local responders'],['📋','Emergency Guides','Practical bilingual guides including this Panama Emergency Guide'],['🤝','Volunteer Network','Connecting trained volunteers with communities in need']].map(([ic,t,d])=>`
-                <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:10px 12px;display:flex;gap:10px;">
-                  <span style="font-size:18px;flex-shrink:0;">${ic}</span>
-                  <div><div style="font-size:12.5px;font-weight:700;">${t}</div><div style="font-size:11.5px;opacity:.85;margin-top:2px;">${d}</div></div>
-                </div>`).join('')}
-            </div>
-            <a href="https://www.ierfresponse.org" target="_blank" style="display:block;text-align:center;padding:11px;background:white;color:#dc2626;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">🌐 ierfresponse.org — Donate & Learn More</a>
-          </div>
         </div>
 
         <!-- Tab: Call for Help -->
