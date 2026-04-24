@@ -992,14 +992,14 @@ const BIZ_CATEGORIES = [
   { label: 'Fish Market',          icon: '🐟' },
   { label: 'Fresh Market',         icon: '🥦' },
   { label: 'Handyman',             icon: '🪛' },
+  { label: 'AC Service',           icon: '❄️' },
   { label: 'Health & Medical',     icon: '🏥' },
   { label: 'Home Services',        icon: '🔧' },
   { label: 'Immigration',          icon: '🛂' },
-  { label: 'LEO/Fire/EMS',         icon: '🚨' },
   { label: 'Pool Service',         icon: '🏊' },
   { label: 'Professional Services', icon: '💼' },
   { label: 'Real Estate',          icon: '🏠' },
-  { label: 'Relocation',           icon: '🚚' },
+  { label: 'Expat Services',       icon: '✈️' },
   { label: 'Restaurant',           icon: '🍽️' },
   { label: 'Retail & Shopping',    icon: '🛍️' },
   { label: 'Sports & Fitness',     icon: '⚽' },
@@ -1092,7 +1092,7 @@ function renderBizList() {
   });
 }
 
-const MEDICAL_BIZ_CATEGORIES = ['Health & Medical', 'LEO/Fire/EMS'];
+const MEDICAL_BIZ_CATEGORIES = ['Health & Medical'];
 const MEDICAL_BIZ_SERVICES = ['Emergency Room','ICU / Critical Care','Surgery','Maternity','Pediatrics','Cardiology','Neurology','Orthopedics','X-Ray / Radiology','CT Scan','Ultrasound','Laboratory','Pharmacy','Ambulance / Transport','Antivenom','Blood Donations','Dialysis','Oncology','Psychiatry','English Speaking Staff'];
 
 function openAddBusinessModal() {
