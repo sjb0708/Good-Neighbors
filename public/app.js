@@ -2977,8 +2977,8 @@ function buildNeighborCard(neighbor) {
   const yearsText = `Member since ${memberYear}`;
 
   card.innerHTML = `
-    <div class="neighbor-avatar" style="background:${neighbor.avatar}">
-      ${neighbor.initials}
+    <div class="neighbor-avatar" style="background:${neighbor.avatar};overflow:hidden;">
+      ${neighbor.avatarUrl ? `<img src="${neighbor.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : neighbor.initials}
       ${neighbor.verified ? '<div class="neighbor-verified">✓</div>' : ''}
     </div>
     <div class="neighbor-name">${escHtml(neighbor.name)}</div>
