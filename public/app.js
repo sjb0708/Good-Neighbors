@@ -3336,16 +3336,16 @@ async function renderGroupPage(groupId, container) {
       <button onclick="toggleGroupMembers('${group.id}')" id="membersToggleBtn-${group.id}" style="width:100%;padding:7px;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;font-size:12px;font-weight:600;color:var(--text-mid);cursor:pointer;font-family:inherit;">
         See all ${(group.memberList||[]).length} members ▾
       </button>
-      <div id="membersFull-${group.id}" style="display:none;margin-top:10px;display:none;flex-direction:column;gap:8px;">
+      <div id="membersFull-${group.id}" style="display:none;margin-top:10px;flex-direction:column;gap:8px;">
         ${(group.memberList||[]).map(m => `
-          <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9;">
             <div style="display:flex;align-items:center;gap:10px;">
               <div style="width:34px;height:34px;border-radius:50%;background:${m.avatar};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;overflow:hidden;flex-shrink:0;">
                 ${m.avatarUrl ? `<img src="${m.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(m.initials)}
               </div>
               <div style="font-size:13px;font-weight:600;color:var(--text-dark);">${escHtml(m.name)}</div>
             </div>
-            ${(group.isAdmin || group.isCreator) && m.username !== currentUser?.username ? `
+            ${group.createdBy === currentUser?.username && m.username !== currentUser?.username ? `
               <button onclick="removeGroupMember('${group.id}','${m.username}')" style="padding:4px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:11px;font-weight:600;color:var(--coral);cursor:pointer;font-family:inherit;">Remove</button>
             ` : ''}
           </div>
