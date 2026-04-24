@@ -2123,7 +2123,7 @@ app.get('/api/search', async (req, res) => {
 
 async function formatGroupRow(g, userId, isAdminUser) {
   return {
-    id: g.id, name: g.name, description: g.description, icon: g.icon,
+    id: g.id, name: g.name, description: g.description, icon: g.icon, iconUrl: g.icon_url||null,
     category: g.category, privacy: g.privacy, coverPhoto: g.cover_photo,
     members: parseInt(g.member_count||0, 10),
     joined: g.user_joined || false,
@@ -2257,19 +2257,30 @@ app.delete('/api/groups/:id', requireAdmin(async (req, res) => {
 }));
 
 app.patch('/api/groups/:id', requireAuth(async (req, res) => {
-  await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS cover_photo TEXT`;
-  const [g] = await sql`SELECT * FROM groups WHERE id=${req.params.id}`;
-  if (!g) return res.status(404).json({ error: 'Not found' });
-  const u = req.currentUser;
-  const isCreator = g.created_by_user_id === u.id;
-  const [mem] = await sql`SELECT is_admin FROM group_members WHERE group_id=${g.id} AND user_id=${u.id}`;
-  if (!isCreator && !mem?.is_admin && u.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
-  const { name, description, privacy, icon, coverPhoto } = req.body;
-  const [updated] = await sql`UPDATE groups SET
-    name=${name||g.name}, description=${description||g.description}, privacy=${privacy||g.privacy},
-    icon=${icon||g.icon}, cover_photo=${coverPhoto||g.cover_photo}
-    WHERE id=${g.id} RETURNING *`;
-  res.json({ ok: true, group: updated });
+  try {
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS cover_photo TEXT`;
+    await sql`ALTER TABLE groups ALTER COLUMN icon TYPE TEXT`;
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS icon_url TEXT`;
+    const [g] = await sql`SELECT * FROM groups WHERE id=${req.params.id}`;
+    if (!g) return res.status(404).json({ error: 'Not found' });
+    const u = req.currentUser;
+    const isCreator = g.created_by_user_id === u.id;
+    const [mem] = await sql`SELECT is_admin FROM group_members WHERE group_id=${g.id} AND user_id=${u.id}`;
+    if (!isCreator && !mem?.is_admin && u.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+    const { name, description, privacy, icon, iconUrl, coverPhoto } = req.body;
+    const newIconUrl = iconUrl || g.icon_url;
+    const emojiIcon = (icon && !icon.startsWith('data:')) ? icon : (g.icon && !g.icon.startsWith('data:') ? g.icon : '👥');
+    const [updated] = await sql`UPDATE groups SET
+      name=${name||g.name}, description=${description||g.description}, privacy=${privacy||g.privacy},
+      icon=${emojiIcon},
+      icon_url=${newIconUrl||null},
+      cover_photo=${coverPhoto||g.cover_photo}
+      WHERE id=${g.id} RETURNING *`;
+    res.json({ ok: true, group: updated });
+  } catch(e) {
+    console.error('PATCH /api/groups/:id error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 }));
 
 app.post('/api/groups/:id/invite', requireAuth(async (req, res) => {

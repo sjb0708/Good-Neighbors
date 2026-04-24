@@ -3162,7 +3162,7 @@ function buildGroupCard(group) {
     : `background:${banner};`;
   card.innerHTML = `
     <div class="group-card-banner" style="${bannerStyle}">
-      <div class="group-card-icon" style="overflow:hidden;">${/^(data:|https?:)/.test(group.icon) ? `<img src="${group.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">` : group.icon}</div>
+      <div class="group-card-icon" style="overflow:hidden;">${(group.iconUrl||/^(data:|https?:)/.test(group.icon)) ? `<img src="${group.iconUrl||group.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">` : group.icon}</div>
     </div>
     <div class="group-card-body">
       <div class="group-card-name">${escHtml(group.name)}</div>
@@ -3252,7 +3252,7 @@ async function renderGroupPage(groupId, container) {
       <div class="group-page-header">
         <!-- Icon with click-to-change for admin -->
         <div class="group-page-icon" style="overflow:hidden;${(group.isCreator||group.isAdmin)?'cursor:pointer;':''}" ${(group.isCreator||group.isAdmin)?`onclick="document.getElementById('groupIconInput-${group.id}').click()"`:''}>
-          ${/^(data:|https?:)/.test(group.icon) ? `<img src="${group.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:18px;">` : group.icon}
+          ${(group.iconUrl||/^(data:|https?:)/.test(group.icon)) ? `<img src="${group.iconUrl||group.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:18px;">` : group.icon}
           ${(group.isCreator||group.isAdmin) ? `<div style="position:absolute;inset:0;background:rgba(0,0,0,0);border-radius:18px;display:flex;align-items:center;justify-content:center;transition:.15s;" onmouseover="this.style.background='rgba(0,0,0,0.35)'" onmouseout="this.style.background='rgba(0,0,0,0)'"><span style="color:white;font-size:18px;opacity:0;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">📷</span></div>` : ''}
         </div>
         ${(group.isCreator||group.isAdmin) ? `<input id="groupIconInput-${group.id}" type="file" accept="image/*" style="display:none;" onchange="uploadGroupIcon('${group.id}',this)">` : ''}
@@ -3475,10 +3475,10 @@ async function uploadGroupIcon(groupId, input) {
     const res = await fetch(`/api/groups/${groupId}`, {
       method: 'PATCH', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ icon: dataUrl })
+      body: JSON.stringify({ iconUrl: dataUrl })
     });
     if (res.ok) { showToast('Group icon updated!'); await renderGroupPage(groupId, document.getElementById('sectionContent')); }
-    else showToast('Upload failed.');
+    else { const err = await res.json().catch(()=>{}); showToast('Upload failed: ' + (err?.error||res.status)); }
   }});
 }
 
