@@ -2257,6 +2257,7 @@ app.delete('/api/groups/:id', requireAdmin(async (req, res) => {
 }));
 
 app.patch('/api/groups/:id', requireAuth(async (req, res) => {
+  await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS cover_photo TEXT`;
   const [g] = await sql`SELECT * FROM groups WHERE id=${req.params.id}`;
   if (!g) return res.status(404).json({ error: 'Not found' });
   const u = req.currentUser;
