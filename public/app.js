@@ -1331,7 +1331,9 @@ async function renderProfile(container) {
   const user = currentUser;
   if (!user) return;
 
-  const bannerStyle = `background:linear-gradient(135deg,var(--ocean),var(--seafoam))`;
+  const bannerStyle = user.bannerUrl
+    ? `background:url('${user.bannerUrl}') center/cover no-repeat`
+    : `background:linear-gradient(135deg,var(--ocean),var(--seafoam))`;
   const avatarContent = user.avatarUrl
     ? `<img src="${user.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
     : user.initials;
@@ -1427,10 +1429,6 @@ async function renderProfile(container) {
 
   userPosts.forEach(p => container.appendChild(buildPostCard(p)));
   lucide.createIcons();
-  if (user.bannerUrl) {
-    const bannerEl = document.getElementById('profileBanner');
-    if (bannerEl) bannerEl.style.background = `url('${user.bannerUrl}') center/cover no-repeat`;
-  }
 }
 
 function openEditProfile() {
