@@ -1381,6 +1381,38 @@ async function renderProfile(container) {
           <div class="profile-stat-lbl">Member Since</div>
         </div>
       </div>
+
+      <!-- Points explanation -->
+      <div style="margin-top:14px;background:#f0f6ff;border:1.5px solid #bfdbfe;border-radius:14px;padding:14px 16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="font-size:18px;">⚡</span>
+          <div style="font-size:13px;font-weight:800;color:var(--text-dark);">How Points Work</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+          ${[
+            ['📝','Post on the feed','+5 pts'],
+            ['💬','Comment on a post','+2 pts'],
+            ['👍','Your post gets liked','+1 pt per like'],
+            ['🛒','List an item for sale','+3 pts'],
+            ['📅','RSVP to an event','+2 pts'],
+            ['🏪','Add a business','+10 pts'],
+            ['✅','Get verified as a neighbor','+20 pts'],
+          ].map(([ic, action, pts]) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:12.5px;">
+              <div style="display:flex;align-items:center;gap:6px;color:var(--text-mid);">
+                <span>${ic}</span><span>${action}</span>
+              </div>
+              <span style="font-weight:700;color:var(--ocean);white-space:nowrap;">${pts}</span>
+            </div>`).join('')}
+        </div>
+        <div style="font-size:11.5px;font-weight:700;color:var(--text-mid);margin-bottom:6px;">YOUR LEVEL PROGRESSION</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          ${[['Newcomer','0+','#6b7280'],['Neighbor','50+','#059669'],['Member','200+','#0284c7'],['Regular','500+','#7c3aed'],['Champion','1000+','#d97706'],['Legend','2000+','#dc2626']].map(([name,pts,color]) => `
+            <div style="background:${name === pointsLevelLabel(user.points) ? color : 'white'};color:${name === pointsLevelLabel(user.points) ? 'white' : color};border:1.5px solid ${color};border-radius:20px;font-size:11px;font-weight:700;padding:3px 9px;white-space:nowrap;">
+              ${name === pointsLevelLabel(user.points) ? '★ ' : ''}${name} · ${pts}
+            </div>`).join('')}
+        </div>
+      </div>
     </div>
   `;
 
