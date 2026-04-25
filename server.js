@@ -2036,6 +2036,18 @@ app.post('/api/marketplace', requireAuth(async (req, res) => {
   res.json({ ok: true, item });
 }));
 
+app.patch('/api/marketplace/:id', requireAuth(async (req, res) => {
+  const [item] = await sql`SELECT seller_id FROM marketplace_items WHERE id=${req.params.id}`;
+  if (!item) return res.status(404).json({ error: 'Not found' });
+  if (item.seller_id !== req.currentUser.id && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  const { title, description, price, condition, category } = req.body;
+  const [updated] = await sql`UPDATE marketplace_items SET
+    title=${title}, description=${description}, price=${Number(price)||0},
+    condition=${condition||null}, category=${category||null}
+    WHERE id=${req.params.id} RETURNING *`;
+  res.json({ ok: true, item: updated });
+}));
+
 app.delete('/api/marketplace/:id', requireAuth(async (req, res) => {
   const [item] = await sql`SELECT seller_id FROM marketplace_items WHERE id=${req.params.id}`;
   if (!item) return res.status(404).json({ error: 'Not found' });

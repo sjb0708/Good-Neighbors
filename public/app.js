@@ -2039,6 +2039,7 @@ function buildMarketCard(item) {
   const ownerButtons = isMine ? `
     <div style="display:flex;gap:6px;margin-top:8px;">
       ${!item.sold ? `<button onclick="event.stopPropagation();markMarketSold('${item.id}')" style="flex:1;padding:7px 4px;background:#52B788;color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">✓ Mark Sold</button>` : ''}
+      <button onclick="event.stopPropagation();openEditMarketItem('${item.id}')" style="flex:1;padding:7px 4px;background:#e0f2fe;color:#0369a1;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">✏️ Edit</button>
       <button onclick="event.stopPropagation();deleteMarketItem('${item.id}')" style="flex:1;padding:7px 4px;background:var(--coral);color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Delete</button>
     </div>` : '';
 
@@ -2113,6 +2114,71 @@ async function deleteMarketItem(id) {
     showToast('Listing deleted.');
   } else {
     showToast('Could not delete listing.');
+  }
+}
+
+async function openEditMarketItem(id) {
+  const items = await fetchJSON('/api/marketplace');
+  const item = (items||[]).find(i => i.id === id);
+  if (!item) return showToast('Could not load listing.');
+
+  const existing = document.getElementById('editMarketModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'editMarketModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <h3 style="margin:0;font-size:17px;font-weight:800;">✏️ Edit Listing</h3>
+        <button onclick="document.getElementById('editMarketModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">TITLE</label>
+          <input id="emTitle" value="${escHtml(item.title)}" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">PRICE ($)</label>
+          <input id="emPrice" type="number" min="0" value="${item.price||0}" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">CONDITION</label>
+          <select id="emCondition" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;">
+            ${['New','Like New','Good','Fair','Parts Only'].map(c=>`<option value="${c}" ${item.condition===c?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">DESCRIPTION</label>
+          <textarea id="emDesc" rows="5" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;">${escHtml(item.description||'')}</textarea>
+        </div>
+        <div id="emErr" style="color:#dc2626;font-size:13px;display:none;"></div>
+        <button onclick="saveEditMarketItem('${id}')" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Save Changes</button>
+      </div>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+async function saveEditMarketItem(id) {
+  const title = document.getElementById('emTitle')?.value.trim();
+  const price = document.getElementById('emPrice')?.value;
+  const condition = document.getElementById('emCondition')?.value;
+  const description = document.getElementById('emDesc')?.value.trim();
+  const errEl = document.getElementById('emErr');
+  if (!title) { errEl.textContent = 'Title is required.'; errEl.style.display = 'block'; return; }
+  const res = await fetch(`/api/marketplace/${id}`, {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, price, condition, description })
+  });
+  if (res.ok) {
+    document.getElementById('editMarketModal')?.remove();
+    await renderMarketplace(document.getElementById('sectionContent'));
+    showToast('Listing updated!');
+  } else {
+    errEl.textContent = 'Could not save changes.'; errEl.style.display = 'block';
   }
 }
 
