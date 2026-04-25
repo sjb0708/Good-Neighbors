@@ -580,7 +580,7 @@ function openListItemModal() {
           <option value="">Select…</option>
           <option>Appliances</option><option>Art & Collectibles</option><option>Baby & Kids</option><option>Books & Media</option>
           <option>Clothing</option><option>Electronics</option><option>Free</option><option>Furniture</option>
-          <option>Home & Garden</option><option>Toys</option><option>Tools & Equipment</option><option>Transportation</option><option>Other</option>
+          <option>Golf Cart</option><option>Home & Garden</option><option>Toys</option><option>Tools & Equipment</option><option>Vehicle</option><option>Other</option>
         </select>
       </div>
       <div style="margin-bottom:12px;">
@@ -2006,7 +2006,7 @@ const categoryIcons = {
   'Appliances': '🏠', 'Art & Collectibles': '🎨', 'Baby & Kids': '👶',
   'Books & Media': '📚', 'Clothing': '👕', 'Electronics': '🔊',
   'Free': '🎁', 'Furniture': '🪑', 'Home & Garden': '🪴',
-  'Toys': '🧸', 'Tools & Equipment': '🔧', 'Transportation': '🛴',
+  'Toys': '🧸', 'Tools & Equipment': '🔧', 'Vehicle': '🚗', 'Golf Cart': '⛳',
   'Other': '📦', 'default': '📦'
 };
 
