@@ -2252,7 +2252,13 @@ app.post('/api/groups/:id/report', requireAuth(async (req, res) => {
   res.json({ ok: true });
 }));
 
-app.delete('/api/groups/:id', requireAdmin(async (req, res) => {
+app.delete('/api/groups/:id', requireAuth(async (req, res) => {
+  const [g] = await sql`SELECT id, created_by_user_id FROM groups WHERE id=${req.params.id}`;
+  if (!g) return res.status(404).json({ error: 'Not found' });
+  const u = req.currentUser;
+  if (u.role !== 'admin' && g.created_by_user_id !== u.id) return res.status(403).json({ error: 'Not authorized' });
+  await sql`DELETE FROM group_members WHERE group_id=${req.params.id}`;
+  await sql`DELETE FROM group_join_requests WHERE group_id=${req.params.id}`;
   await sql`DELETE FROM groups WHERE id=${req.params.id}`;
   res.json({ ok: true });
 }));
