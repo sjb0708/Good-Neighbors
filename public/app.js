@@ -578,8 +578,9 @@ function openListItemModal() {
         <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">CATEGORY</label>
         <select id="liCategory" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:white;box-sizing:border-box;">
           <option value="">Select…</option>
-          <option>Furniture</option><option>Electronics</option><option>Clothing</option><option>Toys</option>
-          <option>Home & Garden</option><option>Sports</option><option>Decor</option><option>Transportation</option><option>Free</option><option>Other</option>
+          <option>Appliances</option><option>Art & Collectibles</option><option>Baby & Kids</option><option>Books & Media</option>
+          <option>Clothing</option><option>Electronics</option><option>Free</option><option>Furniture</option>
+          <option>Home & Garden</option><option>Toys</option><option>Tools & Equipment</option><option>Transportation</option><option>Other</option>
         </select>
       </div>
       <div style="margin-bottom:12px;">
@@ -2002,9 +2003,11 @@ async function deleteComment(postId, commentId) {
 
 // ─── Marketplace Card ────────────────────────────────────────────
 const categoryIcons = {
-  'Furniture': '🪑', 'Transportation': '🛴', 'Sports': '🏄',
-  'Home & Garden': '🪴', 'Free': '🎁', 'Decor': '🖼️',
-  'Electronics': '🔊', 'Clothing': '👕', 'Toys': '🧸', 'default': '📦'
+  'Appliances': '🏠', 'Art & Collectibles': '🎨', 'Baby & Kids': '👶',
+  'Books & Media': '📚', 'Clothing': '👕', 'Electronics': '🔊',
+  'Free': '🎁', 'Furniture': '🪑', 'Home & Garden': '🪴',
+  'Toys': '🧸', 'Tools & Equipment': '🔧', 'Transportation': '🛴',
+  'Other': '📦', 'default': '📦'
 };
 
 function buildMarketCard(item) {
