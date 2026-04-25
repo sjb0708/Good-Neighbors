@@ -241,6 +241,10 @@ async function getUser(req) {
     SELECT u.* FROM sessions s
     JOIN users u ON s.user_id = u.id
     WHERE s.token = ${token} AND s.expires_at > NOW()
+      AND NOT EXISTS (
+        SELECT 1 FROM banned_users
+        WHERE user_id = u.id AND lifted_at IS NULL
+      )
     LIMIT 1
   `;
   return rows[0] || null;
@@ -686,6 +690,7 @@ app.delete('/api/admin/team/:username', requireOwner(async (req, res) => {
 // ─── Ban system ───────────────────────────────────────────────────────────────
 
 app.post('/api/admin/users/:username/ban', requireAdmin(async (req, res) => {
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS banned_users_user_id_idx ON banned_users(user_id)`;
   const { reason } = req.body;
   const [u] = await sql`SELECT * FROM users WHERE username=${req.params.username}`;
   if (!u) return res.status(404).json({ error: 'User not found' });
@@ -696,14 +701,17 @@ app.post('/api/admin/users/:username/ban', requireAdmin(async (req, res) => {
   const [ban] = await sql`
     INSERT INTO banned_users (user_id, username, email, name, address, avatar_hex, initials, original_role, reason, banned_by_user_id)
     VALUES (${u.id}, ${u.username}, ${u.email||null}, ${u.name}, ${u.address}, ${u.avatar_hex}, ${u.initials}, ${u.role}, ${reason || 'Violation of Member Agreement'}, ${req.currentUser.id})
+    ON CONFLICT (user_id) DO UPDATE SET lifted_at=NULL, reason=EXCLUDED.reason, banned_by_user_id=EXCLUDED.banned_by_user_id
     RETURNING *
   `;
-  await sql`DELETE FROM users WHERE id=${u.id}`;
+  // Delete all active sessions so the user is logged out immediately
+  await sql`DELETE FROM sessions WHERE user_id=${u.id}`;
   res.json({ ok: true, ban: { id: ban.id, username: ban.username, name: ban.name, reason: ban.reason, bannedAt: ban.banned_at } });
 }));
 
 app.post('/api/admin/banned/:id/unban', requireAdmin(async (req, res) => {
-  await sql`UPDATE banned_users SET lifted_at=NOW() WHERE id=${req.params.id}`;
+  const [b] = await sql`UPDATE banned_users SET lifted_at=NOW() WHERE id=${req.params.id} RETURNING *`;
+  if (!b) return res.status(404).json({ error: 'Not found' });
   res.json({ ok: true });
 }));
 
