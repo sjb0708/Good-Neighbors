@@ -2056,7 +2056,17 @@ function buildMarketCard(item) {
         ${relativeTime(item.createdAt)}
       </div>
       <div class="market-condition">${escHtml(item.condition || '')}</div>
-      <div style="font-size:12px;color:var(--text-mid);margin-bottom:10px;line-height:1.4;">${escHtml(item.description || '')}</div>
+      ${(()=>{
+        const desc = item.description || '';
+        const short = desc.length > 120;
+        const id = 'md-' + item.id;
+        return short
+          ? `<div style="font-size:12px;color:var(--text-mid);margin-bottom:6px;line-height:1.4;">
+               <span id="${id}-text">${escHtml(desc.slice(0,120))}…</span>
+               <button id="${id}-btn" onclick="event.stopPropagation();(function(){const t=document.getElementById('${id}-text'),b=document.getElementById('${id}-btn'),open=b.dataset.open==='1';t.textContent=open?'${escHtml(desc.slice(0,120)).replace(/'/g,"\\'")}…':'${escHtml(desc).replace(/'/g,"\\'")}';b.textContent=open?'Read more':'Show less';b.dataset.open=open?'':'1';})()" style="background:none;border:none;color:var(--ocean);font-size:11px;font-weight:600;cursor:pointer;padding:0;font-family:inherit;">Read more</button>
+             </div>`
+          : `<div style="font-size:12px;color:var(--text-mid);margin-bottom:6px;line-height:1.4;">${escHtml(desc)}</div>`;
+      })()}
       ${!item.sold ? `<button class="btn-contact" onclick="event.stopPropagation();contactSeller(decodeURIComponent('${sellerData}'))">Message Seller</button>` : '<div style="font-size:12px;color:var(--text-mid);font-weight:700;text-align:center;">This item has been sold</div>'}
       ${ownerButtons}
     </div>
