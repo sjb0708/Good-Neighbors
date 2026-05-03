@@ -5301,6 +5301,12 @@ async function renderFirstResponders(container) {
                 bg: 'linear-gradient(135deg,#eff6ff,#bfdbfe)', border: '#3b82f6', accent: '#1e40af'
               },
               {
+                emoji: '💧', name: 'IDAAN', tagline: 'National water & sewer authority',
+                desc: 'Report water service issues, check planned outages and maintenance, manage your account, or contact support.',
+                url: 'https://www.idaan.gob.pa', cta: 'Open IDAAN →',
+                bg: 'linear-gradient(135deg,#ecfeff,#a5f3fc)', border: '#06b6d4', accent: '#155e75'
+              },
+              {
                 emoji: '📶', name: 'Mas Móvil', tagline: 'Mobile & home internet',
                 desc: 'Check service status, recharge, manage your account, or contact support.',
                 url: 'https://www.masmovilpanama.com', cta: 'Open Mas Móvil →',
