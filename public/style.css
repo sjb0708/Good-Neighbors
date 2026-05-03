@@ -5,8 +5,8 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --ocean: #0077B6;
-  --ocean-dark: #005F92;
+  --ocean: #005F92;
+  --ocean-dark: #00497A;
   --ocean-light: #90E0EF;
   --sand: #F5CBA7;
   --sand-light: #FFF9F0;
