@@ -5139,7 +5139,7 @@ async function renderFirstResponders(container) {
             </div>`).join('')}
 
           <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:12px;padding:18px;text-align:center;margin-top:8px;">
-            <div style="font-size:24px;margin-bottom:6px;">❤️</div>
+            <div style="width:72px;height:72px;background:white;border-radius:14px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.15);"><img src="/images/ierf-logo.png" alt="IERF Response" style="width:56px;height:56px;object-fit:contain;"></div>
             <p style="font-size:14px;font-weight:800;color:white;margin:0 0 6px;">Support IERF Response</p>
             <p style="font-size:12.5px;color:rgba(255,255,255,0.9);line-height:1.55;margin:0 0 14px;">IERF Response prepared the Panama Emergency Guide above and provides critical emergency preparedness resources to communities like ours. Your donation helps fund life-saving training and equipment.</p>
             <a href="https://ierfresponse.org/donate/" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:11px 30px;background:white;color:#dc2626;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;">Donate Today →</a>
@@ -5254,7 +5254,8 @@ async function renderFirstResponders(container) {
             <p style="font-size:12.5px;color:var(--text-mid);line-height:1.55;margin:0;">Print this guide and keep it in a binder with your first aid kit, flashlights & batteries. Store emergency contacts in your phone. The more prepared you are, the safer your family will be.</p>
           </div>
           <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:12px;padding:16px;text-align:center;">
-            <p style="font-size:13px;font-weight:700;color:white;margin:0 0 4px;">❤️ Support IERF Response</p>
+            <div style="width:64px;height:64px;background:white;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.15);"><img src="/images/ierf-logo.png" alt="IERF Response" style="width:50px;height:50px;object-fit:contain;"></div>
+            <p style="font-size:13px;font-weight:700;color:white;margin:0 0 4px;">Support IERF Response</p>
             <p style="font-size:12px;color:rgba(255,255,255,0.85);line-height:1.5;margin:0 0 12px;">IERF Response provides critical emergency preparedness resources to communities like ours. Your donation helps fund life-saving training and equipment.</p>
             <a href="https://ierfresponse.org/donate/" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:11px 28px;background:white;color:#dc2626;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;">Donate Today →</a>
           </div>
