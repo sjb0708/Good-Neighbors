@@ -5338,7 +5338,7 @@ async function renderFirstResponders(container) {
           </div>
 
           <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:14px;padding:22px;text-align:center;color:white;">
-            <div style="width:150px;height:150px;background:white;border-radius:50%;margin:0 auto 14px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;"><img src="/images/ierf-logo.png" alt="IERF Response" style="width:200px;height:200px;object-fit:contain;display:block;"></div>
+            <div style="width:200px;height:200px;background:#0a0a0a;border-radius:50%;margin:0 auto 16px;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,0.45),0 0 0 5px rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;"><img src="/images/ierf-logo.png" alt="IERF Response" style="width:100%;height:100%;object-fit:contain;display:block;"></div>
             <p style="font-size:18px;font-weight:900;margin:0 0 8px;letter-spacing:-0.3px;">When seconds count, training saves lives.</p>
             <p style="font-size:13px;line-height:1.6;margin:0 0 14px;color:rgba(255,255,255,0.92);">IERF Response is on the ground in Panama — training local first responders, equipping rural communities, and producing free preparedness resources like the guide above. Your donation directly funds:</p>
             <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px 16px;margin-bottom:14px;text-align:left;">
