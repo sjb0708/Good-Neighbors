@@ -2479,6 +2479,9 @@ async function formatGroupRow(g, userId, isAdminUser) {
   return {
     id: g.id, name: g.name, description: g.description, icon: g.icon, iconUrl: g.icon_url||null,
     category: g.category, privacy: g.privacy, coverPhoto: g.cover_photo,
+    instagramUrl: g.instagram_url || null,
+    tiktokUrl: g.tiktok_url || null,
+    facebookUrl: g.facebook_url || null,
     members: parseInt(g.member_count||0, 10),
     joined: g.user_joined || false,
     pendingRequest: g.user_pending || false,
@@ -2489,12 +2492,19 @@ async function formatGroupRow(g, userId, isAdminUser) {
   };
 }
 
+async function ensureGroupSocialColumns() {
+  await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS instagram_url TEXT`;
+  await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS tiktok_url TEXT`;
+  await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS facebook_url TEXT`;
+}
+
 app.get('/api/groups', async (req, res) => {
   res.set('Cache-Control', 'no-store');
   try {
     const user        = await getUser(req);
     const userId      = user?.id || null;
     const isAdminUser = user?.role === 'admin';
+    await ensureGroupSocialColumns();
 
     const rows = await sql`
       SELECT g.*, cb.username AS created_by_username,
@@ -2535,6 +2545,7 @@ app.get('/api/groups/:id', async (req, res) => {
     const user        = await getUser(req);
     const userId      = user?.id || null;
     const isAdminUser = user?.role === 'admin';
+    await ensureGroupSocialColumns();
 
     const [g] = await sql`
       SELECT g.*, cb.username AS created_by_username, cb.id AS created_by_user_id_val,
@@ -2618,12 +2629,13 @@ app.get('/api/groups/:id', async (req, res) => {
 });
 
 app.post('/api/groups', requireAuth(async (req, res) => {
-  const { name, description, icon, category, privacy, coverPhoto } = req.body;
+  const { name, description, icon, category, privacy, coverPhoto, instagramUrl, tiktokUrl, facebookUrl } = req.body;
   if (!name) return res.status(400).json({ error: 'Name required' });
   const u = req.currentUser;
+  await ensureGroupSocialColumns();
   const [g] = await sql`
-    INSERT INTO groups (name, description, icon, category, privacy, cover_photo, created_by_user_id)
-    VALUES (${name}, ${description||''}, ${icon||'👥'}, ${category||'Community'}, ${privacy||'public'}, ${coverPhoto||null}, ${u.id})
+    INSERT INTO groups (name, description, icon, category, privacy, cover_photo, created_by_user_id, instagram_url, tiktok_url, facebook_url)
+    VALUES (${name}, ${description||''}, ${icon||'👥'}, ${category||'Community'}, ${privacy||'public'}, ${coverPhoto||null}, ${u.id}, ${instagramUrl||null}, ${tiktokUrl||null}, ${facebookUrl||null})
     RETURNING *
   `;
   await sql`INSERT INTO group_members (group_id, user_id, is_admin) VALUES (${g.id}, ${u.id}, true)`;
@@ -2661,7 +2673,8 @@ app.patch('/api/groups/:id', requireAuth(async (req, res) => {
     const isCreator = g.created_by_user_id === u.id;
     const [mem] = await sql`SELECT is_admin FROM group_members WHERE group_id=${g.id} AND user_id=${u.id}`;
     if (!isCreator && !mem?.is_admin && u.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
-    const { name, description, privacy, icon, iconUrl, coverPhoto, category } = req.body;
+    const { name, description, privacy, icon, iconUrl, coverPhoto, category, instagramUrl, tiktokUrl, facebookUrl } = req.body;
+    await ensureGroupSocialColumns();
     const newIconUrl = iconUrl || g.icon_url;
     const emojiIcon = (icon && !icon.startsWith('data:')) ? icon : (g.icon && !g.icon.startsWith('data:') ? g.icon : '👥');
     const [updated] = await sql`UPDATE groups SET
@@ -2669,7 +2682,10 @@ app.patch('/api/groups/:id', requireAuth(async (req, res) => {
       icon=${emojiIcon},
       icon_url=${newIconUrl||null},
       cover_photo=${coverPhoto||g.cover_photo},
-      category=${category||g.category||'general'}
+      category=${category||g.category||'general'},
+      instagram_url=${instagramUrl !== undefined ? (instagramUrl || null) : g.instagram_url},
+      tiktok_url=${tiktokUrl !== undefined ? (tiktokUrl || null) : g.tiktok_url},
+      facebook_url=${facebookUrl !== undefined ? (facebookUrl || null) : g.facebook_url}
       WHERE id=${g.id} RETURNING *`;
     res.json({ ok: true, group: updated });
   } catch(e) {
