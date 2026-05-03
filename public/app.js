@@ -191,27 +191,46 @@ async function loadSidebarWidgets() {
   const nbCount = document.getElementById('sidebarNeighbors');
   if (nbCount) nbCount.textContent = (neighbors || []).length;
 
-  // Next Event
+  // Next Event — prefers user's next RSVP'd event, falls back to next community event
   const nextEventEl = document.getElementById('nextEventCard');
+  const nextEventLabelEl = document.querySelector('[data-next-event-label]');
   if (nextEventEl) {
-    const upcoming = (events || [])
+    const now = new Date();
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const upcomingEvents = (events || [])
       .filter(e => !e.cancelled)
-      .sort((a, b) => new Date((b.date||b.eventDate||'').substring(0,10)+'T12:00:00') - new Date((a.date||a.eventDate||'').substring(0,10)+'T12:00:00'))[0];
+      .filter(e => {
+        const dateStr = (e.date || e.eventDate || '').substring(0,10);
+        if (!dateStr) return false;
+        return new Date(dateStr + 'T12:00:00') >= todayMidnight;
+      })
+      .sort((a, b) => new Date((a.date||a.eventDate||'').substring(0,10)+'T12:00:00') - new Date((b.date||b.eventDate||'').substring(0,10)+'T12:00:00'));
+
+    const myRsvpd = upcomingEvents.find(e => e.userRsvp === 'going');
+    const upcoming = myRsvpd || upcomingEvents[0];
+    const isMine = !!myRsvpd;
+
+    if (nextEventLabelEl) nextEventLabelEl.textContent = isMine ? 'YOUR NEXT EVENT' : 'NEXT EVENT';
+
     if (upcoming) {
       const d = new Date((upcoming.date || upcoming.eventDate || '').substring(0,10) + 'T12:00:00');
       const month = d.toLocaleString('en', { month: 'short' }).toUpperCase();
       const day   = d.getDate();
-      const going = upcoming.rsvpCounts?.going || 0;
+      const going = upcoming.rsvp?.going || upcoming.rsvpCounts?.going || 0;
+      const safeId = String(upcoming.id).replace(/'/g, "\\'");
       nextEventEl.innerHTML = `
-        <div class="next-event-date"><span class="nev-month">${month}</span><span class="nev-day">${day}</span></div>
+        <div class="next-event-date" style="${isMine ? 'background:#dcfce7;color:#166534;' : ''}"><span class="nev-month">${month}</span><span class="nev-day">${day}</span></div>
         <div class="next-event-info">
           <div class="nev-title">${escHtml(upcoming.title)}</div>
           <div class="nev-meta">${(upcoming.time && upcoming.time !== 'null') ? upcoming.time + ' · ' : ''}${escHtml(upcoming.location || '')}</div>
-          ${going ? `<div class="nev-going">🙋 ${going} going</div>` : ''}
+          ${isMine ? '<div style="font-size:11px;color:#166534;font-weight:700;margin-top:3px;">✓ You\'re going</div>' : (going ? `<div class="nev-going">🙋 ${going} going</div>` : '')}
         </div>`;
       nextEventEl.style.cursor = 'pointer';
+      nextEventEl.onclick = () => goToEvent(safeId);
     } else {
       nextEventEl.innerHTML = '<div style="font-size:12px;color:var(--text-light);padding:8px 0">No upcoming events yet.</div>';
+      nextEventEl.style.cursor = 'default';
+      nextEventEl.onclick = null;
     }
   }
 
@@ -2068,6 +2087,21 @@ function buildSharedPostEmbed(sp) {
       <div style="padding:8px 13px;border-top:1px solid #e5e7eb;font-size:11.5px;color:var(--ocean);font-weight:600;">View original post →</div>
     </div>
   `;
+}
+
+function goToEvent(eventId) {
+  if (typeof navigate === 'function') navigate('events');
+  let tries = 0;
+  const tryFocus = () => {
+    const el = document.querySelector(`[data-event-id="${eventId}"]`) || document.getElementById(`event-${eventId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'box-shadow 0.4s ease';
+      el.style.boxShadow = '0 0 0 3px rgba(0,119,182,0.45)';
+      setTimeout(() => { el.style.boxShadow = ''; }, 2400);
+    } else if (++tries < 20) setTimeout(tryFocus, 200);
+  };
+  setTimeout(tryFocus, 250);
 }
 
 function focusPost(postId) {
