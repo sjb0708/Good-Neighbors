@@ -1696,6 +1696,18 @@ function renderSettings(container) {
         <button class="settings-btn" onclick="navigate('profile');openEditProfile()">Edit</button>
       </div>
       <div class="settings-row">
+        <div class="settings-row-info"><div class="settings-row-label">Username</div><div class="settings-row-sub">@${u.username || ''}</div></div>
+        <span style="font-size:12px;color:var(--text-light);">Cannot be changed</span>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info"><div class="settings-row-label">Email</div><div class="settings-row-sub">${u.email || '—'}</div></div>
+        <button class="settings-btn" onclick="showToast('Contact an admin to change your email.')">Change</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info"><div class="settings-row-label">Password</div><div class="settings-row-sub">••••••••</div></div>
+        <button class="settings-btn" onclick="window.location.href='/reset-password'">Change</button>
+      </div>
+      <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Address</div><div class="settings-row-sub">${u.address || 'Costa Blanca Villas'}</div></div>
         <button class="settings-btn" onclick="navigate('profile');openEditProfile()">Edit</button>
       </div>
