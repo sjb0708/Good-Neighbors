@@ -1701,7 +1701,7 @@ function renderSettings(container) {
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Email</div><div class="settings-row-sub">${u.email || '—'}</div></div>
-        <button class="settings-btn" onclick="showToast('Contact an admin to change your email.')">Change</button>
+        <span style="font-size:12px;color:var(--text-light);">Cannot be changed</span>
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Password</div><div class="settings-row-sub">••••••••</div></div>
