@@ -1940,6 +1940,7 @@ function buildPostCard(post) {
   const card = document.createElement('div');
   card.className = `post-card${post.type === 'safety' ? ' safety-card' + resolvedClass : ''}`;
   card.dataset.postId = post.id;
+  if (post.author?.username) card.dataset.authorUsername = post.author.username;
   card.id = `post-${post.id}`;
 
   const totalReactions = Object.values(post.reactions || {}).reduce((a, b) => a + b, 0);
@@ -2296,17 +2297,41 @@ function buildCommentEl(c, postId) {
   div.className = 'comment-item';
   div.id = `comment-${c.id}`;
   const canDelete = currentUser && (c.author?.id === currentUser.id || currentUser.role === 'admin');
+  const postCard = document.querySelector(`[data-post-id="${postId}"]`);
+  const postAuthorUsername = postCard?.dataset?.authorUsername;
+  const isPostAuthor = postAuthorUsername && c.author?.username === postAuthorUsername;
+  const isMine = currentUser && c.author?.id === currentUser.id;
+  const username = (c.author?.username || '').replace(/'/g, "\\'");
   div.innerHTML = `
-    <div class="avatar-comment" style="background:${c.author?.avatar || '#0077B6'};overflow:hidden;">
+    <div class="avatar-comment" style="background:${c.author?.avatar || '#0077B6'};">
       ${c.author?.avatarUrl ? `<img src="${c.author.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (c.author?.initials || '??')}
     </div>
-    <div class="comment-bubble">
-      <div class="comment-author">${escHtml(c.author?.name || 'Anonymous')}</div>
-      <div class="comment-text">${escHtml(c.content)}</div>
-      <div class="comment-time">${relativeTime(c.createdAt)}${canDelete ? ` · <span style="cursor:pointer;color:var(--text-light)" onclick="deleteComment('${postId}','${c.id}')">Delete</span>` : ''}</div>
+    <div class="comment-body">
+      <div class="comment-bubble${isPostAuthor ? ' is-author' : ''}">
+        <div class="comment-author-row">
+          <span class="comment-author">${escHtml(c.author?.name || 'Anonymous')}</span>
+          ${isPostAuthor ? '<span class="comment-author-badge">Author</span>' : ''}
+          ${isMine && !isPostAuthor ? '<span class="comment-author-badge" style="background:#64748b;">You</span>' : ''}
+        </div>
+        <div class="comment-text">${escHtml(c.content)}</div>
+      </div>
+      <div class="comment-meta-row">
+        <span class="comment-meta-time">${relativeTime(c.createdAt)}</span>
+        ${currentUser ? `<button class="comment-meta-action" onclick="replyToComment('${postId}','${username}')">Reply</button>` : ''}
+        ${canDelete ? `<button class="comment-meta-action danger" onclick="deleteComment('${postId}','${c.id}')">Delete</button>` : ''}
+      </div>
     </div>
   `;
   return div;
+}
+
+function replyToComment(postId, username) {
+  const input = document.getElementById(`comment-input-${postId}`);
+  if (!input) return;
+  const prefix = `@${username} `;
+  if (!input.value.startsWith(prefix)) input.value = prefix + input.value.trim();
+  input.focus();
+  input.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 async function deletePost(postId) {
