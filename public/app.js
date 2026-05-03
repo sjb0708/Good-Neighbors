@@ -5086,6 +5086,12 @@ async function renderFirstResponders(container) {
 
         <!-- Tab: Be Prepared -->
         <div id="frpanel-prepared" class="fr-tab-panel" style="padding:20px;display:none;">
+          <div style="background:linear-gradient(135deg,#dc2626,#ef4444);border-radius:14px;padding:20px;color:white;margin-bottom:16px;text-align:center;">
+            <div style="font-size:32px;margin-bottom:8px;">📄</div>
+            <div style="font-size:18px;font-weight:800;margin-bottom:4px;">Panama Emergency Guide</div>
+            <div style="font-size:13px;opacity:.85;margin-bottom:16px;">2025 Edition · Prepared by IERF Response</div>
+            <a href="/panama-emergency-guide.pdf" download style="display:inline-block;padding:12px 28px;background:white;color:#dc2626;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;">⬇️ Download Full Guide (PDF)</a>
+          </div>
           ${[
             {title:'🔦 Flashlights', color:'#ea580c', bg:'#fff7ed', border:'#fed7aa', items:[
               'Keep at least 2 flashlights — one in living area, one in bedroom',
@@ -5131,6 +5137,13 @@ async function renderFirstResponders(container) {
                 ${s.items.map(i=>`<div style="display:flex;gap:8px;font-size:13px;color:var(--text-dark);line-height:1.5;"><span style="color:${s.color};flex-shrink:0;font-weight:700;">•</span>${i}</div>`).join('')}
               </div>
             </div>`).join('')}
+
+          <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:12px;padding:18px;text-align:center;margin-top:8px;">
+            <div style="font-size:24px;margin-bottom:6px;">❤️</div>
+            <p style="font-size:14px;font-weight:800;color:white;margin:0 0 6px;">Support IERF Response</p>
+            <p style="font-size:12.5px;color:rgba(255,255,255,0.9);line-height:1.55;margin:0 0 14px;">IERF Response prepared the Panama Emergency Guide above and provides critical emergency preparedness resources to communities like ours. Your donation helps fund life-saving training and equipment.</p>
+            <a href="https://ierfresponse.org/donate/" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:11px 30px;background:white;color:#dc2626;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;">Donate Today →</a>
+          </div>
         </div>
 
         <!-- Tab: Important Links -->
