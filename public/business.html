@@ -1732,6 +1732,23 @@
 
     function googleTranslateElementInit() {
       new google.translate.TranslateElement({ pageLanguage: 'en', includedLanguages: 'en,es', autoDisplay: false }, 'google_translate_element');
+      applySavedLanguage();
+    }
+
+    function applySavedLanguage() {
+      const saved = localStorage.getItem('lang');
+      if (saved !== 'es') return;
+      let tries = 0;
+      const t = setInterval(() => {
+        const sel = document.querySelector('.goog-te-combo');
+        if (sel) {
+          sel.value = 'es';
+          sel.dispatchEvent(new Event('change'));
+          const btn = document.getElementById('langToggleBtn');
+          if (btn) btn.textContent = '🌐 EN';
+          clearInterval(t);
+        } else if (++tries > 40) clearInterval(t);
+      }, 150);
     }
 
     function toggleLanguage() {
@@ -1739,6 +1756,7 @@
       if (!sel) return;
       sel.value = sel.value === 'es' ? 'en' : 'es';
       sel.dispatchEvent(new Event('change'));
+      try { localStorage.setItem('lang', sel.value); } catch(e){}
       const btn = document.getElementById('langToggleBtn');
       if (btn) btn.textContent = sel.value === 'es' ? '🌐 EN' : '🌐 ES';
     }
