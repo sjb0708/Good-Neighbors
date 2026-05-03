@@ -5847,7 +5847,7 @@ const sectionMeta = {
   feed: { title: 'Neighborhood Feed', desc: 'What\'s happening in Costa Blanca Villas right now', emoji: '<img src="/logo.png" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--border);">' },
   marketplace: { title: 'Marketplace', desc: 'Buy, sell, and give away items with neighbors', emoji: '🛒' },
   events: { title: 'Events', desc: 'What\'s coming up in Costa Blanca Villas & Farallón', emoji: '📅' },
-  safety: { title: 'Safety & Alerts', desc: 'Stay informed about safety in Costa Blanca Villas', emoji: '🛡️' },
+  safety: { title: 'Safety & Alerts', desc: 'Report issues — security concerns: contact your Gate Guard via the Munity app chat. Facilities issues are reported directly to Decameron.', emoji: '🛡️' },
   businesses: { title: 'Business Directory', desc: 'Local restaurants and services near Farallón', emoji: '🍽️' },
   neighbors: { title: 'My Neighbors', desc: 'Verified residents in Costa Blanca Villas', emoji: '👋' },
   groups: { title: 'Groups', desc: 'Connect with neighbors who share your interests', emoji: '👥' },
