@@ -4934,7 +4934,7 @@ async function renderFirstResponders(container) {
       <!-- Tabs -->
       <div style="background:white;border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px;">
         <div style="display:flex;overflow-x:auto;border-bottom:1px solid var(--border);padding:0 4px;">
-          ${[['services','🚑 Services'],['call','📞 Emergency Phrases'],['prepared','⚡ Be Prepared'],['myinfo','👤 My Info'],['guide','🤝 Nonprofit']].map(([id,label]) => `
+          ${[['services','🚑 Services'],['call','📞 Emergency Phrases'],['prepared','⚡ Be Prepared'],['links','🔗 Important Links'],['myinfo','👤 My Info'],['guide','🤝 Nonprofit']].map(([id,label]) => `
             <button id="frtab-${id}" class="fr-tab-btn" onclick="switchFRTab('${id}')" style="padding:13px 14px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:inherit;white-space:nowrap;background:transparent;color:var(--text-mid);border-bottom:3px solid transparent;transition:all .15s;">${label}</button>
           `).join('')}
         </div>
@@ -5131,6 +5131,55 @@ async function renderFirstResponders(container) {
                 ${s.items.map(i=>`<div style="display:flex;gap:8px;font-size:13px;color:var(--text-dark);line-height:1.5;"><span style="color:${s.color};flex-shrink:0;font-weight:700;">•</span>${i}</div>`).join('')}
               </div>
             </div>`).join('')}
+        </div>
+
+        <!-- Tab: Important Links -->
+        <div id="frpanel-links" class="fr-tab-panel" style="padding:20px;display:none;">
+          <p style="font-size:13.5px;color:var(--text-mid);line-height:1.6;margin:0 0 16px;">Quick access to utility, weather, and service providers in Panama. Open in a new tab — check here during outages, storms, or service interruptions.</p>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            ${[
+              {
+                emoji: '⚡', name: 'Naturgy Panamá', tagline: 'Power outages & service updates',
+                desc: 'Follow their Facebook page for live outage notifications and scheduled maintenance windows in your area.',
+                url: 'https://www.facebook.com/NaturgyPanama/', cta: 'Open Facebook Page →',
+                bg: 'linear-gradient(135deg,#fff7ed,#fed7aa)', border: '#fb923c', accent: '#9a3412'
+              },
+              {
+                emoji: '🌦️', name: 'IMHPA — Hidromet Panamá', tagline: 'Official weather & climate authority',
+                desc: 'Forecasts, storm warnings, river levels, and hurricane season updates from the national weather service.',
+                url: 'https://www.imhpa.gob.pa/es/', cta: 'Open IMHPA →',
+                bg: 'linear-gradient(135deg,#eff6ff,#bfdbfe)', border: '#3b82f6', accent: '#1e40af'
+              },
+              {
+                emoji: '📶', name: 'Mas Móvil', tagline: 'Mobile & home internet',
+                desc: 'Check service status, recharge, manage your account, or contact support.',
+                url: 'https://www.masmovilpanama.com', cta: 'Open Mas Móvil →',
+                bg: 'linear-gradient(135deg,#f5f3ff,#ddd6fe)', border: '#8b5cf6', accent: '#5b21b6'
+              },
+              {
+                emoji: '📺', name: 'Tigo Panamá', tagline: 'Internet, cable TV & mobile',
+                desc: 'Service status, billing, technical support, and outage maps.',
+                url: 'https://www.tigo.com.pa', cta: 'Open Tigo →',
+                bg: 'linear-gradient(135deg,#eff6ff,#bae6fd)', border: '#0ea5e9', accent: '#075985'
+              }
+            ].map(l => `
+              <a href="${l.url}" target="_blank" rel="noopener noreferrer" style="display:block;background:${l.bg};border:1.5px solid ${l.border};border-radius:14px;padding:16px;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                <div style="display:flex;align-items:flex-start;gap:14px;">
+                  <div style="font-size:32px;flex-shrink:0;line-height:1;">${l.emoji}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:15px;font-weight:800;color:${l.accent};line-height:1.2;">${l.name}</div>
+                    <div style="font-size:12px;color:${l.accent};opacity:0.8;margin-top:2px;font-weight:600;">${l.tagline}</div>
+                    <div style="font-size:13px;color:var(--text-mid);margin-top:8px;line-height:1.5;">${l.desc}</div>
+                    <div style="font-size:12.5px;color:${l.accent};font-weight:700;margin-top:10px;">${l.cta}</div>
+                  </div>
+                </div>
+              </a>
+            `).join('')}
+          </div>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;margin-top:14px;">
+            <p style="font-size:12.5px;color:#059669;font-weight:700;margin:0 0 4px;">💡 Tip</p>
+            <p style="font-size:12.5px;color:var(--text-mid);line-height:1.55;margin:0;">For real-time power-outage updates, follow Naturgy Panamá on Facebook directly so you get notifications even when the app is closed. Same for IMHPA storm alerts.</p>
+          </div>
         </div>
 
         <!-- Tab: My Info -->
