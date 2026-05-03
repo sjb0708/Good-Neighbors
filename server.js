@@ -1610,6 +1610,7 @@ app.get('/api/events', async (req, res) => {
     const user   = await getUser(req);
     const userId = user?.id || null;
     await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS group_id UUID`;
+    await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled BOOLEAN DEFAULT FALSE`;
     const rows   = await sql`
       SELECT e.*, u.username AS host_username, u.name AS host_name, u.avatar_hex AS host_avatar, u.initials AS host_initials, u.verified AS host_verified,
         g.name AS group_name, g.icon AS group_icon,
@@ -2549,6 +2550,7 @@ app.get('/api/groups/:id', async (req, res) => {
     if (!g) return res.status(404).json({ error: 'Not found' });
 
     await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS group_id UUID`;
+    await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled BOOLEAN DEFAULT FALSE`;
     await sql`ALTER TABLE group_posts ADD COLUMN IF NOT EXISTS event_id UUID`;
     const posts = await sql`
       SELECT gp.*, u.username, u.name, u.avatar_hex, u.initials,
