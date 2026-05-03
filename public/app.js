@@ -3508,7 +3508,7 @@ async function openConversationPanel(convId, partner, layout, youBlockedThem) {
     </div>
     ${isBlocked ? `<div style="background:#fef2f2;border-bottom:1px solid #fecaca;padding:10px 16px;font-size:13px;color:#dc2626;font-weight:600;">You have blocked this person. They cannot message you.</div>` : ''}
     <div class="chat-messages" id="chatMessages">
-      ${messages.map(m => buildMessageBubble(m)).join('')}
+      ${buildMessageList(messages)}
       ${!messages.length ? '<div style="text-align:center;color:var(--text-light);font-size:13px;padding:24px;">Say hello!</div>' : ''}
     </div>
     <div class="chat-input-row">
@@ -3560,13 +3560,56 @@ async function unblockUser(convId) {
   }
 }
 
-function buildMessageBubble(msg) {
+function buildMessageBubble(msg, opts = {}) {
   const isMine = msg.senderId === currentUser.id;
   const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  return `<div class="msg-row ${isMine ? 'mine' : 'theirs'}">
+  const groupClass = opts.groupPos ? `group-${opts.groupPos}` : '';
+  const showTime = opts.showTime ? 'show-time' : '';
+  return `<div class="msg-row ${isMine ? 'mine' : 'theirs'} ${groupClass} ${showTime}">
     <div class="msg-bubble ${isMine ? 'mine' : 'theirs'}">${escHtml(msg.content)}</div>
     <div class="msg-time">${time}</div>
   </div>`;
+}
+
+function fmtMsgDateDivider(d) {
+  const date = new Date(d);
+  const today = new Date();
+  const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return 'Today';
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  const diffDays = Math.floor((today - date) / 86400000);
+  if (diffDays < 7) return date.toLocaleDateString(undefined, { weekday: 'long' });
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function buildMessageList(messages) {
+  if (!messages || !messages.length) return '';
+  const GROUP_GAP_MS = 5 * 60 * 1000;
+  const out = [];
+  let lastDay = null;
+  messages.forEach((m, i) => {
+    const date = new Date(m.createdAt);
+    const dayKey = date.toDateString();
+    if (dayKey !== lastDay) {
+      out.push(`<div class="msg-date-divider">${fmtMsgDateDivider(m.createdAt)}</div>`);
+      lastDay = dayKey;
+    }
+    const prev = i > 0 ? messages[i-1] : null;
+    const next = i < messages.length - 1 ? messages[i+1] : null;
+    const sameAsPrev = prev && prev.senderId === m.senderId &&
+      (new Date(m.createdAt) - new Date(prev.createdAt)) < GROUP_GAP_MS &&
+      new Date(prev.createdAt).toDateString() === dayKey;
+    const sameAsNext = next && next.senderId === m.senderId &&
+      (new Date(next.createdAt) - new Date(m.createdAt)) < GROUP_GAP_MS &&
+      new Date(next.createdAt).toDateString() === dayKey;
+    let groupPos = 'single';
+    if (sameAsPrev && sameAsNext) groupPos = 'mid';
+    else if (sameAsPrev) groupPos = 'end';
+    else if (sameAsNext) groupPos = 'start';
+    const showTime = !sameAsNext; // show time on the LAST in a group
+    out.push(buildMessageBubble(m, { groupPos, showTime }));
+  });
+  return out.join('');
 }
 
 async function sendDirectMessage(convId) {
