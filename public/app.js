@@ -5086,12 +5086,6 @@ async function renderFirstResponders(container) {
 
         <!-- Tab: Be Prepared -->
         <div id="frpanel-prepared" class="fr-tab-panel" style="padding:20px;display:none;">
-          <div style="background:linear-gradient(135deg,#dc2626,#ef4444);border-radius:14px;padding:20px;color:white;margin-bottom:16px;text-align:center;">
-            <div style="font-size:32px;margin-bottom:8px;">📄</div>
-            <div style="font-size:18px;font-weight:800;margin-bottom:4px;">Panama Emergency Guide</div>
-            <div style="font-size:13px;opacity:.85;margin-bottom:16px;">2025 Edition · Prepared by IERF Response</div>
-            <a href="/panama-emergency-guide.pdf" download style="display:inline-block;padding:12px 28px;background:white;color:#dc2626;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;">⬇️ Download Full Guide (PDF)</a>
-          </div>
           ${[
             {title:'🔦 Flashlights', color:'#ea580c', bg:'#fff7ed', border:'#fed7aa', items:[
               'Keep at least 2 flashlights — one in living area, one in bedroom',
@@ -5137,8 +5131,18 @@ async function renderFirstResponders(container) {
                 ${s.items.map(i=>`<div style="display:flex;gap:8px;font-size:13px;color:var(--text-dark);line-height:1.5;"><span style="color:${s.color};flex-shrink:0;font-weight:700;">•</span>${i}</div>`).join('')}
               </div>
             </div>`).join('')}
+        </div>
 
-          <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:14px;padding:22px;text-align:center;margin-top:8px;color:white;">
+        <!-- Tab: Important Links -->
+        <div id="frpanel-links" class="fr-tab-panel" style="padding:20px;display:none;">
+          <div style="background:linear-gradient(135deg,#dc2626,#ef4444);border-radius:14px;padding:20px;color:white;margin-bottom:16px;text-align:center;">
+            <div style="font-size:32px;margin-bottom:8px;">📄</div>
+            <div style="font-size:18px;font-weight:800;margin-bottom:4px;">Panama Emergency Guide</div>
+            <div style="font-size:13px;opacity:.85;margin-bottom:16px;">2025 Edition · Prepared by IERF Response</div>
+            <a href="/panama-emergency-guide.pdf" download style="display:inline-block;padding:12px 28px;background:white;color:#dc2626;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;">⬇️ Download Full Guide (PDF)</a>
+          </div>
+
+          <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:14px;padding:22px;text-align:center;color:white;margin-bottom:20px;">
             <div style="width:80px;height:80px;background:white;border-radius:16px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.2);"><img src="/images/ierf-logo.png" alt="IERF Response" style="width:64px;height:64px;object-fit:contain;"></div>
             <p style="font-size:18px;font-weight:900;margin:0 0 8px;letter-spacing:-0.3px;">When seconds count, training saves lives.</p>
             <p style="font-size:13px;line-height:1.6;margin:0 0 14px;color:rgba(255,255,255,0.92);">IERF Response is on the ground in Panama — training local first responders, equipping rural communities, and producing free preparedness resources like the guide above. Your donation directly funds:</p>
@@ -5154,10 +5158,8 @@ async function renderFirstResponders(container) {
             <a href="https://ierfresponse.org/donate/" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:13px 36px;background:white;color:#dc2626;border-radius:12px;font-size:15px;font-weight:900;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.2);">Donate Now →</a>
             <p style="font-size:11px;color:rgba(255,255,255,0.75);margin:12px 0 0;">100% volunteer-run · Every gift makes a difference</p>
           </div>
-        </div>
 
-        <!-- Tab: Important Links -->
-        <div id="frpanel-links" class="fr-tab-panel" style="padding:20px;display:none;">
+          <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">🌐 Utility &amp; Service Providers</div>
           <p style="font-size:13.5px;color:var(--text-mid);line-height:1.6;margin:0 0 16px;">Quick access to utility, weather, and service providers in Panama. Open in a new tab — check here during outages, storms, or service interruptions.</p>
           <div style="display:flex;flex-direction:column;gap:10px;">
             ${[
