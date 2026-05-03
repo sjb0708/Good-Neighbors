@@ -2480,8 +2480,8 @@ body {
   font-family: 'Inter', sans-serif;
   resize: none;
   outline: none;
-  background: var(--bg);
-  transition: border-color 0.2s;
+  background: #f8fafc;
+  transition: border-color 0.2s, background 0.2s;
 }
 .group-compose-box textarea:focus { border-color: var(--ocean); background: white; }
 
