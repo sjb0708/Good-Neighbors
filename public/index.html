@@ -549,18 +549,19 @@
           <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" required />
         </div>
         <button type="submit" class="btn-login" id="loginBtn">Sign In</button>
-        <div style="text-align:right;margin-top:8px;">
+        <div style="display:flex;justify-content:space-between;margin-top:8px;">
+          <a href="#" onclick="openForgotUsername();return false;" style="font-size:13px;color:#0077B6;font-weight:600;text-decoration:none;">Forgot username?</a>
           <a href="#" class="forgot-link" onclick="openForgotPassword();return false;" style="font-size:13px;color:#0077B6;font-weight:600;text-decoration:none;">Forgot password?</a>
         </div>
       </form>
 
 
-      <div class="footer-text">
-        By signing in you agree to our <a href="#" onclick="openLegal('tos');return false;">Member Agreement</a> and <a href="#" onclick="openLegal('privacy');return false;">Privacy Policy</a>
-      </div>
-
       <div class="signup-link">
         New to Costa Blanca Villas? <a onclick="openSignUp()">Request Access →</a>
+      </div>
+
+      <div class="footer-text">
+        By signing in you agree to our <a href="#" onclick="openLegal('tos');return false;">Member Agreement</a> and <a href="#" onclick="openLegal('privacy');return false;">Privacy Policy</a>
       </div>
 
       <div style="text-align:center;margin-top:16px;">
@@ -823,6 +824,46 @@
     function showSuErr(msg) {
       const el = document.getElementById('suErr');
       if (el) { el.textContent = msg; el.classList.add('show'); }
+    }
+
+    function openForgotUsername() {
+      const overlay = document.createElement('div');
+      overlay.id = 'fuOverlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+      overlay.innerHTML = `
+        <div style="background:white;border-radius:20px;padding:32px 28px;width:360px;max-width:92vw;box-shadow:0 8px 40px rgba(0,0,0,0.18);">
+          <h2 style="margin:0 0 8px;font-size:20px;color:#1a2a3a;">Forgot Username?</h2>
+          <p style="font-size:14px;color:#4a6378;margin:0 0 20px;">Enter your email address and we'll send you your username.</p>
+          <input id="fuEmail" type="email" placeholder="Email address" style="width:100%;box-sizing:border-box;padding:11px 14px;border:1.5px solid #d1dce6;border-radius:10px;font-size:14px;font-family:inherit;margin-bottom:16px;" />
+          <div id="fuErr" style="display:none;color:#E63946;font-size:13px;margin-bottom:12px;"></div>
+          <div id="fuSuccess" style="display:none;color:#2E7D32;font-size:13px;margin-bottom:12px;"></div>
+          <button onclick="submitForgotUsername()" id="fuBtn" style="width:100%;padding:12px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Send Username</button>
+          <button onclick="document.getElementById('fuOverlay').remove()" style="width:100%;padding:10px;background:none;border:none;font-size:14px;color:#4a6378;cursor:pointer;font-family:inherit;margin-top:8px;">Cancel</button>
+        </div>`;
+      document.body.appendChild(overlay);
+    }
+
+    async function submitForgotUsername() {
+      const email = document.getElementById('fuEmail')?.value.trim();
+      const errEl = document.getElementById('fuErr');
+      const successEl = document.getElementById('fuSuccess');
+      const btn = document.getElementById('fuBtn');
+      if (!email) { errEl.textContent = 'Please enter your email.'; errEl.style.display = 'block'; return; }
+      errEl.style.display = 'none';
+      btn.textContent = 'Sending…'; btn.disabled = true;
+      const res = await fetch('/api/auth/forgot-username', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      btn.textContent = 'Send Username'; btn.disabled = false;
+      if (res.ok) {
+        successEl.textContent = 'If that email is registered, your username has been sent.';
+        successEl.style.display = 'block';
+        btn.style.display = 'none';
+      } else {
+        errEl.textContent = 'Something went wrong. Please try again.';
+        errEl.style.display = 'block';
+      }
     }
 
     let fpStep = 0; // 0=form, 1=sent
@@ -1287,6 +1328,7 @@
     };
 
     function setLang(lang) {
+      localStorage.setItem('lang', lang);
       const t = translations[lang];
       document.getElementById('langEn').style.color = lang === 'en' ? '#0077B6' : '#a0aec0';
       document.getElementById('langEs').style.color = lang === 'es' ? '#0077B6' : '#a0aec0';
@@ -1311,6 +1353,9 @@
       document.getElementById('password').value = password;
       document.getElementById('loginForm').requestSubmit();
     }
+
+    const savedLang = localStorage.getItem('lang');
+    if (savedLang && savedLang !== 'en') setLang(savedLang);
 
     fetch('/api/auth/me', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)

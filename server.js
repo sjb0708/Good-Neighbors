@@ -12,7 +12,10 @@ const { sql }      = require('./db/client');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
-const COOKIE_SECRET = process.env.COOKIE_SECRET || 'gn-secret-2026';
+const COOKIE_SECRET = process.env.COOKIE_SECRET;
+if (!COOKIE_SECRET || COOKIE_SECRET.length < 32) {
+  throw new Error('COOKIE_SECRET environment variable must be set to a random string of at least 32 characters. Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+}
 app.use(cookieParser(COOKIE_SECRET));
 app.use((req, res, next) => {
   if (req.path.match(/\.(js|css)$/)) res.setHeader('Cache-Control', 'no-store');
@@ -59,12 +62,17 @@ const POINTS = {
 };
 
 // ─── Email (Resend) ───────────────────────────────────────────────────────────
-const resend = new Resend(process.env.RESEND_API_KEY || 're_3CTghUDW_7N13M3NHkgoKctGHjWLVCYr5');
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const RESEND_FROM = process.env.RESEND_FROM || 'Costa Blanca Connect <noreply@costablancaconnect.com>';
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+if (!resend) console.warn('[email] RESEND_API_KEY not set — email sending disabled.');
 
 async function sendEmail({ to, subject, html }) {
+  if (!resend) { console.warn('[email] skipped (RESEND_API_KEY missing):', subject, '→', to); return false; }
   try {
-    await resend.emails.send({ from: 'Costa Blanca Connect <noreply@costablancaconnect.org>', to, subject, html });
-  } catch (err) { console.error('sendEmail failed:', err.message); }
+    await resend.emails.send({ from: RESEND_FROM, to, subject, html });
+    return true;
+  } catch (err) { console.error('sendEmail failed:', err.message); return false; }
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -280,10 +288,36 @@ function requireOwner(handler) {
 
 // ─── Auth routes ─────────────────────────────────────────────────────────────
 
+// DB-backed rate limiter (works across Vercel serverless invocations).
+// Returns true if the key is allowed, false if it should be blocked.
+async function rateLimitCheck(key, maxAttempts, windowSeconds) {
+  await sql`CREATE TABLE IF NOT EXISTS rate_limit_attempts (
+    bucket_key TEXT NOT NULL,
+    attempted_at TIMESTAMPTZ DEFAULT NOW()
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_rate_limit_key_time ON rate_limit_attempts(bucket_key, attempted_at)`;
+  await sql`DELETE FROM rate_limit_attempts WHERE attempted_at < NOW() - INTERVAL '1 day'`;
+  const [{ c }] = await sql`
+    SELECT COUNT(*)::int AS c FROM rate_limit_attempts
+    WHERE bucket_key = ${key} AND attempted_at > NOW() - make_interval(secs => ${windowSeconds})
+  `;
+  if (c >= maxAttempts) return false;
+  await sql`INSERT INTO rate_limit_attempts (bucket_key) VALUES (${key})`;
+  return true;
+}
+
+function clientIp(req) {
+  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip || 'unknown';
+}
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Username/email and password are required.' });
+
+    const ip = clientIp(req);
+    const ok = await rateLimitCheck(`login:${ip}:${(username||'').toLowerCase()}`, 10, 900);
+    if (!ok) return res.status(429).json({ error: 'Too many login attempts. Please wait 15 minutes and try again.' });
 
     const rows = await sql`
       SELECT * FROM users
@@ -433,11 +467,42 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
+// Forgot username
+app.post('/api/auth/forgot-username', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email required.' });
+    res.json({ ok: true });
+    const rows = await sql`SELECT username, name, email FROM users WHERE LOWER(email) = LOWER(${email}) LIMIT 1`;
+    if (!rows.length) return;
+    const user = rows[0];
+    await sendEmail({
+      to: user.email,
+      subject: 'Your Costa Blanca Connect username',
+      html: `
+        <div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
+          <h2 style="color:#0077B6;">Your Username</h2>
+          <p>Hi ${user.name},</p>
+          <p>Your Costa Blanca Connect username is:</p>
+          <p style="font-size:22px;font-weight:700;color:#0077B6;letter-spacing:1px;">${user.username}</p>
+          <p>You can use this username — or your email address — to sign in.</p>
+          <hr style="border:none;border-top:1px solid #eee;margin-top:24px;">
+          <p style="color:#888;font-size:12px;">Costa Blanca Connect · Costa Blanca Villas, Farallón, Coclé, Panamá</p>
+        </div>
+      `
+    });
+  } catch (err) { console.error('Forgot username error:', err.message); res.status(500).json({ error: 'Server error' }); }
+});
+
 // Forgot password
 app.post('/api/auth/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email required.' });
+
+    const ip = clientIp(req);
+    const ok = await rateLimitCheck(`forgot:${ip}:${(email||'').toLowerCase()}`, 5, 3600);
+    if (!ok) return res.status(429).json({ error: 'Too many reset requests. Please wait an hour and try again.' });
 
     const rows = await sql`SELECT id, email, name FROM users WHERE LOWER(email) = LOWER(${email}) LIMIT 1`;
     // Always respond success to prevent email enumeration
@@ -715,6 +780,80 @@ app.post('/api/admin/banned/:id/unban', requireAdmin(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ─── Verification requests ────────────────────────────────────────────────────
+
+app.post('/api/verification/request', requireAuth(async (req, res) => {
+  const u = req.currentUser;
+  if (u.verified) return res.status(400).json({ error: 'Already verified' });
+  const existing = await sql`SELECT id, status FROM verification_requests WHERE user_id=${u.id} AND status='pending' LIMIT 1`;
+  if (existing.length) return res.status(400).json({ error: 'You already have a pending verification request' });
+  const { documentData, documentType, note } = req.body;
+  if (!documentData) return res.status(400).json({ error: 'Document required' });
+  const documentUrl = await storeImage(documentData, 'verification');
+  if (!documentUrl) return res.status(400).json({ error: 'Failed to store document' });
+  const [vr] = await sql`
+    INSERT INTO verification_requests (user_id, document_url, document_type, note)
+    VALUES (${u.id}, ${documentUrl}, ${documentType || 'other'}, ${note || ''})
+    RETURNING id
+  `;
+  const admins = await sql`SELECT id FROM users WHERE role='admin'`;
+  if (admins.length) {
+    await Promise.all(admins.map(a =>
+      sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
+          VALUES (${a.id}, 'verify_request', ${`${u.name} submitted a verification request`}, ${u.avatar_hex}, ${u.initials}, ${vr.id})`
+    ));
+  }
+  res.json({ ok: true, id: vr.id });
+}));
+
+app.get('/api/verification/status', requireAuth(async (req, res) => {
+  const [vr] = await sql`SELECT id, status, created_at FROM verification_requests WHERE user_id=${req.currentUser.id} ORDER BY created_at DESC LIMIT 1`;
+  res.json(vr ? { status: vr.status, submittedAt: vr.created_at } : { status: null });
+}));
+
+app.get('/api/admin/verification-requests', requireAdmin(async (req, res) => {
+  const rows = await sql`
+    SELECT vr.*, u.name, u.username, u.avatar_hex, u.initials, u.avatar_url
+    FROM verification_requests vr
+    JOIN users u ON u.id = vr.user_id
+    ORDER BY CASE WHEN vr.status='pending' THEN 0 ELSE 1 END, vr.created_at DESC
+  `;
+  res.json(rows.map(r => ({
+    id: r.id, userId: r.user_id, name: r.name, username: r.username,
+    avatar: r.avatar_hex, avatarUrl: r.avatar_url, initials: r.initials,
+    documentUrl: r.document_url, documentType: r.document_type, note: r.note,
+    status: r.status, submittedAt: r.created_at, reviewedAt: r.reviewed_at,
+  })));
+}));
+
+app.post('/api/admin/verification-requests/:id/approve', requireAdmin(async (req, res) => {
+  const [vr] = await sql`SELECT vr.*, u.name, u.avatar_hex, u.initials FROM verification_requests vr JOIN users u ON u.id=vr.user_id WHERE vr.id=${req.params.id}`;
+  if (!vr) return res.status(404).json({ error: 'Not found' });
+  if (vr.status !== 'pending') return res.status(400).json({ error: 'Not pending' });
+  await sql`UPDATE verification_requests SET status='approved', reviewed_by_user_id=${req.currentUser.id}, reviewed_at=NOW() WHERE id=${vr.id}`;
+  await sql`UPDATE users SET verified=true WHERE id=${vr.user_id}`;
+  await awardPoints(vr.user_id, 'verified', 20);
+  await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
+            VALUES (${vr.user_id}, 'verified', 'Congrats! You are now a Verified Neighbor ✓', ${vr.avatar_hex}, ${vr.initials})`;
+  res.json({ ok: true });
+}));
+
+app.post('/api/admin/verification-requests/:id/deny', requireAdmin(async (req, res) => {
+  const [vr] = await sql`SELECT vr.*, u.name, u.avatar_hex, u.initials FROM verification_requests vr JOIN users u ON u.id=vr.user_id WHERE vr.id=${req.params.id}`;
+  if (!vr) return res.status(404).json({ error: 'Not found' });
+  if (vr.status !== 'pending') return res.status(400).json({ error: 'Not pending' });
+  await sql`UPDATE verification_requests SET status='denied', reviewed_by_user_id=${req.currentUser.id}, reviewed_at=NOW() WHERE id=${vr.id}`;
+  await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
+            VALUES (${vr.user_id}, 'verify_denied', 'Your verification request was not approved. You may submit a new request with a clearer document.', ${vr.avatar_hex}, ${vr.initials})`;
+  res.json({ ok: true });
+}));
+
+app.post('/api/admin/users/:id/toggle-verified', requireAdmin(async (req, res) => {
+  const [u] = await sql`UPDATE users SET verified = NOT verified WHERE id=${req.params.id} RETURNING id, verified`;
+  if (!u) return res.status(404).json({ error: 'Not found' });
+  res.json({ ok: true, verified: u.verified });
+}));
+
 app.get('/api/admin/all-users', requireAdmin(async (req, res) => {
   const rows = await sql`SELECT id, username, name, email, role, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, created_at FROM users WHERE role != 'admin' ORDER BY created_at DESC`;
   res.json(rows.map(u => ({ id: u.id, username: u.username, name: u.name, email: u.email, role: u.role, avatar: u.avatar_hex, avatarUrl: u.avatar_url, initials: u.initials, verified: u.verified, yearsInNeighborhood: u.years_in_neighborhood, address: u.address })));
@@ -746,6 +885,7 @@ app.get('/api/admin/community-safety', requireAdmin(async (req, res) => {
       message: p.content, severity: p.severity || 'medium',
       author: p.author?.name || 'Unknown', createdAt: p.createdAt,
       forwardedToDecameron: p.forwardedToDecameron,
+      image: p.image || null,
     })),
     ...reportRows.map(r => ({
       id: r.id, type: 'report',
@@ -772,23 +912,82 @@ app.get('/api/admin/decameron-email', requireAdmin(async (req, res) => {
 }));
 
 app.post('/api/admin/forward-to-decameron', requireAdmin(async (req, res) => {
-  const { itemId, itemType, title, message, severity, author, createdAt } = req.body;
+  const { itemId, itemType, title, message, severity, author, createdAt, image } = req.body;
   const [decRow] = await sql`SELECT value FROM app_settings WHERE key='decameron_email'`;
   if (!decRow?.value) return res.status(400).json({ error: 'Decameron email not configured' });
   const sevColors = { low:'#16a34a', medium:'#d97706', high:'#ea580c', urgent:'#dc2626' };
   const sevLabels = { low:'Low', medium:'Medium', high:'High', urgent:'URGENT' };
-  try {
-    await sendEmail({
-      to: decRow.value,
-      subject: `[Safety Alert] ${title} — Costa Blanca Villas`,
-      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;"><div style="background:#0077B6;color:white;padding:20px;border-radius:8px 8px 0 0;"><h2 style="margin:0;">🏘️ Costa Blanca Villas — Safety Alert</h2></div><div style="background:#fff3cd;border-left:4px solid ${sevColors[severity]||'#d97706'};padding:14px 20px;"><strong>Severity:</strong> ${sevLabels[severity]||severity} · <strong>Reported by:</strong> ${author} · <strong>Time:</strong> ${new Date(createdAt).toLocaleString()}</div><div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;"><h3 style="color:#0077B6;margin-top:0;">${title}</h3><p style="white-space:pre-wrap;">${message}</p></div></div>`
-    });
-    if (itemId) {
-      await sql`UPDATE posts   SET forwarded_to_decameron=true WHERE id=${itemId}`;
-      await sql`UPDATE reports SET forwarded_to_decameron=true WHERE id=${itemId}`;
-    }
-    res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: 'Email failed: ' + err.message }); }
+  const sent = await sendEmail({
+    to: decRow.value,
+    subject: `[Safety Alert] ${title} — Costa Blanca Villas`,
+    html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+      <div style="background:#0077B6;color:white;padding:20px;border-radius:8px 8px 0 0;">
+        <h2 style="margin:0;">🏘️ Costa Blanca Villas — Safety Alert</h2>
+      </div>
+      <div style="background:#fff3cd;border-left:4px solid ${sevColors[severity]||'#d97706'};padding:14px 20px;">
+        <strong>Severity:</strong> ${sevLabels[severity]||severity} &nbsp;·&nbsp;
+        <strong>Reported by:</strong> ${author} &nbsp;·&nbsp;
+        <strong>Time:</strong> ${new Date(createdAt).toLocaleString()}
+      </div>
+      <div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+        <h3 style="color:#0077B6;margin-top:0;">${title}</h3>
+        <p style="white-space:pre-wrap;margin-top:0;">${message}</p>
+        ${image ? `<img src="${image}" alt="Post image" style="max-width:100%;border-radius:8px;margin-top:12px;border:1px solid #e0e0e0;">` : ''}
+      </div>
+    </div>`
+  });
+  if (!sent) return res.status(500).json({ error: 'Failed to send email — check Resend configuration' });
+  if (itemId) {
+    await sql`UPDATE posts   SET forwarded_to_decameron=true WHERE id=${itemId}`;
+    await sql`UPDATE reports SET forwarded_to_decameron=true WHERE id=${itemId}`;
+  }
+  res.json({ ok: true });
+}));
+
+// ─── Admin content moderation ────────────────────────────────────────────────
+
+app.get('/api/admin/posts', requireAdmin(async (req, res) => {
+  const rows = await sql`
+    SELECT p.id, p.content, p.type, p.section, p.created_at, p.image_url,
+           u.name AS author_name, u.username AS author_username, u.avatar_hex, u.initials
+    FROM posts p JOIN users u ON u.id = p.author_id
+    WHERE p.type NOT IN ('sponsored')
+    ORDER BY p.created_at DESC LIMIT 200
+  `;
+  res.json(rows.map(r => ({
+    id: r.id, content: r.content, type: r.type, section: r.section,
+    image: r.image_url || null, createdAt: r.created_at,
+    author: { name: r.author_name, username: r.author_username, avatar: r.avatar_hex, initials: r.initials },
+  })));
+}));
+
+app.get('/api/admin/events', requireAdmin(async (req, res) => {
+  const rows = await sql`
+    SELECT e.id, e.title, e.event_date, e.location, e.cancelled,
+           u.name AS host_name, u.username AS host_username,
+           COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='going'),0) AS going_count
+    FROM events e JOIN users u ON e.host_id = u.id
+    ORDER BY e.event_date DESC
+  `;
+  res.json(rows.map(r => ({
+    id: r.id, title: r.title, date: r.event_date, location: r.location, cancelled: r.cancelled,
+    host: { name: r.host_name, username: r.host_username },
+    goingCount: r.going_count,
+  })));
+}));
+
+app.get('/api/admin/marketplace', requireAdmin(async (req, res) => {
+  const rows = await sql`
+    SELECT m.id, m.title, m.price, m.condition, m.category, m.sold, m.created_at, m.image_url,
+           u.name AS seller_name, u.username AS seller_username
+    FROM marketplace_items m JOIN users u ON u.id = m.seller_id
+    ORDER BY m.created_at DESC LIMIT 200
+  `;
+  res.json(rows.map(r => ({
+    id: r.id, title: r.title, price: r.price, condition: r.condition,
+    category: r.category, sold: r.sold, image: r.image_url || null, createdAt: r.created_at,
+    seller: { name: r.seller_name, username: r.seller_username },
+  })));
 }));
 
 app.get('/api/admin/hoa-contacts', requireAdmin(async (req, res) => {
@@ -1222,12 +1421,37 @@ app.get('/api/posts/:id/image', async (req, res) => {
   res.set('Content-Type', mime).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(data, 'base64'));
 });
 
-app.delete('/api/posts/:id', requireAuth(async (req, res) => {
+app.patch('/api/posts/:id', requireAuth(async (req, res) => {
   const [post] = await sql`SELECT author_id FROM posts WHERE id=${req.params.id}`;
   if (!post) return res.status(404).json({ error: 'Not found' });
   if (post.author_id !== req.currentUser.id && req.currentUser.role !== 'admin')
     return res.status(403).json({ error: 'Not authorized' });
+  const { content, offerTitle, offerExpiry, eventTitle, eventDate, eventTime, eventLocation } = req.body;
+  const [updated] = await sql`
+    UPDATE posts SET
+      content=${content},
+      offer_title=${offerTitle||null},
+      offer_expiry=${offerExpiry||null},
+      event_title=${eventTitle||null},
+      event_date=${eventDate||null},
+      event_time=${eventTime||null},
+      event_location=${eventLocation||null}
+    WHERE id=${req.params.id} RETURNING id
+  `;
+  res.json({ ok: true, id: updated.id });
+}));
+
+app.delete('/api/posts/:id', requireAuth(async (req, res) => {
+  const [post] = await sql`SELECT author_id, type, business_id, event_title, event_date FROM posts WHERE id=${req.params.id}`;
+  if (!post) return res.status(404).json({ error: 'Not found' });
+  if (post.author_id !== req.currentUser.id && req.currentUser.role !== 'admin')
+    return res.status(403).json({ error: 'Not authorized' });
   await sql`DELETE FROM posts WHERE id=${req.params.id}`;
+  // If this was a business event post, also remove it from the events table.
+  // Match on title + date + host so old events (without business_id) are also caught.
+  if (post.type === 'event' && post.event_title) {
+    await sql`DELETE FROM events WHERE title=${post.event_title} AND event_date=${post.event_date} AND host_id=${post.author_id}`;
+  }
   res.json({ ok: true });
 }));
 
@@ -1261,7 +1485,14 @@ app.post('/api/posts/:id/react', requireAuth(async (req, res) => {
       INSERT INTO post_reactions (post_id, user_id, reaction_type) VALUES (${post.id}, ${req.currentUser.id}, ${reaction})
       ON CONFLICT (post_id, user_id) DO UPDATE SET reaction_type=${reaction}, created_at=NOW()
     `;
-    if (!existing && post.author_id !== req.currentUser.id) await awardPoints(post.author_id, 'react_received', POINTS.react_received);
+    if (!existing && post.author_id !== req.currentUser.id) {
+      await awardPoints(post.author_id, 'react_received', POINTS.react_received);
+      const u = req.currentUser;
+      const emojiMap = { like:'👍', insightful:'💡', haha:'😂', wow:'😮', sad:'😢', agree:'👏' };
+      const msg = `${u.name} reacted ${emojiMap[reaction]||''} to your post`;
+      await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
+        VALUES (${post.author_id}, 'reaction', ${msg}, ${u.avatar_hex}, ${u.initials}, ${post.id})`;
+    }
   }
 
   const counts = await sql`SELECT reaction_type, COUNT(*)::int AS cnt FROM post_reactions WHERE post_id=${post.id} GROUP BY reaction_type`;
@@ -1325,8 +1556,14 @@ app.post('/api/posts/:id/comments', requireAuth(async (req, res) => {
     INSERT INTO comments (post_id, author_id, content) VALUES (${req.params.id}, ${u.id}, ${content.trim()})
     RETURNING *
   `;
-  const [post] = await sql`SELECT author_id FROM posts WHERE id=${req.params.id}`;
-  if (post?.author_id && post.author_id !== u.id) await awardPoints(post.author_id, 'comment', POINTS.react_received);
+  const [post] = await sql`SELECT author_id, content AS post_content FROM posts WHERE id=${req.params.id}`;
+  if (post?.author_id && post.author_id !== u.id) {
+    await awardPoints(post.author_id, 'comment', POINTS.react_received);
+    const snippet = (post.post_content || '').slice(0, 40).trim();
+    const msg = `${u.name} commented on your post${snippet ? ` "${snippet}${post.post_content.length > 40 ? '…' : ''}"` : ''}`;
+    await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
+      VALUES (${post.author_id}, 'comment', ${msg}, ${u.avatar_hex}, ${u.initials}, ${req.params.id})`;
+  }
   await awardPoints(u.id, 'comment', POINTS.comment);
 
   res.json({
@@ -1372,7 +1609,7 @@ app.post('/api/events/:id/rsvp', requireAuth(async (req, res) => {
   const validStatuses = ['going','maybe','cantGo'];
   const dbStatus = status === 'cantGo' ? 'cant_go' : status;
 
-  const [event] = await sql`SELECT id FROM events WHERE id=${req.params.id}`;
+  const [event] = await sql`SELECT id, host_id, title FROM events WHERE id=${req.params.id}`;
   if (!event) return res.status(404).json({ error: 'Event not found' });
 
   const [existing] = await sql`SELECT status FROM event_rsvps WHERE event_id=${event.id} AND user_id=${req.currentUser.id}`;
@@ -1388,6 +1625,13 @@ app.post('/api/events/:id/rsvp', requireAuth(async (req, res) => {
     `;
     if (dbStatus === 'going' && existing?.status !== 'going') await awardPoints(req.currentUser.id, 'event_rsvp', POINTS.event_rsvp);
     if (existing?.status === 'going' && dbStatus !== 'going') await awardPoints(req.currentUser.id, 'event_rsvp', -POINTS.event_rsvp);
+    if (event.host_id && event.host_id !== req.currentUser.id && existing?.status !== dbStatus) {
+      const u = req.currentUser;
+      const label = dbStatus === 'going' ? 'is going to' : (dbStatus === 'maybe' ? 'might attend' : "can't make");
+      const msg = `${u.name} ${label} your event "${(event.title||'').slice(0,50)}"`;
+      await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
+        VALUES (${event.host_id}, 'rsvp', ${msg}, ${u.avatar_hex}, ${u.initials}, ${event.id})`;
+    }
   }
 
   const counts = await sql`
@@ -1429,8 +1673,8 @@ function formatBusiness(b) {
     tags: b.tags||[], rating: parseFloat(b.rating)||0,
     reviewCount: b.review_count||0, recommendedBy: b.recommended_by||0,
     claimed: b.claimed,
-    bannerUrl: b.banner_url ? (b.banner_url.startsWith('data:') ? `/api/businesses/${b.id}/banner-image` : b.banner_url) : null,
-    logoUrl: b.logo_url ? (b.logo_url.startsWith('data:') ? `/api/businesses/${b.id}/logo-image` : b.logo_url) : null,
+    bannerUrl: b.banner_url ? (b.banner_url.startsWith('data:') ? `/api/businesses/${b.id}/banner-image?v=${b.img_version||0}` : b.banner_url) : null,
+    logoUrl: b.logo_url ? (b.logo_url.startsWith('data:') ? `/api/businesses/${b.id}/logo-image?v=${b.img_version||0}` : b.logo_url) : null,
     menuUrl: b.menu_url||null, menuText: b.menu_text||null,
     addedByUserId: b.added_by_user_id||null, claimedByUserId: b.claimed_by_user_id||null,
     services: b.services || [],
@@ -1501,6 +1745,11 @@ app.patch('/api/businesses/:id', requireAuth(async (req, res) => {
 }));
 
 app.post('/api/businesses/:id/verify', requireAuth(async (req, res) => {
+  const u = req.currentUser;
+  const [biz] = await sql`SELECT claimed_by_user_id, added_by_user_id FROM businesses WHERE id=${req.params.id}`;
+  if (!biz) return res.status(404).json({ error: 'Not found' });
+  const isOwner = biz.claimed_by_user_id === u.id || biz.added_by_user_id === u.id || String(u.business_id) === String(req.params.id);
+  if (!isOwner && u.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
   await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS last_verified_at TIMESTAMPTZ`;
   await sql`UPDATE businesses SET last_verified_at=NOW() WHERE id=${req.params.id}`;
   res.json({ ok: true });
@@ -1592,7 +1841,7 @@ app.get('/api/businesses/:id/banner-image', async (req, res) => {
   if (!biz.banner_url.startsWith('data:')) return res.redirect(biz.banner_url);
   const [header, data] = biz.banner_url.split(',');
   const mime = (header.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
-  res.set('Content-Type', mime).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(data, 'base64'));
+  res.set('Content-Type', mime).set('Cache-Control', 'no-store').send(Buffer.from(data, 'base64'));
 });
 
 app.get('/api/businesses/:id/logo-image', async (req, res) => {
@@ -1601,7 +1850,7 @@ app.get('/api/businesses/:id/logo-image', async (req, res) => {
   if (!biz.logo_url.startsWith('data:')) return res.redirect(biz.logo_url);
   const [header, data] = biz.logo_url.split(',');
   const mime = (header.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
-  res.set('Content-Type', mime).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(data, 'base64'));
+  res.set('Content-Type', mime).set('Cache-Control', 'no-store').send(Buffer.from(data, 'base64'));
 });
 
 app.get('/api/businesses/:id/photo/:index', async (req, res) => {
@@ -1672,7 +1921,7 @@ app.post('/api/businesses/:id/recommend', requireAuth(async (req, res) => {
   const { text, rating, image } = req.body;
   if (!text?.trim()) return res.status(400).json({ error: 'Text required' });
   const stars = Math.min(5, Math.max(1, parseInt(rating) || 5));
-  const [biz] = await sql`SELECT id FROM businesses WHERE id=${req.params.id}`;
+  const [biz] = await sql`SELECT id, name, claimed_by_user_id FROM businesses WHERE id=${req.params.id}`;
   if (!biz) return res.status(404).json({ error: 'Not found' });
   const u = req.currentUser;
   await sql`ALTER TABLE business_reviews ADD COLUMN IF NOT EXISTS photo_url TEXT`;
@@ -1680,6 +1929,11 @@ app.post('/api/businesses/:id/recommend', requireAuth(async (req, res) => {
   await sql`INSERT INTO business_reviews (business_id, author_id, rating, text, photo_url) VALUES (${biz.id}, ${u.id}, ${stars}, ${text.trim()}, ${photoUrl})`;
   const [avg] = await sql`SELECT ROUND(AVG(rating)::numeric, 1)::float AS avg, COUNT(*)::int AS cnt FROM business_reviews WHERE business_id=${biz.id}`;
   await sql`UPDATE businesses SET recommended_by = recommended_by + 1, rating = ${avg.avg}, review_count = ${avg.cnt} WHERE id=${biz.id}`;
+  if (biz.claimed_by_user_id && biz.claimed_by_user_id !== u.id) {
+    const msg = `${u.name} left a ${stars}★ review on ${biz.name}`;
+    await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
+      VALUES (${biz.claimed_by_user_id}, 'review', ${msg}, ${u.avatar_hex}, ${u.initials}, ${biz.id})`;
+  }
   res.json({ ok: true });
 }));
 
@@ -1823,17 +2077,61 @@ app.get('/api/business/posts', requireAuth(async (req, res) => {
   res.json(posts);
 }));
 
+app.post('/api/business/banner', requireAuth(async (req, res) => {
+  const u = req.currentUser;
+  if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
+  const { dataUrl } = req.body;
+  if (!dataUrl) return res.status(400).json({ error: 'No image data' });
+  let bizId = u.business_id;
+  if (!bizId) {
+    const [b] = await sql`SELECT id FROM businesses WHERE claimed_by_user_id=${u.id} OR added_by_user_id=${u.id} LIMIT 1`;
+    bizId = b?.id;
+  }
+  if (!bizId) return res.status(400).json({ error: 'No business linked to this account' });
+  const url = await storeImage(dataUrl, 'biz-banner');
+  const ts = Date.now();
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS img_version BIGINT DEFAULT 0`;
+  await sql`UPDATE businesses SET banner_url=${url}, img_version=${ts} WHERE id=${bizId}`;
+  const bannerUrl = url && url.startsWith('data:') ? `/api/businesses/${bizId}/banner-image?v=${ts}` : url;
+  res.json({ ok: true, bannerUrl });
+}));
+
+app.post('/api/business/logo', requireAuth(async (req, res) => {
+  const u = req.currentUser;
+  if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
+  const { dataUrl } = req.body;
+  if (!dataUrl) return res.status(400).json({ error: 'No image data' });
+  let bizId = u.business_id;
+  if (!bizId) {
+    const [b] = await sql`SELECT id FROM businesses WHERE claimed_by_user_id=${u.id} OR added_by_user_id=${u.id} LIMIT 1`;
+    bizId = b?.id;
+  }
+  if (!bizId) return res.status(400).json({ error: 'No business linked to this account' });
+  const url = await storeImage(dataUrl, 'biz-logo');
+  const ts = Date.now();
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS img_version BIGINT DEFAULT 0`;
+  await sql`UPDATE businesses SET logo_url=${url}, img_version=${ts} WHERE id=${bizId}`;
+  const logoUrl = url && url.startsWith('data:') ? `/api/businesses/${bizId}/logo-image?v=${ts}` : url;
+  res.json({ ok: true, logoUrl });
+}));
+
 app.post('/api/business/reviews/:id/reply', requireAuth(async (req, res) => {
   const u = req.currentUser;
   if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
   const { reply } = req.body;
   if (!reply) return res.status(400).json({ error: 'Reply text required' });
-  const [review] = await sql`SELECT id, business_id FROM business_reviews WHERE id=${req.params.id}`;
+  const [review] = await sql`SELECT id, business_id, author_id FROM business_reviews WHERE id=${req.params.id}`;
   if (!review) return res.status(404).json({ error: 'Review not found' });
   if (review.business_id.toString() !== u.business_id?.toString()) return res.status(403).json({ error: 'Not your business' });
   const [updated] = await sql`
     UPDATE business_reviews SET owner_reply_text=${reply}, owner_reply_date='Just now' WHERE id=${review.id} RETURNING *
   `;
+  if (review.author_id && review.author_id !== u.id) {
+    const [biz] = await sql`SELECT name FROM businesses WHERE id=${u.business_id}`;
+    const msg = `${biz?.name || 'A business'} replied to your review`;
+    await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
+      VALUES (${review.author_id}, 'review_reply', ${msg}, ${u.avatar_hex}, ${u.initials}, ${u.business_id})`;
+  }
   res.json({ ok: true });
 }));
 
@@ -2121,22 +2419,22 @@ app.delete('/api/realestate/:id', requireAuth(async (req, res) => {
 
 app.get('/api/search', async (req, res) => {
   const q = (req.query.q || '').trim();
-  if (!q || q.length < 2) return res.json({ posts: [], businesses: [], events: [], neighbors: [] });
+  if (!q || q.length < 2) return res.json({ safety: [], events: [], marketplace: [], groups: [] });
   const like = `%${q}%`;
   try {
-    const [posts, businesses, events, neighbors] = await Promise.all([
-      sql`SELECT id, content, type, section FROM posts WHERE content ILIKE ${like} OR type ILIKE ${like} OR section ILIKE ${like} ORDER BY created_at DESC LIMIT 5`,
-      sql`SELECT id, name, category FROM businesses WHERE name ILIKE ${like} OR category ILIKE ${like} ORDER BY name LIMIT 5`,
+    const [safety, events, marketplace, groups] = await Promise.all([
+      sql`SELECT id, content FROM posts WHERE section='safety' AND content ILIKE ${like} ORDER BY created_at DESC LIMIT 5`,
       sql`SELECT id, title FROM events WHERE title ILIKE ${like} OR description ILIKE ${like} ORDER BY event_date DESC LIMIT 5`,
-      sql`SELECT id, name, username FROM users WHERE (name ILIKE ${like} OR username ILIKE ${like}) AND role IN ('neighbor','admin') ORDER BY name LIMIT 5`,
+      sql`SELECT id, title, price, category FROM marketplace_items WHERE (title ILIKE ${like} OR description ILIKE ${like} OR category ILIKE ${like}) AND sold=FALSE ORDER BY created_at DESC LIMIT 5`,
+      sql`SELECT id, name FROM groups WHERE name ILIKE ${like} OR description ILIKE ${like} ORDER BY name LIMIT 5`,
     ]);
     res.json({
-      posts: posts.map(r => ({ id: r.id, content: r.content?.substring(0, 80) })),
-      businesses: businesses.map(r => ({ id: r.id, name: r.name, category: r.category })),
+      safety: safety.map(r => ({ id: r.id, content: r.content?.substring(0, 80) })),
       events: events.map(r => ({ id: r.id, title: r.title })),
-      neighbors: neighbors.map(r => ({ id: r.id, name: r.name })),
+      marketplace: marketplace.map(r => ({ id: r.id, title: r.title, price: parseFloat(r.price)||0, category: r.category })),
+      groups: groups.map(r => ({ id: r.id, name: r.name })),
     });
-  } catch (err) { console.error(err); res.json({ posts: [], businesses: [], events: [], neighbors: [] }); }
+  } catch (err) { console.error(err); res.json({ safety: [], events: [], marketplace: [], groups: [] }); }
 });
 
 // ─── Groups ───────────────────────────────────────────────────────────────────
@@ -2240,7 +2538,7 @@ app.get('/api/groups/:id', async (req, res) => {
         WHERE gm.group_id=${g.id} ORDER BY gm.joined_at ASC
       `).map(m => ({ id: m.id, username: m.username, name: m.name, avatar: m.avatar_hex, avatarUrl: m.avatar_url, initials: m.initials, joinedAt: m.joined_at })),
       posts: posts.map(p => ({
-        id: p.id, content: p.content, imageUrl: p.image_url, pinned: p.pinned,
+        id: p.id, content: p.content, imageUrl: p.image_url, pdfUrl: p.pdf_url, pdfName: p.pdf_name, pinned: p.pinned,
         pollQuestion: p.poll_question, pollOptions: p.poll_options, pollVotes: p.poll_votes,
         createdAt: p.created_at,
         author: { id: p.author_id, username: p.username, name: p.name, avatar: p.avatar_hex, initials: p.initials },
@@ -2341,6 +2639,10 @@ app.post('/api/groups/:id/join', requireAuth(async (req, res) => {
       INSERT INTO group_join_requests (group_id, user_id, status) VALUES (${g.id}, ${u.id}, 'pending')
       ON CONFLICT (group_id, user_id) DO UPDATE SET status='pending', requested_at=NOW()
     `;
+    if (g.created_by_user_id && g.created_by_user_id !== u.id) {
+      await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
+                VALUES (${g.created_by_user_id}, 'group_join_request', ${`${u.name} requested to join ${g.name}`}, ${u.avatar_hex}, ${u.initials}, ${g.id})`;
+    }
     return res.json({ requested: true });
   }
 
@@ -2372,6 +2674,16 @@ app.post('/api/groups/:id/join-requests/:username/deny', requireAuth(async (req,
   res.json({ ok: true });
 }));
 
+app.get('/api/groups/:id/members', requireAuth(async (req, res) => {
+  const rows = await sql`
+    SELECT u.id, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials, u.role, gm.joined_at
+    FROM group_members gm JOIN users u ON u.id = gm.user_id
+    WHERE gm.group_id = ${req.params.id}
+    ORDER BY gm.joined_at ASC
+  `;
+  res.json(rows.map(r => ({ id: r.id, username: r.username, name: r.name, avatar: r.avatar_hex, avatarUrl: r.avatar_url, initials: r.initials, role: r.role, joinedAt: r.joined_at })));
+}));
+
 app.delete('/api/groups/:id/members/:username', requireAuth(async (req, res) => {
   const [g] = await sql`SELECT id, created_by_user_id FROM groups WHERE id=${req.params.id}`;
   if (!g) return res.status(404).json({ error: 'Not found' });
@@ -2384,17 +2696,21 @@ app.delete('/api/groups/:id/members/:username', requireAuth(async (req, res) => 
 }));
 
 app.post('/api/groups/:id/posts', requireAuth(async (req, res) => {
-  const { content, image, pollQuestion, pollOptions } = req.body;
-  if (!content && !pollQuestion) return res.status(400).json({ error: 'Content required' });
+  const { content, image, pdf, pdfName, pollQuestion, pollOptions } = req.body;
+  if (!content && !pollQuestion && !pdf) return res.status(400).json({ error: 'Content required' });
   const [g] = await sql`SELECT id, name FROM groups WHERE id=${req.params.id}`;
   if (!g) return res.status(404).json({ error: 'Group not found' });
   const u = req.currentUser;
+  await sql`ALTER TABLE group_posts ADD COLUMN IF NOT EXISTS pdf_url TEXT`;
+  await sql`ALTER TABLE group_posts ADD COLUMN IF NOT EXISTS pdf_name TEXT`;
   const imageUrl = await storeImage(image, 'group');
+  const pdfUrl = await storeImage(pdf, 'group-pdf');
+  const safePdfName = pdfUrl ? (pdfName || 'document.pdf').toString().slice(0, 200) : null;
   const pollOpts = pollOptions && pollOptions.length >= 2 ? JSON.stringify(pollOptions) : null;
   const pollVotes = pollOpts ? JSON.stringify({}) : null;
   const [post] = await sql`
-    INSERT INTO group_posts (group_id, author_id, content, image_url, poll_question, poll_options, poll_votes)
-    VALUES (${g.id}, ${u.id}, ${content||''}, ${imageUrl}, ${pollQuestion||null}, ${pollOpts||null}::jsonb, ${pollVotes||null}::jsonb)
+    INSERT INTO group_posts (group_id, author_id, content, image_url, pdf_url, pdf_name, poll_question, poll_options, poll_votes)
+    VALUES (${g.id}, ${u.id}, ${content||''}, ${imageUrl}, ${pdfUrl}, ${safePdfName}, ${pollQuestion||null}, ${pollOpts||null}::jsonb, ${pollVotes||null}::jsonb)
     RETURNING *`;
   await sql`UPDATE groups SET last_activity_at=NOW() WHERE id=${g.id}`;
 
@@ -2407,7 +2723,7 @@ app.post('/api/groups/:id/posts', requireAuth(async (req, res) => {
     ));
   }
 
-  res.json({ id: post.id, content: post.content, imageUrl: post.image_url, pollQuestion: post.poll_question, pollOptions: post.poll_options, pollVotes: post.poll_votes, pinned: post.pinned, createdAt: post.created_at, author: { id: u.id, username: u.username, name: u.name, avatar: u.avatar_hex, initials: u.initials } });
+  res.json({ id: post.id, content: post.content, imageUrl: post.image_url, pdfUrl: post.pdf_url, pdfName: post.pdf_name, pollQuestion: post.poll_question, pollOptions: post.poll_options, pollVotes: post.poll_votes, pinned: post.pinned, createdAt: post.created_at, author: { id: u.id, username: u.username, name: u.name, avatar: u.avatar_hex, initials: u.initials } });
 }));
 
 app.post('/api/groups/:id/posts/:postId/pin', requireAuth(async (req, res) => {
@@ -2441,8 +2757,11 @@ app.post('/api/groups/:id/posts/:postId/poll-vote', requireAuth(async (req, res)
 
 app.delete('/api/groups/:id/posts/:postId', requireAuth(async (req, res) => {
   const [g] = await sql`SELECT id, created_by_user_id FROM groups WHERE id=${req.params.id}`;
+  const [post] = await sql`SELECT user_id FROM group_posts WHERE id=${req.params.postId}`;
   const u = req.currentUser;
-  if (g?.created_by_user_id !== u.id && u.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  const isPostAuthor = post?.user_id === u.id;
+  const isGroupAdmin = g?.created_by_user_id === u.id || u.role === 'admin';
+  if (!isPostAuthor && !isGroupAdmin) return res.status(403).json({ error: 'Not authorized' });
   await sql`DELETE FROM group_posts WHERE id=${req.params.postId} AND group_id=${req.params.id}`;
   res.json({ ok: true });
 }));
@@ -2493,6 +2812,18 @@ app.patch('/api/profile', requireAuth(async (req, res) => {
 app.patch('/api/profile/allow-messages', requireAuth(async (req, res) => {
   const { allow } = req.body;
   await sql`UPDATE users SET allow_messages = ${!!allow} WHERE id = ${req.currentUser.id}`;
+  res.json({ ok: true });
+}));
+
+app.post('/api/profile/change-password', requireAuth(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both fields required' });
+  if (newPassword.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  const [u] = await sql`SELECT password_hash FROM users WHERE id=${req.currentUser.id}`;
+  const valid = await bcrypt.compare(currentPassword, u.password_hash);
+  if (!valid) return res.status(400).json({ error: 'Current password is incorrect' });
+  const hash = await bcrypt.hash(newPassword, 12);
+  await sql`UPDATE users SET password_hash=${hash} WHERE id=${req.currentUser.id}`;
   res.json({ ok: true });
 }));
 
@@ -2603,7 +2934,37 @@ app.post('/api/transport/carts', requireAuth(async (req, res) => {
   if (!makeModel) return res.status(400).json({ error: 'Cart description required' });
   const imageUrl = await storeImage(image, 'carts');
   const [cart] = await sql`INSERT INTO transport_carts (owner_id, make_model, seats, rate, phone, notes, image_url) VALUES (${req.currentUser.id}, ${makeModel}, ${parseInt(seats)||4}, ${rate||''}, ${phone||''}, ${notes||''}, ${imageUrl||null}) RETURNING *`;
+
+  const u = req.currentUser;
+  const neighbors = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${u.id}`;
+  if (neighbors.length) {
+    const msg = `${u.name} listed a golf cart for rent: "${makeModel}"${rate ? ` — ${rate}` : ''}`;
+    await Promise.all(neighbors.map(n =>
+      sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
+          VALUES (${n.id}, 'cart_listing', ${msg}, ${u.avatar_hex}, ${u.initials}, ${cart.id})`
+    ));
+  }
+
   res.json(cart);
+}));
+
+app.patch('/api/transport/carts/:id', requireAuth(async (req, res) => {
+  await sql`ALTER TABLE transport_carts ADD COLUMN IF NOT EXISTS image_url TEXT`;
+  const [cart] = await sql`SELECT owner_id, seats, image_url FROM transport_carts WHERE id=${req.params.id}`;
+  if (!cart) return res.status(404).json({ error: 'Not found' });
+  if (cart.owner_id !== req.currentUser.id && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  const { makeModel, seats, rate, phone, notes, image, removeImage } = req.body;
+  if (!makeModel) return res.status(400).json({ error: 'Cart description required' });
+  const seatsVal = (seats === undefined || seats === null || seats === '') ? cart.seats : (parseInt(seats) || cart.seats || 4);
+  let imageUrl = cart.image_url;
+  if (removeImage) imageUrl = null;
+  else if (image) imageUrl = await storeImage(image, 'carts');
+  const [updated] = await sql`
+    UPDATE transport_carts
+    SET make_model=${makeModel}, seats=${seatsVal}, rate=${rate||''}, phone=${phone||''}, notes=${notes||''}, image_url=${imageUrl}
+    WHERE id=${req.params.id}
+    RETURNING *`;
+  res.json(updated);
 }));
 
 app.delete('/api/transport/carts/:id', requireAuth(async (req, res) => {
@@ -2838,6 +3199,8 @@ app.get('/api/tides', (req, res) => {
 
 app.get('/api/version', (req, res) => res.json({ v: assetVersion('app.js') }));
 app.post('/api/debug-log', (req, res) => { console.log('[DEBUG]', JSON.stringify(req.body)); res.json({ok:true}); });
+
+;
 
 // ─── HTML pages ───────────────────────────────────────────────────────────────
 

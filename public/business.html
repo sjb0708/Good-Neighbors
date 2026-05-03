@@ -960,10 +960,53 @@
     </div>
   </div>
 
+  <!-- Edit Post Modal -->
+  <div class="modal-overlay" id="editPostModal" onclick="closeEditPostModal(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Edit Post</div>
+        <button class="btn-close" onclick="closeEditPostModal()">×</button>
+      </div>
+      <div id="editPostEventFields" style="display:none;">
+        <div class="field-group">
+          <label class="field-label">Event Title</label>
+          <input class="field-input" id="epEventTitle" type="text" />
+        </div>
+        <div class="field-group" style="display:flex;gap:10px;">
+          <div style="flex:1;"><label class="field-label">Date</label><input class="field-input" id="epEventDate" type="date" /></div>
+          <div style="flex:1;"><label class="field-label">Time</label><input class="field-input" id="epEventTime" type="time" /></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Location</label>
+          <input class="field-input" id="epEventLocation" type="text" />
+        </div>
+      </div>
+      <div id="editPostPromoFields" style="display:none;">
+        <div class="field-group">
+          <label class="field-label">Offer Title</label>
+          <input class="field-input" id="epOfferTitle" type="text" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Expiry</label>
+          <input class="field-input" id="epOfferExpiry" type="text" placeholder="e.g. Dec 31" />
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Message</label>
+        <textarea class="field-textarea" id="epContent"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeEditPostModal()">Cancel</button>
+        <button class="btn-save" onclick="saveEditPost()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let bizData = null;
     let currentTab = 'announcement';
     let postFileDataUrl = null;
+    let editPostId = null;
 
     async function init() {
       try {
@@ -1116,33 +1159,38 @@
         overlay.insertAdjacentHTML('beforeend', `<div style="display:flex;gap:10px;margin-top:16px;"><button id="cropCancel" style="padding:10px 24px;background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button><button id="cropSave" style="padding:10px 28px;background:#0077B6;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Save Photo</button></div>`);
         document.body.appendChild(overlay);
         overlay.querySelector('#cropCancel').onclick = () => { URL.revokeObjectURL(url); overlay.remove(); };
-        overlay.querySelector('#cropSave').onclick = () => { const out=document.createElement('canvas');const OUTPUT=circular?400:1200;const OUTPUT_H=circular?400:Math.round(1200/aspectRatio);out.width=OUTPUT;out.height=OUTPUT_H;const ctx=out.getContext('2d');const scaleUp=OUTPUT/PREVIEW_W;ctx.drawImage(img,ox*scaleUp,oy*scaleUp,img.naturalWidth*scale*scaleUp,img.naturalHeight*scale*scaleUp);const dataUrl=out.toDataURL('image/jpeg',0.88);URL.revokeObjectURL(url);overlay.remove();onCrop(dataUrl); };
+        overlay.querySelector('#cropSave').onclick = () => { const out=document.createElement('canvas');const OUTPUT=circular?300:900;const OUTPUT_H=circular?300:Math.round(900/aspectRatio);out.width=OUTPUT;out.height=OUTPUT_H;const ctx=out.getContext('2d');const scaleUp=OUTPUT/PREVIEW_W;ctx.drawImage(img,ox*scaleUp,oy*scaleUp,img.naturalWidth*scale*scaleUp,img.naturalHeight*scale*scaleUp);const dataUrl=out.toDataURL('image/jpeg',0.75);URL.revokeObjectURL(url);overlay.remove();onCrop(dataUrl); };
       };
       img.src = url;
     }
 
     async function uploadDashLogo(input) {
       const file = input.files[0];
-      if (!file || !bizData.id) return;
+      if (!file) return;
       input.value = '';
       openImageCropper(file, { aspectRatio: 1, circular: true, onCrop: async (dataUrl) => {
         showToast('Uploading…');
-        const res = await fetch(`/api/businesses/${bizData.id}/logo`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) });
-        if (res.ok) { const data = await res.json(); bizData.logoUrl = data.logoUrl; renderProfile(); showToast('✅ Logo updated!'); }
-        else showToast('Upload failed. Please try again.');
+        try {
+          const res = await fetch('/api/business/logo', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) });
+          const data = await res.json();
+          if (res.ok) { bizData.logoUrl = data.logoUrl + '?t=' + Date.now(); renderProfile(); showToast('✅ Logo updated!'); }
+          else { alert('Logo upload failed: ' + (data.error || res.status)); showToast('❌ Logo failed'); }
+        } catch(e) { alert('Logo upload error: ' + e.message); }
       }});
     }
 
     async function uploadDashBanner(input) {
       const file = input.files[0];
-      if (!file || !bizData.id) return;
+      if (!file) return;
       input.value = '';
       openImageCropper(file, { aspectRatio: 16/5, circular: false, onCrop: async (dataUrl) => {
         showToast('Uploading…');
-        const res = await fetch(`/api/businesses/${bizData.id}/banner`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) });
-        const data = await res.json();
-        if (res.ok) { bizData.bannerUrl = data.bannerUrl; renderProfile(); showToast('✅ Banner saved!'); }
-        else { showToast('❌ Banner failed: ' + (data.error || res.status)); }
+        try {
+          const res = await fetch('/api/business/banner', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) });
+          const data = await res.json();
+          if (res.ok) { bizData.bannerUrl = data.bannerUrl + '?t=' + Date.now(); renderProfile(); showToast('✅ Banner saved!'); }
+          else { alert('Banner upload failed: ' + (data.error || res.status)); showToast('❌ Banner failed'); }
+        } catch(e) { alert('Banner upload error: ' + e.message); }
       }});
     }
 
@@ -1337,7 +1385,19 @@
               const parts = Object.entries(p.reactions||{}).filter(([,c])=>c>0).map(([k,c])=>`<span class="post-stat">${EMOJI[k]||'👍'} ${c}</span>`);
               return parts.length ? parts.join('') : '<span class="post-stat">No reactions yet</span>';
             })()}
-            <span class="post-stat">💬 ${p.commentCount} comments</span>
+            <span class="post-stat" style="cursor:pointer;color:var(--ocean);text-decoration:underline;" onclick="toggleComments('${p.id}')">💬 ${p.commentCount} comment${p.commentCount !== 1 ? 's' : ''}</span>
+          </div>
+          <!-- Comments section -->
+          <div id="comments-${p.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+            <div id="comments-list-${p.id}" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
+            <div style="display:flex;gap:8px;">
+              <input id="comment-input-${p.id}" type="text" placeholder="Reply as ${bizData?.name || 'business'}…" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;" onkeydown="if(event.key==='Enter')postComment('${p.id}')" />
+              <button onclick="postComment('${p.id}')" style="padding:8px 14px;background:var(--ocean);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Send</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+            <button onclick="openEditPost(${JSON.stringify(p).replace(/"/g,'&quot;')})" style="flex:1;padding:7px;background:white;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-mid);">✏️ Edit</button>
+            <button onclick="deletePost('${p.id}')" style="flex:1;padding:7px;background:white;border:1.5px solid #fecaca;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:#ef4444;">🗑️ Delete</button>
           </div>
         </div>
         `;
@@ -1454,6 +1514,108 @@
 
       btn.disabled = false;
       btn.textContent = 'Send to Neighborhood';
+    }
+
+    function openEditPost(p) {
+      editPostId = p.id;
+      document.getElementById('epContent').value = p.content || '';
+      const isEvent = p.type === 'event';
+      const isPromo = p.type === 'promotion';
+      document.getElementById('editPostEventFields').style.display = isEvent ? '' : 'none';
+      document.getElementById('editPostPromoFields').style.display = isPromo ? '' : 'none';
+      if (isEvent) {
+        document.getElementById('epEventTitle').value = p.eventTitle || '';
+        document.getElementById('epEventDate').value = p.eventDate ? String(p.eventDate).substring(0,10) : '';
+        document.getElementById('epEventTime').value = p.eventTime || '';
+        document.getElementById('epEventLocation').value = p.eventLocation || '';
+      }
+      if (isPromo) {
+        document.getElementById('epOfferTitle').value = p.offerTitle || '';
+        document.getElementById('epOfferExpiry').value = p.offerExpiry || '';
+      }
+      document.getElementById('editPostModal').classList.add('open');
+    }
+
+    function closeEditPostModal(e) {
+      if (e && e.target !== document.getElementById('editPostModal')) return;
+      document.getElementById('editPostModal').classList.remove('open');
+      editPostId = null;
+    }
+
+    async function saveEditPost() {
+      if (!editPostId) return;
+      const body = {
+        content: document.getElementById('epContent').value.trim(),
+        eventTitle: document.getElementById('epEventTitle')?.value || null,
+        eventDate: document.getElementById('epEventDate')?.value || null,
+        eventTime: document.getElementById('epEventTime')?.value || null,
+        eventLocation: document.getElementById('epEventLocation')?.value || null,
+        offerTitle: document.getElementById('epOfferTitle')?.value || null,
+        offerExpiry: document.getElementById('epOfferExpiry')?.value || null,
+      };
+      const res = await fetch(`/api/posts/${editPostId}`, {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) {
+        document.getElementById('editPostModal').classList.remove('open');
+        editPostId = null;
+        await loadPosts();
+        showToast('✅ Post updated!');
+      } else {
+        showToast('Something went wrong. Try again.');
+      }
+    }
+
+    async function deletePost(id) {
+      if (!confirm('Delete this post? This cannot be undone.')) return;
+      const res = await fetch(`/api/posts/${id}`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) { await loadPosts(); showToast('Post deleted.'); }
+      else showToast('Could not delete post.');
+    }
+
+    async function toggleComments(postId) {
+      const section = document.getElementById(`comments-${postId}`);
+      if (!section) return;
+      if (section.style.display === 'none') {
+        section.style.display = 'block';
+        await loadComments(postId);
+      } else {
+        section.style.display = 'none';
+      }
+    }
+
+    async function loadComments(postId) {
+      const listEl = document.getElementById(`comments-list-${postId}`);
+      if (!listEl) return;
+      listEl.innerHTML = '<div style="font-size:12px;color:#9ca3af;">Loading…</div>';
+      const res = await fetch(`/api/posts/${postId}/comments`);
+      const comments = await res.json();
+      if (!comments.length) {
+        listEl.innerHTML = '<div style="font-size:12px;color:#9ca3af;">No comments yet.</div>';
+        return;
+      }
+      listEl.innerHTML = comments.map(c => `
+        <div style="background:#f8fafc;border-radius:8px;padding:8px 10px;">
+          <div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:2px;">${c.author.name || c.author.username}</div>
+          <div style="font-size:13px;color:#1f2937;">${c.content}</div>
+        </div>
+      `).join('');
+    }
+
+    async function postComment(postId) {
+      const input = document.getElementById(`comment-input-${postId}`);
+      const content = input?.value.trim();
+      if (!content) return;
+      input.value = '';
+      const res = await fetch(`/api/posts/${postId}/comments`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+      });
+      if (res.ok) { await loadComments(postId); }
+      else showToast('Could not post comment.');
     }
 
     function showToast(msg) {

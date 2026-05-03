@@ -169,6 +169,10 @@
       <button class="nav-item" onclick="showView('members')" id="nav-members">
         <span class="icon">👥</span> All Members
       </button>
+      <button class="nav-item" onclick="showView('verify')" id="nav-verify">
+        <span class="icon">✓</span> Verify Requests
+        <span class="nav-badge green" id="badge-verify" style="display:none">0</span>
+      </button>
 
       <button class="nav-item" onclick="showView('reports')" id="nav-reports">
         <span class="icon">⚑</span> Reports
@@ -196,6 +200,17 @@
       </button>
       <button class="nav-item" onclick="showView('realtors')" id="nav-realtors">
         <span class="icon">🏠</span> Realtors
+      </button>
+
+      <div class="nav-section-label">Content Moderation</div>
+      <button class="nav-item" onclick="showView('mod-posts')" id="nav-mod-posts">
+        <span class="icon">📝</span> Feed Posts
+      </button>
+      <button class="nav-item" onclick="showView('mod-events')" id="nav-mod-events">
+        <span class="icon">📅</span> Events
+      </button>
+      <button class="nav-item" onclick="showView('mod-marketplace')" id="nav-mod-marketplace">
+        <span class="icon">🛒</span> Marketplace
       </button>
 
       <div id="ownerSection" style="display:none">
@@ -285,7 +300,7 @@
           <div class="panel-header">
             <div>
               <h2>All Members</h2>
-              <div class="panel-header-sub">Active accounts on Costa Blanca Connect</div>
+              <div class="panel-header-sub">All accounts on Costa Blanca Connect</div>
             </div>
           </div>
           <table class="members-table">
@@ -300,6 +315,19 @@
             </thead>
             <tbody id="membersList"></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- VERIFICATION REQUESTS -->
+      <div class="view" id="view-verify">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>✓ Verification Requests</h2>
+              <div class="panel-header-sub">Members requesting Verified Neighbor status — review their document and approve or deny</div>
+            </div>
+          </div>
+          <div id="verifyList" style="padding:0 0 8px;"><div class="panel-empty">Loading…</div></div>
         </div>
       </div>
 
@@ -431,53 +459,6 @@
               <button onclick="addEmtsService()" style="padding:10px 18px;background:#1d4ed8;color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;white-space:nowrap;">+ Add</button>
             </div>
             <div id="emtsServicesList"><div class="panel-empty">No services added yet.</div></div>
-          </div>
-        </div>
-
-        <!-- Hospital Directory Panel -->
-        <div class="panel" style="margin-bottom:20px;">
-          <div class="panel-header">
-            <div>
-              <h2>🏥 Hospital Directory</h2>
-              <div class="panel-header-sub">Manage hospitals shown on the First Responders page</div>
-            </div>
-          </div>
-          <div style="padding:0 20px 20px;">
-            <!-- Add Hospital Form -->
-            <details style="margin-bottom:16px;">
-              <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1d4ed8;padding:10px 0;">+ Add New Hospital</summary>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
-                <input id="hospName" type="text" placeholder="Hospital name *" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
-                <input id="hospAddress" type="text" placeholder="Address" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
-                <input id="hospPhone" type="text" placeholder="Phone (e.g. +507 123-4567)" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
-                <input id="hospWhatsapp" type="text" placeholder="WhatsApp number (optional)" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
-                <input id="hospHours" type="text" placeholder="Hours (e.g. 24/7 or Mon-Fri 8am-6pm)" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
-                <input id="hospDistance" type="text" placeholder="Distance from community (e.g. 2.3 km)" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
-                <input id="hospType" type="text" placeholder="Type (e.g. Public, Private, Clinic)" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
-                <input id="hospNotes" type="text" placeholder="Notes (e.g. accepts Seguro Social)" style="padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;background:#f8fafc;" />
-              </div>
-              <div style="margin-top:8px;">
-                <div style="font-size:12px;font-weight:600;color:#4a6378;margin-bottom:6px;">Services (check all that apply):</div>
-                <div id="hospServicesCheck" style="display:flex;flex-wrap:wrap;gap:8px;">
-                  <!-- filled by JS -->
-                </div>
-              </div>
-              <button onclick="addHospital()" style="margin-top:12px;padding:10px 24px;background:#1d4ed8;color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;">Add Hospital</button>
-            </details>
-            <div id="adminHospitalsList"><div class="panel-empty">Loading...</div></div>
-          </div>
-        </div>
-
-        <!-- Hospital Community Reports Panel -->
-        <div class="panel" style="margin-bottom:20px;">
-          <div class="panel-header">
-            <div>
-              <h2>⚠️ Hospital Community Reports</h2>
-              <div class="panel-header-sub">Unresolved issues reported by residents</div>
-            </div>
-          </div>
-          <div style="padding:0 20px 20px;">
-            <div id="hospitalReportsList"><div class="panel-empty">Loading...</div></div>
           </div>
         </div>
 
@@ -703,6 +684,45 @@
         <div id="groupsManageList"><div class="panel-empty">Loading…</div></div>
       </div>
 
+      <!-- Feed Posts Moderation -->
+      <div class="view" id="view-mod-posts">
+        <div class="panel">
+          <div class="panel-header">
+            <div><h2>📝 Feed Posts</h2><div class="panel-header-sub">All community posts — delete anything that violates community standards</div></div>
+            <button class="topbar-refresh" onclick="loadModPosts()">↻ Refresh</button>
+          </div>
+          <div style="padding:8px 16px 8px;">
+            <input id="modPostSearch" type="text" placeholder="Search posts…" oninput="filterModPosts()" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13.5px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none;">
+          </div>
+          <div id="modPostsList"><div class="panel-empty">Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- Events Moderation -->
+      <div class="view" id="view-mod-events">
+        <div class="panel">
+          <div class="panel-header">
+            <div><h2>📅 Events</h2><div class="panel-header-sub">All community events — delete spam or inappropriate events</div></div>
+            <button class="topbar-refresh" onclick="loadModEvents()">↻ Refresh</button>
+          </div>
+          <div id="modEventsList"><div class="panel-empty">Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- Marketplace Moderation -->
+      <div class="view" id="view-mod-marketplace">
+        <div class="panel">
+          <div class="panel-header">
+            <div><h2>🛒 Marketplace</h2><div class="panel-header-sub">All marketplace listings — remove prohibited or inappropriate items</div></div>
+            <button class="topbar-refresh" onclick="loadModMarketplace()">↻ Refresh</button>
+          </div>
+          <div style="padding:8px 16px 8px;">
+            <input id="modMktSearch" type="text" placeholder="Search listings…" oninput="filterModMarketplace()" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13.5px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none;">
+          </div>
+          <div id="modMarketplaceList"><div class="panel-empty">Loading…</div></div>
+        </div>
+      </div>
+
       <!-- Business Claims View -->
       <div class="view" id="view-claims">
         <div class="panel">
@@ -775,8 +795,7 @@
     }
 
     async function loadAll() {
-      renderHospServicesChecks();
-      await Promise.all([loadAccess(), loadMembers(), loadStats(), loadBanned(), loadReports(), loadHOAContacts(), loadAlertHistory(), loadCommunitySafety(), loadDecameronEmail(), loadClaims(), loadRealtors(), loadEmtsServices(), loadAdminHospitals()]);
+      await Promise.all([loadAccess(), loadMembers(), loadStats(), loadBanned(), loadReports(), loadHOAContacts(), loadAlertHistory(), loadCommunitySafety(), loadDecameronEmail(), loadClaims(), loadRealtors(), loadEmtsServices(), loadVerifyRequests()]);
       renderDashAccess();
       if (currentAdmin?.isOwner) {
         document.getElementById('ownerSection').style.display = 'block';
@@ -814,10 +833,13 @@
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.getElementById('view-' + name).classList.add('active');
       document.getElementById('nav-' + name)?.classList.add('active');
-      const titles = { dashboard: 'Dashboard', access: 'Access Requests', members: 'All Members', reports: 'Reports', banned: 'Banned Members', team: 'Admin Team', alerts: 'Security Alerts', managed: 'Managed Accounts', sponsored: 'Sponsored Posts', claims: 'Business Claims', businesses: 'Manage Businesses', realtors: 'Realtors', groups: 'Manage Groups' };
+      const titles = { dashboard: 'Dashboard', access: 'Access Requests', members: 'All Members', verify: 'Verification Requests', reports: 'Reports', banned: 'Banned Members', team: 'Admin Team', alerts: 'Security Alerts', managed: 'Managed Accounts', sponsored: 'Sponsored Posts', claims: 'Business Claims', businesses: 'Manage Businesses', realtors: 'Realtors', groups: 'Manage Groups', 'mod-posts': 'Feed Posts', 'mod-events': 'Events', 'mod-marketplace': 'Marketplace' };
       document.getElementById('topbarTitle').textContent = titles[name] || name;
       if (name === 'businesses') loadBusinesses();
       if (name === 'groups') loadGroups();
+      if (name === 'mod-posts') loadModPosts();
+      if (name === 'mod-events') loadModEvents();
+      if (name === 'mod-marketplace') loadModMarketplace();
     }
 
     function timeAgo(iso) {
@@ -858,12 +880,16 @@
 
     function renderMembers() {
       const tbody = document.getElementById('membersList');
-      tbody.innerHTML = allMembers.map(m => `
-        <tr>
+      tbody.innerHTML = allMembers.map(m => {
+        const banRecord = allBanned.find(b => b.username === m.username || b.email === m.email);
+        const isBanned = !!banRecord;
+        return `
+        <tr style="${isBanned ? 'opacity:0.7;background:#fff5f5;' : ''}">
           <td>
             <div class="member-name-cell">
               <div class="member-mini-avatar" style="background:${m.avatar}">${m.initials}</div>
               <span style="font-weight:600">${m.name}</span>
+              ${isBanned ? `<span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:6px;">BANNED</span>` : ''}
             </div>
           </td>
           <td style="color:var(--text-light)">@${m.username}</td>
@@ -873,17 +899,23 @@
           <td>
             ${m.username !== currentAdmin?.username ? `
               <div style="display:flex;gap:6px;">
-                <button class="btn-remove" style="background:rgba(230,57,70,0.08);color:var(--red);border:1px solid rgba(230,57,70,0.15);padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;" onclick="openBanModal('${m.username}','${m.name.replace(/'/g,"\\'")}')">🚫 Ban</button>
+                ${isBanned
+                  ? `<button class="btn-dismiss" style="background:rgba(5,150,105,0.08);color:#065f46;border:1px solid rgba(5,150,105,0.2);padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;" onclick="liftBanById('${banRecord.id}')">✓ Lift Ban</button>`
+                  : `<button class="btn-remove" style="background:rgba(230,57,70,0.08);color:var(--red);border:1px solid rgba(230,57,70,0.15);padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;" onclick="openBanModal('${m.username}','${m.name.replace(/'/g,"\\'")}')">🚫 Ban</button>`
+                }
+                <button class="btn-dismiss" style="background:${m.verified?'rgba(5,150,105,0.08)':'rgba(0,119,182,0.08)'};color:${m.verified?'#065f46':'#0077B6'};border:1px solid ${m.verified?'rgba(5,150,105,0.2)':'rgba(0,119,182,0.2)'};" onclick="toggleVerified('${m.id}','${m.name.replace(/'/g,"\\'")}',this)">${m.verified?'✓ Verified':'Verify'}</button>
                 <button class="btn-dismiss" onclick="removeMember('${m.username}','${m.name.replace(/'/g,"\\'")}')">Remove</button>
               </div>` : '<span style="font-size:12px;color:var(--text-light)">You</span>'}
           </td>
-        </tr>`).join('');
+        </tr>`;
+      }).join('');
     }
 
     async function loadBanned() {
       const res = await fetch('/api/admin/banned', { credentials: 'include' });
       allBanned = res.ok ? await res.json() : [];
       renderBanned();
+      renderMembers(); // re-render so BANNED badges reflect current ban list
       const b = document.getElementById('badge-banned');
       b.textContent = allBanned.length;
       b.style.display = allBanned.length ? 'block' : 'none';
@@ -949,7 +981,21 @@
     async function unban(id, name) {
       if (!confirm(`Lift the ban on ${name}? They will be able to re-register.`)) return;
       const res = await fetch(`/api/admin/banned/${id}/unban`, { method: 'POST', credentials: 'include' });
-      if (res.ok) { showToast(`Ban lifted for ${name}`); await loadBanned(); }
+      if (res.ok) { showToast(`Ban lifted for ${name}`); await loadAll(); }
+    }
+
+    async function toggleVerified(userId, name, btn) {
+      const res = await fetch(`/api/admin/users/${userId}/toggle-verified`, { method: 'POST', credentials: 'include' });
+      if (!res.ok) { showToast('Error updating verification'); return; }
+      const data = await res.json();
+      await loadMembers();
+      showToast(data.verified ? `✓ ${name} is now Verified` : `${name} verification removed`);
+    }
+
+    async function liftBanById(id) {
+      const ban = allBanned.find(b => b.id === id);
+      const name = ban?.name || 'this member';
+      await unban(id, name);
     }
 
     async function loadReports() {
@@ -1138,120 +1184,6 @@
       await loadEmtsServices();
     }
 
-    // ─── Hospital Directory ──────────────────────────────────────────────────
-    const ADMIN_HOSP_SERVICES = ['Emergency Room','ICU','Surgery','Maternity','Pediatrics','Cardiology','Neurology','Orthopedics','Radiology','Lab / Blood Work','Pharmacy','Ambulance','Dialysis','Oncology','Psychiatry'];
-
-    async function loadAdminHospitals() {
-      const [hRes, rRes] = await Promise.all([
-        fetch('/api/admin/hospitals', { credentials: 'include' }),
-        fetch('/api/admin/hospital-reports', { credentials: 'include' })
-      ]);
-      const hospitals = hRes.ok ? await hRes.json() : [];
-      const reports = rRes.ok ? await rRes.json() : [];
-
-      // Render hospitals list
-      const el = document.getElementById('adminHospitalsList');
-      if (!hospitals.length) { el.innerHTML = '<div class="panel-empty">No hospitals added yet.</div>'; }
-      else {
-        el.innerHTML = hospitals.map(h => `
-          <div style="padding:14px;border:1.5px solid #dde4ed;border-radius:12px;margin-bottom:10px;background:#f8fafc;">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-              <div style="flex:1;">
-                <div style="font-size:15px;font-weight:700;color:#1a2e44;">${h.name}</div>
-                <div style="font-size:12.5px;color:#4a6378;margin-top:2px;">${[h.type,h.address,h.distance?h.distance+' away':'',h.hours].filter(Boolean).join(' · ')}</div>
-                ${h.phone?`<div style="font-size:12.5px;color:#4a6378;">📞 ${h.phone}${h.whatsapp?' · 💬 '+h.whatsapp:''}</div>`:''}
-                ${h.notes?`<div style="font-size:12px;color:#6b7280;margin-top:4px;font-style:italic;">${h.notes}</div>`:''}
-                ${h.services&&h.services.length?`<div style="font-size:11px;color:#1d4ed8;margin-top:6px;">${h.services.join(', ')}</div>`:''}
-              </div>
-              <div style="display:flex;gap:6px;flex-shrink:0;">
-                <button onclick="editHospital(${h.id})" style="padding:6px 12px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;font-size:12px;font-weight:600;color:#1d4ed8;cursor:pointer;font-family:Inter,sans-serif;">Edit</button>
-                <button onclick="deleteHospital(${h.id})" style="padding:6px 12px;background:#fee;border:1.5px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:600;color:#E63946;cursor:pointer;font-family:Inter,sans-serif;">Delete</button>
-              </div>
-            </div>
-          </div>
-        `).join('');
-      }
-
-      // Render reports
-      const rEl = document.getElementById('hospitalReportsList');
-      if (!reports.length) { rEl.innerHTML = '<div class="panel-empty">No unresolved reports.</div>'; }
-      else {
-        rEl.innerHTML = reports.map(r => `
-          <div style="padding:14px;border:1.5px solid #fcd34d;border-radius:12px;margin-bottom:10px;background:#fffbeb;">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-              <div style="flex:1;">
-                <div style="font-size:13px;font-weight:700;color:#92400e;">${r.hospital_name}</div>
-                <div style="font-size:13px;color:#1a2e44;margin-top:4px;">${r.issue}</div>
-                <div style="font-size:11.5px;color:#6b7280;margin-top:4px;">Reported by ${r.reported_by_name||'Anonymous'} · ${new Date(r.created_at).toLocaleDateString()}</div>
-              </div>
-              <button onclick="resolveReport(${r.id})" style="padding:6px 14px;background:#d1fae5;border:1.5px solid #6ee7b7;border-radius:8px;font-size:12px;font-weight:600;color:#065f46;cursor:pointer;font-family:Inter,sans-serif;flex-shrink:0;">Resolve</button>
-            </div>
-          </div>
-        `).join('');
-      }
-    }
-
-    function renderHospServicesChecks(selected=[]) {
-      document.getElementById('hospServicesCheck').innerHTML = ADMIN_HOSP_SERVICES.map(s => `
-        <label style="display:flex;align-items:center;gap:4px;font-size:12.5px;color:#1a2e44;cursor:pointer;background:#fff;border:1px solid #dde4ed;border-radius:8px;padding:4px 8px;">
-          <input type="checkbox" value="${s}" ${selected.includes(s)?'checked':''} style="cursor:pointer;"> ${s}
-        </label>
-      `).join('');
-    }
-
-    function getCheckedServices() {
-      return [...document.querySelectorAll('#hospServicesCheck input:checked')].map(i => i.value);
-    }
-
-    async function addHospital() {
-      const name = document.getElementById('hospName').value.trim();
-      if (!name) { showToast('Hospital name is required'); return; }
-      const body = {
-        name,
-        address: document.getElementById('hospAddress').value.trim(),
-        phone: document.getElementById('hospPhone').value.trim(),
-        whatsapp: document.getElementById('hospWhatsapp').value.trim(),
-        hours: document.getElementById('hospHours').value.trim(),
-        distance: document.getElementById('hospDistance').value.trim(),
-        type: document.getElementById('hospType').value.trim(),
-        notes: document.getElementById('hospNotes').value.trim(),
-        services: getCheckedServices()
-      };
-      const res = await fetch('/api/admin/hospitals', { method: 'POST', credentials: 'include', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
-      if (!res.ok) { showToast('Error adding hospital'); return; }
-      ['hospName','hospAddress','hospPhone','hospWhatsapp','hospHours','hospDistance','hospType','hospNotes'].forEach(id => document.getElementById(id).value='');
-      renderHospServicesChecks();
-      showToast('Hospital added');
-      await loadAdminHospitals();
-    }
-
-    async function editHospital(id) {
-      const res = await fetch('/api/admin/hospitals', { credentials: 'include' });
-      const hospitals = await res.json();
-      const h = hospitals.find(x => x.id === id);
-      if (!h) return;
-      const newName = prompt('Hospital name:', h.name); if (!newName) return;
-      const newPhone = prompt('Phone:', h.phone||'');
-      const newHours = prompt('Hours:', h.hours||'');
-      const newNotes = prompt('Notes:', h.notes||'');
-      await fetch(`/api/admin/hospitals/${id}`, { method: 'PATCH', credentials: 'include', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name: newName, phone: newPhone, hours: newHours, notes: newNotes }) });
-      showToast('Hospital updated');
-      await loadAdminHospitals();
-    }
-
-    async function deleteHospital(id) {
-      if (!confirm('Delete this hospital? This cannot be undone.')) return;
-      await fetch(`/api/admin/hospitals/${id}`, { method: 'DELETE', credentials: 'include' });
-      showToast('Hospital deleted');
-      await loadAdminHospitals();
-    }
-
-    async function resolveReport(id) {
-      await fetch(`/api/admin/hospital-reports/${id}/resolve`, { method: 'PATCH', credentials: 'include' });
-      showToast('Report resolved');
-      await loadAdminHospitals();
-    }
-
     // ─── HOA Contacts ────────────────────────────────────────────────────────
     let hoaContacts = [];
 
@@ -1436,13 +1368,18 @@
                 ${item.forwardedToDecameron ? '<span style="font-size:11px;font-weight:600;color:#16a34a;background:#f0fdf4;padding:2px 8px;border-radius:20px;border:1px solid #bbf7d0;">✓ Forwarded</span>' : ''}
               </div>
               <div style="font-size:13px;color:#374151;line-height:1.5;margin-bottom:4px;white-space:pre-wrap;">${item.message}</div>
+              ${item.image ? `<img src="${item.image}" style="max-width:120px;max-height:80px;border-radius:6px;object-fit:cover;border:1px solid #e0e0e0;margin-bottom:4px;">` : ''}
               <div style="font-size:11.5px;color:#94a3b8;">By ${item.author} · ${timeAgo(item.createdAt)}</div>
             </div>
-            ${!item.forwardedToDecameron ? `
-              <button onclick="forwardToDecameron('${item.id}','${item.type}',${JSON.stringify(item.title)},${JSON.stringify(item.message)},'${item.severity}',${JSON.stringify(item.author)},'${item.createdAt}')"
-                style="padding:8px 14px;background:#C0392B;color:white;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;flex-shrink:0;">
+            <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
+              ${!item.forwardedToDecameron ? `
+              <button onclick="forwardToDecameron('${item.id}','${item.type}',${JSON.stringify(item.title)},${JSON.stringify(item.message)},'${item.severity}',${JSON.stringify(item.author)},'${item.createdAt}',${JSON.stringify(item.image||'')})"
+                style="padding:7px 14px;background:#C0392B;color:white;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">
                 Forward to Decameron
               </button>` : ''}
+              ${item.type === 'community_post' ? `
+              <button onclick="adminDeletePost('${item.id}',this)" style="padding:7px 14px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">🗑 Delete Post</button>` : ''}
+            </div>
           </div>
         </div>
       `).join('');
@@ -1467,8 +1404,8 @@
       }
     }
 
-    async function forwardToDecameron(id, type, title, message, severity, author, createdAt) {
-      const res = await fetch('/api/admin/forward-to-decameron', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ itemId: id, itemType: type, title, message, severity, author, createdAt }) });
+    async function forwardToDecameron(id, type, title, message, severity, author, createdAt, image) {
+      const res = await fetch('/api/admin/forward-to-decameron', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ itemId: id, itemType: type, title, message, severity, author, createdAt, image }) });
       const data = await res.json();
       if (res.ok) {
         showToast('Forwarded to Decameron ✓');
@@ -1619,6 +1556,92 @@
       else { showToast('Failed to delete'); btn.disabled = false; btn.textContent = 'Delete'; }
     }
 
+    // ─── Content Moderation ──────────────────────────────────────────────────
+    let modPostsData = [], modEventsData = [], modMarketplaceData = [];
+
+    async function loadModPosts() {
+      const res = await fetch('/api/admin/posts', { credentials: 'include' });
+      modPostsData = res.ok ? await res.json() : [];
+      filterModPosts();
+    }
+    function filterModPosts() {
+      const q = (document.getElementById('modPostSearch')?.value || '').toLowerCase();
+      const filtered = q ? modPostsData.filter(p => p.content?.toLowerCase().includes(q) || p.author?.name?.toLowerCase().includes(q)) : modPostsData;
+      const el = document.getElementById('modPostsList');
+      if (!filtered.length) { el.innerHTML = '<div class="panel-empty">No posts found.</div>'; return; }
+      const typeColors = { safety: '#dc2626', feed: '#0077B6', marketplace: '#16a34a', event: '#7c3aed' };
+      el.innerHTML = filtered.map(p => `
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);">
+          ${p.image ? `<img src="${p.image}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid var(--border);">` : ''}
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;">
+              <span style="font-size:11px;font-weight:700;color:${typeColors[p.section||p.type]||'#6b7280'};background:${typeColors[p.section||p.type]||'#6b7280'}18;padding:2px 7px;border-radius:20px;text-transform:capitalize;">${p.section||p.type}</span>
+              <span style="font-size:12px;font-weight:600;color:var(--text-dark);">@${p.author?.username}</span>
+              <span style="font-size:11.5px;color:var(--text-light);">${timeAgo(p.createdAt)}</span>
+            </div>
+            <div style="font-size:13px;color:var(--text-mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:500px;">${p.content||''}</div>
+          </div>
+          <button onclick="adminDeletePost('${p.id}',this)" style="flex-shrink:0;padding:6px 14px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Delete</button>
+        </div>`).join('');
+    }
+    async function adminDeletePost(id, btn) {
+      if (!confirm('Delete this post? This cannot be undone.')) return;
+      btn.disabled = true; btn.textContent = 'Deleting…';
+      const res = await fetch(`/api/posts/${id}`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) { showToast('Post deleted'); modPostsData = modPostsData.filter(p => p.id !== id); filterModPosts(); }
+      else { showToast('Failed to delete'); btn.disabled = false; btn.textContent = 'Delete'; }
+    }
+
+    async function loadModEvents() {
+      const res = await fetch('/api/admin/events', { credentials: 'include' });
+      modEventsData = res.ok ? await res.json() : [];
+      const el = document.getElementById('modEventsList');
+      if (!modEventsData.length) { el.innerHTML = '<div class="panel-empty">No events found.</div>'; return; }
+      el.innerHTML = modEventsData.map(e => `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${e.title}${e.cancelled ? ' <span style="font-size:11px;color:#dc2626;font-weight:600;">[Cancelled]</span>' : ''}</div>
+            <div style="font-size:12px;color:var(--text-light);margin-top:2px;">By @${e.host?.username} · ${e.location||''} · ${new Date(e.date).toLocaleDateString()} · 👍 ${e.goingCount} going</div>
+          </div>
+          <button onclick="adminDeleteEvent('${e.id}',this)" style="flex-shrink:0;padding:6px 14px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Delete</button>
+        </div>`).join('');
+    }
+    async function adminDeleteEvent(id, btn) {
+      if (!confirm('Delete this event? This cannot be undone.')) return;
+      btn.disabled = true; btn.textContent = 'Deleting…';
+      const res = await fetch(`/api/events/${id}`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) { showToast('Event deleted'); modEventsData = modEventsData.filter(e => e.id !== id); loadModEvents(); }
+      else { showToast('Failed to delete'); btn.disabled = false; btn.textContent = 'Delete'; }
+    }
+
+    async function loadModMarketplace() {
+      const res = await fetch('/api/admin/marketplace', { credentials: 'include' });
+      modMarketplaceData = res.ok ? await res.json() : [];
+      filterModMarketplace();
+    }
+    function filterModMarketplace() {
+      const q = (document.getElementById('modMktSearch')?.value || '').toLowerCase();
+      const filtered = q ? modMarketplaceData.filter(m => m.title?.toLowerCase().includes(q) || m.seller?.name?.toLowerCase().includes(q)) : modMarketplaceData;
+      const el = document.getElementById('modMarketplaceList');
+      if (!filtered.length) { el.innerHTML = '<div class="panel-empty">No listings found.</div>'; return; }
+      el.innerHTML = filtered.map(m => `
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);">
+          ${m.image ? `<img src="${m.image}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid var(--border);">` : '<div style="width:56px;height:56px;background:#f3f4f6;border-radius:8px;flex-shrink:0;"></div>'}
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${m.title}${m.sold ? ' <span style="font-size:11px;color:#16a34a;font-weight:600;">[Sold]</span>' : ''}</div>
+            <div style="font-size:12px;color:var(--text-light);margin-top:2px;">By @${m.seller?.username} · ${m.category||''} · ${m.price ? '$'+parseFloat(m.price).toFixed(2) : 'Free'} · ${timeAgo(m.createdAt)}</div>
+          </div>
+          <button onclick="adminDeleteListing('${m.id}',this)" style="flex-shrink:0;padding:6px 14px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Delete</button>
+        </div>`).join('');
+    }
+    async function adminDeleteListing(id, btn) {
+      if (!confirm('Delete this listing? This cannot be undone.')) return;
+      btn.disabled = true; btn.textContent = 'Deleting…';
+      const res = await fetch(`/api/marketplace/${id}`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) { showToast('Listing deleted'); modMarketplaceData = modMarketplaceData.filter(m => m.id !== id); filterModMarketplace(); }
+      else { showToast('Failed to delete'); btn.disabled = false; btn.textContent = 'Delete'; }
+    }
+
     async function loadGroups() {
       const el = document.getElementById('groupsManageList');
       el.innerHTML = '<div class="panel-empty">Loading…</div>';
@@ -1626,22 +1649,30 @@
       const groups = res.ok ? await res.json() : [];
       if (!groups.length) { el.innerHTML = '<div class="panel-empty">No groups found.</div>'; return; }
       el.innerHTML = groups.map(g => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px;background:white;">
-          <div style="display:flex;align-items:center;gap:14px;">
-            <div style="width:46px;height:46px;border-radius:12px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden;flex-shrink:0;">
-              ${g.iconUrl ? `<img src="${g.iconUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">` : g.icon}
-            </div>
-            <div>
-              <div style="font-size:15px;font-weight:700;color:var(--text);">${g.name}</div>
-              <div style="font-size:12px;color:var(--text-mid);margin-top:2px;">
-                👥 ${g.members} member${g.members !== 1 ? 's' : ''} &nbsp;·&nbsp;
-                ${g.privacy === 'private' ? '🔒 Private' : '🌐 Public'} &nbsp;·&nbsp;
-                Created by <strong>@${g.createdBy}</strong>
+        <div style="border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;background:white;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div style="width:46px;height:46px;border-radius:12px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden;flex-shrink:0;">
+                ${g.iconUrl ? `<img src="${g.iconUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">` : g.icon}
               </div>
-              ${g.description ? `<div style="font-size:12px;color:var(--text-light);margin-top:3px;max-width:500px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${g.description}</div>` : ''}
+              <div>
+                <div style="font-size:15px;font-weight:700;color:var(--text);">${g.name}</div>
+                <div style="font-size:12px;color:var(--text-mid);margin-top:2px;">
+                  👥 ${g.members} member${g.members !== 1 ? 's' : ''} &nbsp;·&nbsp;
+                  ${g.privacy === 'private' ? '🔒 Private' : '🌐 Public'} &nbsp;·&nbsp;
+                  Created by <strong>@${g.createdBy}</strong>
+                </div>
+                ${g.description ? `<div style="font-size:12px;color:var(--text-light);margin-top:3px;max-width:500px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${g.description}</div>` : ''}
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              <button onclick="toggleGroupMembers('${g.id}',this)" style="padding:7px 14px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Members</button>
+              <button onclick="adminDeleteGroup('${g.id}','${(g.name||'').replace(/'/g,"\\'")}',this)" style="padding:7px 14px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Delete</button>
             </div>
           </div>
-          <button onclick="adminDeleteGroup('${g.id}','${(g.name||'').replace(/'/g,"\\'")}',this)" style="padding:7px 16px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">Delete</button>
+          <div id="group-members-${g.id}" style="display:none;border-top:1px solid var(--border);background:#f8fafc;padding:10px 18px;">
+            <div class="panel-empty" style="padding:8px 0;">Loading…</div>
+          </div>
         </div>`).join('');
     }
 
@@ -1651,6 +1682,91 @@
       const res = await fetch(`/api/groups/${id}`, { method: 'DELETE', credentials: 'include' });
       if (res.ok) { showToast('Group deleted'); loadGroups(); }
       else { showToast('Failed to delete'); btn.disabled = false; btn.textContent = 'Delete'; }
+    }
+
+    async function toggleGroupMembers(groupId, btn) {
+      const el = document.getElementById('group-members-' + groupId);
+      if (el.style.display !== 'none') { el.style.display = 'none'; btn.textContent = 'Members'; return; }
+      el.style.display = 'block';
+      btn.textContent = 'Hide';
+      const res = await fetch(`/api/groups/${groupId}/members`, { credentials: 'include' });
+      const members = res.ok ? await res.json() : [];
+      if (!members.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-light);padding:6px 0;">No members.</div>'; return; }
+      el.innerHTML = members.map(m => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f4f8;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:${m.avatar||'#ccc'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0;">${m.avatarUrl ? `<img src="${m.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : m.initials}</div>
+            <div>
+              <span style="font-size:13px;font-weight:600;color:var(--text-dark);">${m.name}</span>
+              <span style="font-size:12px;color:var(--text-light);margin-left:4px;">@${m.username}</span>
+              ${m.role === 'admin' ? '<span style="font-size:10px;font-weight:700;color:#0077B6;margin-left:4px;">ADMIN</span>' : ''}
+            </div>
+          </div>
+          ${m.role !== 'admin' ? `<button onclick="adminRemoveGroupMember('${groupId}','${m.username}',this)" style="padding:4px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Remove</button>` : ''}
+        </div>`).join('');
+    }
+
+    async function adminRemoveGroupMember(groupId, username, btn) {
+      if (!confirm(`Remove @${username} from this group?`)) return;
+      btn.disabled = true; btn.textContent = '…';
+      const res = await fetch(`/api/groups/${groupId}/members/${username}`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) { showToast(`@${username} removed`); btn.closest('div[style*="border-bottom"]').remove(); }
+      else { showToast('Failed'); btn.disabled = false; btn.textContent = 'Remove'; }
+    }
+
+    // ─── Verification requests ────────────────────────────────────
+    async function loadVerifyRequests() {
+      const res = await fetch('/api/admin/verification-requests', { credentials: 'include' });
+      const requests = res.ok ? await res.json() : [];
+      const pending = requests.filter(r => r.status === 'pending');
+      const badge = document.getElementById('badge-verify');
+      if (pending.length) { badge.textContent = pending.length; badge.style.display = 'inline-flex'; }
+      else badge.style.display = 'none';
+      const el = document.getElementById('verifyList');
+      if (!el) return;
+      if (!requests.length) { el.innerHTML = '<div class="panel-empty">No verification requests yet.</div>'; return; }
+      el.innerHTML = requests.map(r => {
+        const docLabel = { utility_bill: 'Utility Bill', hoa_letter: 'HOA Letter', official_mail: 'Official Mail', other: 'Document' }[r.documentType] || 'Document';
+        const statusBadge = r.status === 'approved'
+          ? '<span style="background:rgba(42,157,143,0.12);color:#1a7a70;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;">Approved ✓</span>'
+          : r.status === 'denied'
+            ? '<span style="background:rgba(230,57,70,0.1);color:#c0392b;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;">Denied</span>'
+            : '<span style="background:rgba(244,162,97,0.15);color:#c77a2a;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;">Pending</span>';
+        const avatarEl = r.avatarUrl
+          ? `<img src="${r.avatarUrl}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`
+          : `<div style="width:36px;height:36px;border-radius:50%;background:${r.avatar||'#ccc'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;">${r.initials||'?'}</div>`;
+        return `
+        <div class="pending-row" style="padding:16px 22px;border-bottom:1px solid var(--border);display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+          <div style="display:flex;gap:10px;align-items:center;flex:1;min-width:180px;">
+            ${avatarEl}
+            <div>
+              <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${r.name} ${statusBadge}</div>
+              <div style="font-size:12px;color:var(--text-light);">@${r.username} · ${docLabel} · ${timeAgo(r.submittedAt)}</div>
+              ${r.note ? `<div style="font-size:12.5px;color:var(--text-mid);margin-top:3px;font-style:italic;">"${r.note}"</div>` : ''}
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;min-width:180px;">
+            <img src="${r.documentUrl}" alt="Document" style="max-width:180px;max-height:120px;border-radius:8px;border:1px solid var(--border);object-fit:cover;cursor:pointer;" onclick="window.open('${r.documentUrl}','_blank')">
+            ${r.status === 'pending' ? `
+            <div style="display:flex;gap:8px;">
+              <button class="btn-approve" onclick="approveVerify('${r.id}')">✓ Approve</button>
+              <button class="btn-reject" onclick="denyVerify('${r.id}')">✕ Deny</button>
+            </div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    async function approveVerify(id) {
+      const res = await fetch(`/api/admin/verification-requests/${id}/approve`, { method: 'POST', credentials: 'include' });
+      if (res.ok) { showToast('Member verified!'); await loadVerifyRequests(); await loadMembers(); }
+      else showToast('Error approving request');
+    }
+
+    async function denyVerify(id) {
+      const res = await fetch(`/api/admin/verification-requests/${id}/deny`, { method: 'POST', credentials: 'include' });
+      if (res.ok) { showToast('Request denied.'); await loadVerifyRequests(); }
+      else showToast('Error denying request');
     }
 
     async function loadClaims() {

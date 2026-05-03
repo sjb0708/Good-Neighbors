@@ -272,6 +272,8 @@ CREATE TABLE IF NOT EXISTS group_posts (
   group_id   UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
   author_id  UUID NOT NULL REFERENCES users(id),
   content    TEXT NOT NULL,
+  pdf_url    TEXT,
+  pdf_name   TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -385,6 +387,19 @@ CREATE TABLE IF NOT EXISTS business_claims (
   reviewed_by_user_id UUID         REFERENCES users(id),
   reviewed_at         TIMESTAMPTZ,
   generated_username  VARCHAR(20)
+);
+
+CREATE TABLE IF NOT EXISTS verification_requests (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id             UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  document_url        TEXT        NOT NULL,
+  document_type       VARCHAR(50) NOT NULL DEFAULT 'other',
+  note                TEXT        DEFAULT '',
+  status              VARCHAR(20) NOT NULL DEFAULT 'pending'
+                        CHECK (status IN ('pending','approved','denied')),
+  reviewed_by_user_id UUID        REFERENCES users(id),
+  reviewed_at         TIMESTAMPTZ,
+  created_at          TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ─── Admin tools ──────────────────────────────────────────────────────────────

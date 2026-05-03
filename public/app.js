@@ -67,6 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     navigate('feed');
     showWelcomeIfNew();
   }
+  focusSharedPostFromUrl();
 });
 
 function showWelcomeIfNew() {
@@ -355,6 +356,7 @@ function renderUserUI() {
   setTextSafe('sidebarInitials', currentUser.avatarUrl ? '' : currentUser.initials);
   setTextSafe('sidebarName', currentUser.name);
   setTextSafe('sidebarPoints', currentUser.points);
+  setTextSafe('sidebarStatusLabel', currentUser.role === 'admin' ? 'Admin' : currentUser.verified ? 'Verified' : '');
 
   // Create post modal avatar
   const createAv = document.getElementById('createAvatar');
@@ -589,10 +591,13 @@ function openListItemModal() {
       </div>
       <div style="margin-bottom:18px;">
         <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">PHOTO</label>
-        <label style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:80px;border:1.5px dashed var(--border);border-radius:10px;cursor:pointer;background:#f8fafc;">
-          <input type="file" accept="image/*" style="display:none;" onchange="previewMarketImage(this)">
-          <div id="liImagePreview" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);font-weight:600;">📷 Upload photo</div>
-        </label>
+        <input id="marketPhotoFile" type="file" accept="image/*" style="display:none;" onchange="previewMarketImage(this)">
+        <input id="marketPhotoCamera" type="file" accept="image/*" capture="environment" style="display:none;" onchange="previewMarketImage(this)">
+        <div id="liImagePreview" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:80px;border:1.5px dashed var(--border);border-radius:10px;background:#f8fafc;font-size:13px;color:var(--text-mid);font-weight:600;">📷 Upload photo</div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button type="button" onclick="document.getElementById('marketPhotoCamera').click()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-mid);">📷 Camera</button>
+          <button type="button" onclick="document.getElementById('marketPhotoFile').click()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-mid);">🖼️ Gallery</button>
+        </div>
       </div>
       <button onclick="submitListItem()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Post Listing</button>
       <div id="liErr" style="color:var(--coral);font-size:13px;margin-top:8px;display:none;"></div>
@@ -614,6 +619,14 @@ function compressImage(dataUrl, maxW, maxH, quality) {
       resolve(c.toDataURL('image/jpeg', quality));
     };
     img.src = dataUrl;
+  });
+}
+
+async function readAndCompress(file, maxW = 1200, maxH = 1200, quality = 0.82) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = async e => resolve(await compressImage(e.target.result, maxW, maxH, quality));
+    reader.readAsDataURL(file);
   });
 }
 
@@ -761,15 +774,11 @@ function openCreateEventModal() {
 
 let evPhotoDataUrl = null;
 
-function attachEventPhoto(input) {
+async function attachEventPhoto(input) {
   if (!input.files || !input.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    evPhotoDataUrl = e.target.result;
-    document.getElementById('evPhotoImg').src = evPhotoDataUrl;
-    document.getElementById('evPhotoPreview').style.display = 'block';
-  };
-  reader.readAsDataURL(input.files[0]);
+  evPhotoDataUrl = await readAndCompress(input.files[0]);
+  document.getElementById('evPhotoImg').src = evPhotoDataUrl;
+  document.getElementById('evPhotoPreview').style.display = 'block';
 }
 
 function removeEventPhoto() {
@@ -904,11 +913,15 @@ function openSafetyReportModal() {
         </div>
         <div style="margin-bottom:18px;">
           <input id="safetyPhotoInput" type="file" accept="image/*" style="display:none;" onchange="attachSafetyPhoto(this)" />
+          <input id="safetyPhotoCamera" type="file" accept="image/*" capture="environment" style="display:none;" onchange="attachSafetyPhoto(this)" />
           <div id="safetyPhotoPreview" style="display:none;position:relative;margin-bottom:8px;">
             <img id="safetyPhotoImg" src="" alt="" style="width:100%;border-radius:10px;object-fit:cover;max-height:180px;display:block;" />
             <button onclick="removeSafetyPhoto()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);color:white;border:none;border-radius:50%;width:26px;height:26px;font-size:15px;cursor:pointer;">✕</button>
           </div>
-          <button onclick="document.getElementById('safetyPhotoInput').click()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-mid);">📷 Add Photo</button>
+          <div style="display:flex;gap:8px;">
+            <button onclick="document.getElementById('safetyPhotoCamera').click()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-mid);">📷 Camera</button>
+            <button onclick="document.getElementById('safetyPhotoInput').click()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-mid);">🖼️ Gallery</button>
+          </div>
         </div>
         <button onclick="submitSafetyReport()" style="width:100%;padding:12px;background:#E63946;color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Post Alert</button>
         <div id="safetyErr" style="color:var(--coral);font-size:13px;margin-top:8px;display:none;"></div>
@@ -973,6 +986,7 @@ function removeSafetyPhoto() {
   safetyPhotoDataUrl = null;
   document.getElementById('safetyPhotoPreview').style.display = 'none';
   document.getElementById('safetyPhotoInput').value = '';
+  document.getElementById('safetyPhotoCamera').value = '';
 }
 
 async function submitSafetyReport() {
@@ -1004,6 +1018,7 @@ async function submitSafetyReport() {
 
 const BIZ_CATEGORIES = [
   { label: 'AC Service',           icon: '❄️' },
+  { label: 'Auto Repair',          icon: '🔩' },
   { label: 'Bar & Grill',          icon: '🍺' },
   { label: 'Beauty & Wellness',    icon: '💅' },
   { label: 'Cafe & Bakery',        icon: '☕' },
@@ -1023,6 +1038,7 @@ const BIZ_CATEGORIES = [
   { label: 'Retail & Shopping',    icon: '🛍️' },
   { label: 'Sports & Fitness',     icon: '⚽' },
   { label: 'Supermarket',          icon: '🛒' },
+  { label: 'Towing',               icon: '🚛' },
   { label: 'Transportation',       icon: '🚗' },
   { label: 'Veterans',             icon: '🎖️' },
   { label: 'Other',                icon: '📌' },
@@ -1058,16 +1074,35 @@ async function renderBusinesses(container) {
   allBusinesses = await fetchJSON('/api/businesses') || [];
 
   // Category chips — always shown
+  const chipOuter = document.createElement('div');
+  chipOuter.style.cssText = 'position:relative;margin-bottom:16px;';
+
+  const btnStyle = 'position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:28px;height:28px;border-radius:50%;background:white;border:1.5px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,0.12);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;';
+  const leftBtn = document.createElement('button');
+  leftBtn.innerHTML = '‹';
+  leftBtn.style.cssText = btnStyle + 'left:0;';
+  const rightBtn = document.createElement('button');
+  rightBtn.innerHTML = '›';
+  rightBtn.style.cssText = btnStyle + 'right:0;';
+
   const chipWrap = document.createElement('div');
   chipWrap.id = 'bizCatChips';
-  chipWrap.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;';
+  chipWrap.style.cssText = 'display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;padding:2px 34px 4px;scrollbar-width:none;-ms-overflow-style:none;';
+
   const allChips = [{ label: 'All', icon: '🏪' }, ...BIZ_CATEGORIES];
   chipWrap.innerHTML = allChips.map(c => `
     <button onclick="bizActiveCat='${c.label}';renderBizList()"
-      style="padding:7px 15px;border-radius:20px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;border:1.5px solid ${c.label==='All'?'var(--ocean)':'var(--border)'};background:${c.label==='All'?'var(--ocean)':'white'};color:${c.label==='All'?'white':'var(--text-mid)'};">
+      style="flex-shrink:0;padding:7px 15px;border-radius:20px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;border:1.5px solid ${c.label==='All'?'var(--ocean)':'var(--border)'};background:${c.label==='All'?'var(--ocean)':'white'};color:${c.label==='All'?'white':'var(--text-mid)'};">
       ${c.icon} ${c.label}
     </button>`).join('');
-  container.appendChild(chipWrap);
+
+  leftBtn.onclick = () => chipWrap.scrollBy({ left: -200, behavior: 'smooth' });
+  rightBtn.onclick = () => chipWrap.scrollBy({ left: 200, behavior: 'smooth' });
+
+  chipOuter.appendChild(leftBtn);
+  chipOuter.appendChild(chipWrap);
+  chipOuter.appendChild(rightBtn);
+  container.appendChild(chipOuter);
 
   const list = document.createElement('div');
   list.id = 'bizList';
@@ -1231,14 +1266,14 @@ async function submitAddBusiness() {
   // Upload banner if selected
   const bannerFile = document.getElementById('abBannerInput')?.files?.[0];
   if (bannerFile && business?.id) {
-    const fd = new FormData(); fd.append('banner', bannerFile);
-    await fetch(`/api/businesses/${business.id}/banner`, { method: 'POST', body: fd, credentials: 'include' });
+    const dataUrl = await readAndCompress(bannerFile, 1400, 600);
+    await fetch(`/api/businesses/${business.id}/banner`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) });
   }
   // Upload logo if selected
   const logoFile = document.getElementById('abLogoInput')?.files?.[0];
   if (logoFile && business?.id) {
-    const fd = new FormData(); fd.append('logo', logoFile);
-    await fetch(`/api/businesses/${business.id}/logo`, { method: 'POST', body: fd, credentials: 'include' });
+    const dataUrl = await readAndCompress(logoFile, 800, 800, 0.88);
+    await fetch(`/api/businesses/${business.id}/logo`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) });
   }
 
   document.getElementById('addBizModal').remove();
@@ -1350,6 +1385,11 @@ async function renderProfile(container) {
   const user = currentUser;
   if (!user) return;
 
+  let verifyStatus = null;
+  if (!user.verified) {
+    try { const d = await fetchJSON('/api/verification/status'); verifyStatus = d?.status; } catch (_) {}
+  }
+
   const bannerStyle = user.bannerUrl
     ? `background:url('${user.bannerUrl}') center/cover no-repeat`
     : `background:linear-gradient(135deg,var(--ocean),var(--seafoam))`;
@@ -1376,14 +1416,16 @@ async function renderProfile(container) {
     <div class="profile-info">
       <div class="profile-name">
         ${user.name}
-        <span class="badge-verified"><span style="font-size:10px">✓</span> Verified Neighbor</span>
+        ${user.verified ? `<span class="badge-verified"><span style="font-size:10px">✓</span> Verified Neighbor</span>` : ''}
       </div>
       <div class="profile-location">
         <i data-lucide="map-pin" style="width:13px;height:13px;"></i>
-        Costa Blanca Villas · <span style="color:var(--ocean);font-weight:600;">Verified</span>
+        Costa Blanca Villas${user.role === 'admin' ? ` · <span style="color:var(--ocean);font-weight:600;">Admin</span>` : user.verified ? ` · <span style="color:var(--ocean);font-weight:600;">Verified</span>` : ''}
       </div>
-      <div class="profile-bio">${user.bio || 'Tap Edit Profile to add a bio.'}</div>
-      <button onclick="openEditProfile()" style="margin-top:10px;padding:8px 18px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✏️ Edit Profile</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+        <button onclick="openEditProfile()" style="padding:8px 18px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✏️ Edit Profile</button>
+        ${!user.verified ? (verifyStatus === 'pending' ? `<span style="padding:8px 14px;background:#fef9c3;color:#854d0e;border:1.5px solid #fde047;border-radius:20px;font-size:13px;font-weight:700;">⏳ Verification Pending</span>` : `<button id="verifyBtn" onclick="openVerificationModal()" style="padding:8px 18px;background:white;color:var(--ocean);border:1.5px solid var(--ocean);border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✓ Get Verified</button>`) : ''}
+      </div>
       <div class="profile-stats">
         <div class="profile-stat">
           <div class="profile-stat-val">${user.posts || 0}</div>
@@ -1468,10 +1510,6 @@ function openEditProfile() {
           <input id="epName" value="${escHtml(u.name||'')}" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
         </div>
         <div>
-          <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Bio</label>
-          <textarea id="epBio" rows="3" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;">${escHtml(u.bio||'')}</textarea>
-        </div>
-        <div>
           <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Neighborhood / Area <span style="font-weight:400;text-transform:none;color:#aaa;">(optional)</span></label>
           <input id="epAddress" value="${escHtml(u.address||'')}" placeholder="e.g. Villa 42, Farallón, Las Olas…" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
         </div>
@@ -1508,18 +1546,112 @@ async function submitEditProfile() {
   showToast('Profile updated!');
 }
 
+// ─── Verification modal ──────────────────────────────────────────
+function openVerificationModal() {
+  document.getElementById('verifyModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'verifyModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <h3 style="margin:0;font-size:18px;font-weight:800;">Get Verified</h3>
+        <button onclick="document.getElementById('verifyModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div style="background:#f0f6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:14px 16px;margin-bottom:18px;">
+        <div style="font-size:13.5px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">✓ What does Verified mean?</div>
+        <div style="font-size:13px;color:var(--text-mid);line-height:1.5;">The <strong>Verified Neighbor</strong> badge lets the community know you live or rent here in Costa Blanca Villas. It builds trust with your neighbors and unlocks +20 points.</div>
+      </div>
+      <p style="margin:0 0 18px;font-size:13.5px;color:var(--text-mid);">Upload a document showing your name and address at Costa Blanca Villas — a utility bill, HOA letter, or official mail. Our team reviews requests within 1–2 days.</p>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Document Type</label>
+          <select id="vrDocType" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;background:white;">
+            <option value="utility_bill">Utility Bill</option>
+            <option value="hoa_letter">HOA Letter</option>
+            <option value="official_mail">Official Mail / Letter</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Upload Document <span style="color:var(--coral)">*</span></label>
+          <div id="vrPreviewWrap" style="display:none;margin-top:6px;margin-bottom:6px;">
+            <img id="vrPreview" style="max-width:100%;border-radius:8px;border:1px solid var(--border);">
+          </div>
+          <label style="display:block;margin-top:4px;padding:28px 12px;border:2px dashed var(--border);border-radius:10px;text-align:center;cursor:pointer;font-size:13px;color:var(--text-light);" id="vrUploadLabel">
+            <div style="font-size:24px;margin-bottom:4px;">📄</div>
+            Click to choose a photo or file
+            <input id="vrFile" type="file" accept="image/*,application/pdf" style="display:none;" onchange="handleVerifyDocSelect(event)">
+          </label>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Note <span style="font-weight:400;text-transform:none;color:#aaa;">(optional)</span></label>
+          <textarea id="vrNote" placeholder="Any extra context for the admin…" rows="2" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+        </div>
+        <div id="vrErr" style="display:none;color:var(--coral);font-size:13px;"></div>
+        <button onclick="submitVerificationRequest()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Submit for Verification</button>
+      </div>
+    </div>
+  `;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+function handleVerifyDocSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('vrPreview').src = ev.target.result;
+    document.getElementById('vrPreviewWrap').style.display = 'block';
+    document.getElementById('vrUploadLabel').style.paddingTop = '8px';
+    document.getElementById('vrUploadLabel').childNodes[0].textContent = '📄 ';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitVerificationRequest() {
+  const errEl = document.getElementById('vrErr');
+  errEl.style.display = 'none';
+  const fileInput = document.getElementById('vrFile');
+  if (!fileInput.files[0]) { errEl.textContent = 'Please upload a document.'; errEl.style.display = 'block'; return; }
+  const docType = document.getElementById('vrDocType').value;
+  const note = document.getElementById('vrNote').value.trim();
+  const btn = document.querySelector('#verifyModal button:last-child');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  const documentData = await readAndCompress(fileInput.files[0], 1600, 1600, 0.88);
+  const res = await fetch('/api/verification/request', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ documentData, documentType: docType, note })
+  });
+  if (!res.ok) {
+    const d = await res.json();
+    errEl.textContent = d.error || 'Submission failed. Please try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Submit for Verification';
+    return;
+  }
+  document.getElementById('verifyModal')?.remove();
+  showToast('Verification request submitted! We\'ll review it shortly.');
+  navigate('profile');
+}
+
 // ─── Settings ────────────────────────────────────────────────────
 function renderSettings(container) {
   const u = currentUser || {};
+  const bannerStyle = u.bannerUrl
+    ? `background:url('${u.bannerUrl}') center/cover no-repeat`
+    : `background:linear-gradient(135deg,var(--ocean),var(--seafoam))`;
   container.innerHTML = `
-    <div class="profile-banner" style="background:linear-gradient(135deg,var(--ocean),var(--seafoam))">
+    <div class="profile-banner" style="${bannerStyle}">
       <div class="profile-avatar-wrap">
         <div class="profile-avatar" style="background:${u.avatar}">${u.avatarUrl ? `<img src="${u.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : u.initials}</div>
       </div>
     </div>
     <div class="profile-info" style="margin-bottom:16px;">
-      <div class="profile-name">${u.name} <span class="badge-verified"><span style="font-size:10px">✓</span> Verified</span></div>
-      <div class="profile-location"><i data-lucide="map-pin" style="width:13px;height:13px"></i> Costa Blanca Villas · <span style="color:var(--ocean);font-weight:600;">Verified</span></div>
+      <div class="profile-name">${u.name} ${u.verified ? `<span class="badge-verified"><span style="font-size:10px">✓</span> Verified</span>` : ''}</div>
+      <div class="profile-location"><i data-lucide="map-pin" style="width:13px;height:13px"></i> Costa Blanca Villas${u.verified ? ` · <span style="color:var(--ocean);font-weight:600;">Verified</span>` : ''}</div>
     </div>
 
     ${u.role === 'admin' ? `
@@ -1537,10 +1669,6 @@ function renderSettings(container) {
       <div class="settings-group-title">Profile</div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Display Name</div><div class="settings-row-sub">${u.name}</div></div>
-        <button class="settings-btn" onclick="navigate('profile');openEditProfile()">Edit</button>
-      </div>
-      <div class="settings-row">
-        <div class="settings-row-info"><div class="settings-row-label">Bio</div><div class="settings-row-sub">${u.bio || 'No bio yet'}</div></div>
         <button class="settings-btn" onclick="navigate('profile');openEditProfile()">Edit</button>
       </div>
       <div class="settings-row">
@@ -1592,10 +1720,6 @@ function renderSettings(container) {
         <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
       </div>
       <div class="settings-row">
-        <div class="settings-row-info"><div class="settings-row-label">Appear in Neighbor Search</div><div class="settings-row-sub">Other residents can find your profile</div></div>
-        <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
-      </div>
-      <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Receive Direct Messages</div><div class="settings-row-sub">Allow neighbors to send you private messages</div></div>
         <label class="toggle-switch"><input type="checkbox" id="allowMessagesToggle" ${u.allowMessages !== false ? 'checked' : ''} onchange="toggleAllowMessages(this.checked)"><span class="toggle-slider"></span></label>
       </div>
@@ -1605,7 +1729,7 @@ function renderSettings(container) {
       <div class="settings-group-title">Account</div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Change Password</div><div class="settings-row-sub">Update your login password</div></div>
-        <button class="settings-btn" onclick="showToast('Password reset email sent')">Reset</button>
+        <button class="settings-btn" onclick="openChangePassword()">Change</button>
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label" style="color:var(--coral)">Sign Out</div><div class="settings-row-sub">Log out of Costa Blanca Connect</div></div>
@@ -1629,6 +1753,49 @@ async function toggleAllowMessages(allow) {
     showToast('Failed to save. Try again.');
     document.getElementById('allowMessagesToggle').checked = !allow;
   }
+}
+
+function openChangePassword() {
+  const existing = document.getElementById('changePwModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'changePwModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:18px;padding:24px;width:100%;max-width:380px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <div style="font-size:17px;font-weight:700;color:var(--text-dark);">Change Password</div>
+        <button onclick="document.getElementById('changePwModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-mid);">✕</button>
+      </div>
+      <input type="password" id="cpCurrent" placeholder="Current password" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;margin-bottom:10px;box-sizing:border-box;" />
+      <input type="password" id="cpNew" placeholder="New password (min 8 characters)" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;margin-bottom:10px;box-sizing:border-box;" />
+      <input type="password" id="cpConfirm" placeholder="Confirm new password" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;margin-bottom:10px;box-sizing:border-box;" />
+      <div id="cpErr" style="color:var(--coral);font-size:13px;margin-bottom:10px;display:none;"></div>
+      <button onclick="submitChangePassword()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Update Password</button>
+    </div>
+  `;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+async function submitChangePassword() {
+  const currentPassword = document.getElementById('cpCurrent')?.value;
+  const newPassword = document.getElementById('cpNew')?.value;
+  const confirm = document.getElementById('cpConfirm')?.value;
+  const errEl = document.getElementById('cpErr');
+  errEl.style.display = 'none';
+  if (newPassword !== confirm) { errEl.textContent = 'New passwords do not match.'; errEl.style.display = 'block'; return; }
+  const btn = document.querySelector('#changePwModal button:last-child');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const res = await fetch('/api/profile/change-password', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentPassword, newPassword })
+  });
+  const d = await res.json();
+  if (!res.ok) { errEl.textContent = d.error || 'Failed. Try again.'; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Update Password'; return; }
+  document.getElementById('changePwModal').remove();
+  showToast('Password updated successfully!');
 }
 
 // ─── Build Sponsored Post Card ───────────────────────────────────
@@ -1819,18 +1986,39 @@ function buildPollHTML(post) {
   `;
 }
 
-function votePoll(postId, optId, el) {
-  showToast('Your vote has been recorded! 🗳️');
+async function votePoll(postId, optId, el) {
+  try {
+    const res = await fetch(`/api/posts/${postId}/vote`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ optionId: optId })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.error || 'Could not record vote');
+      return;
+    }
+    const data = await res.json();
+    const card = el?.closest('.post-card');
+    const pollWrap = card?.querySelector('.poll-container');
+    if (pollWrap) {
+      pollWrap.outerHTML = buildPollHTML({ id: postId, pollOptions: data.pollOptions, userVote: data.userVote });
+    }
+    showToast(data.userVote ? 'Vote recorded! 🗳️' : 'Vote removed');
+  } catch (e) {
+    showToast('Network error — please try again');
+  }
 }
 
 function buildReactionPicker(postId) {
   const reactions = [
-    { key: 'like',  emoji: '👍', label: 'Like'  },
-    { key: 'love',  emoji: '❤️', label: 'Love'  },
-    { key: 'haha',  emoji: '😂', label: 'Haha'  },
-    { key: 'wow',   emoji: '😮', label: 'Wow'   },
-    { key: 'sad',   emoji: '😢', label: 'Sad'   },
-    { key: 'angry', emoji: '😡', label: 'Angry' }
+    { key: 'like',       emoji: '👍', label: 'Like'       },
+    { key: 'insightful', emoji: '💡', label: 'Insightful' },
+    { key: 'haha',       emoji: '😂', label: 'Haha'       },
+    { key: 'wow',        emoji: '😮', label: 'Wow'        },
+    { key: 'sad',        emoji: '😢', label: 'Sad'        },
+    { key: 'agree',      emoji: '👏', label: 'Agree'      }
   ];
   return reactions.map(r => `
     <button class="reaction-pick-btn" onclick="reactToPost('${postId}','${r.key}')">
@@ -2905,16 +3093,16 @@ async function saveEditBizServices(bizId) {
 
 async function uploadBizBanner(bizId, input) {
   if (!input.files || !input.files[0]) return;
-  const fd = new FormData(); fd.append('banner', input.files[0]);
-  const res = await fetch(`/api/businesses/${bizId}/banner`, { method: 'POST', body: fd, credentials: 'include' });
+  const dataUrl = await readAndCompress(input.files[0], 1400, 600);
+  const res = await fetch(`/api/businesses/${bizId}/banner`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) });
   if (res.ok) { await openBusinessPage(bizId); showToast('Banner updated!'); }
   else showToast('Upload failed');
 }
 
 async function uploadBizLogo(bizId, input) {
   if (!input.files || !input.files[0]) return;
-  const fd = new FormData(); fd.append('logo', input.files[0]);
-  const res = await fetch(`/api/businesses/${bizId}/logo`, { method: 'POST', body: fd, credentials: 'include' });
+  const dataUrl = await readAndCompress(input.files[0], 800, 800, 0.88);
+  const res = await fetch(`/api/businesses/${bizId}/logo`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) });
   if (res.ok) { await openBusinessPage(bizId); showToast('Logo updated!'); }
   else showToast('Upload failed');
 }
@@ -3037,11 +3225,7 @@ async function submitBizReview(bizId) {
   const photoInput = document.getElementById('bizReviewPhoto');
   let image = '';
   if (photoInput?.files[0]) {
-    image = await new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = e => resolve(e.target.result);
-      reader.readAsDataURL(photoInput.files[0]);
-    });
+    image = await readAndCompress(photoInput.files[0]);
   }
   const res = await fetch(`/api/businesses/${bizId}/recommend`, {
     method: 'POST', credentials: 'include',
@@ -3447,11 +3631,16 @@ async function renderGroupPage(groupId, container) {
             <button onclick="addGroupPollOption()" style="font-size:12px;color:var(--ocean);background:none;border:none;cursor:pointer;font-weight:600;padding:0;">+ Add option</button>
           </div>
           <div id="groupImagePreview" style="display:none;margin-top:8px;"></div>
+          <div id="groupPdfPreview" style="display:none;margin-top:8px;"></div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
-            <div style="display:flex;gap:8px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <label title="Add photo" style="cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;gap:4px;background:white;">
                 <input type="file" accept="image/*" style="display:none;" onchange="previewGroupPostImage(this)">
                 📷 Photo
+              </label>
+              <label title="Attach PDF" style="cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;gap:4px;background:white;">
+                <input type="file" accept="application/pdf,.pdf" style="display:none;" onchange="previewGroupPostPdf(this)">
+                📄 PDF
               </label>
               <button onclick="toggleGroupPoll()" title="Create poll" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:600;color:var(--text-mid);background:white;cursor:pointer;font-family:inherit;">📊 Poll</button>
             </div>
@@ -3479,11 +3668,19 @@ async function renderGroupPage(groupId, container) {
               </div>
               <div style="display:flex;gap:6px;">
                 ${group.isAdmin || group.isCreator ? `<button onclick="${p.pinned ? `unpinGroupPost('${group.id}','${p.id}')` : `pinGroupPost('${group.id}','${p.id}')`}" title="${p.pinned ? 'Unpin' : 'Pin to top'}" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;">${p.pinned ? '📌 Unpin' : '📌 Pin'}</button>` : ''}
-                ${group.isAdmin || group.isCreator ? `<button onclick="deleteGroupPost('${group.id}','${p.id}')" title="Delete" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--coral);">🗑️</button>` : ''}
+                ${(group.isAdmin || group.isCreator || p.author?.username === currentUser?.username) ? `<button onclick="deleteGroupPost('${group.id}','${p.id}')" title="Delete" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--coral);">🗑️</button>` : ''}
               </div>
             </div>
-            ${p.content ? `<div style="font-size:14px;color:var(--text-mid);line-height:1.65;margin-bottom:${p.imageUrl||p.pollQuestion?'10px':'0'}">${escHtml(p.content)}</div>` : ''}
-            ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:100%;border-radius:10px;max-height:360px;object-fit:cover;margin-bottom:${p.pollQuestion?'10px':'0'}" />` : ''}
+            ${p.content ? `<div style="font-size:14px;color:var(--text-mid);line-height:1.65;margin-bottom:${p.imageUrl||p.pdfUrl||p.pollQuestion?'10px':'0'}">${escHtml(p.content)}</div>` : ''}
+            ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:100%;border-radius:10px;max-height:360px;object-fit:cover;margin-bottom:${p.pdfUrl||p.pollQuestion?'10px':'0'}" />` : ''}
+            ${p.pdfUrl ? `<a href="${p.pdfUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;text-decoration:none;color:var(--text-dark);margin-bottom:${p.pollQuestion?'10px':'0'};">
+              <div style="font-size:22px;">📄</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(p.pdfName || 'Document.pdf')}</div>
+                <div style="font-size:11.5px;color:var(--text-light);font-weight:600;">PDF · Tap to open</div>
+              </div>
+              <div style="font-size:13px;color:var(--ocean);font-weight:700;">Open →</div>
+            </a>` : ''}
             ${p.pollQuestion ? `
               <div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:12px;">
                 <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:10px;">📊 ${escHtml(p.pollQuestion)}</div>
@@ -3510,16 +3707,51 @@ async function renderGroupPage(groupId, container) {
 }
 
 let groupPostImageData = null;
+let groupPostPdfData = null;
+let groupPostPdfName = null;
 
-function previewGroupPostImage(input) {
+async function previewGroupPostImage(input) {
   if (!input.files || !input.files[0]) return;
+  groupPostImageData = await readAndCompress(input.files[0]);
+  const prev = document.getElementById('groupImagePreview');
+  if (prev) { prev.style.display = 'block'; prev.innerHTML = `<img src="${groupPostImageData}" style="max-width:100%;border-radius:10px;max-height:200px;object-fit:cover;" />`; }
+}
+
+function previewGroupPostPdf(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    showToast('Please select a PDF file.');
+    input.value = '';
+    return;
+  }
+  if (file.size > 9 * 1024 * 1024) {
+    showToast('PDF too large (max 9 MB).');
+    input.value = '';
+    return;
+  }
   const reader = new FileReader();
-  reader.onload = e => {
-    groupPostImageData = e.target.result;
-    const prev = document.getElementById('groupImagePreview');
-    if (prev) { prev.style.display = 'block'; prev.innerHTML = `<img src="${groupPostImageData}" style="max-width:100%;border-radius:10px;max-height:200px;object-fit:cover;" />`; }
+  reader.onload = () => {
+    groupPostPdfData = reader.result;
+    groupPostPdfName = file.name;
+    const prev = document.getElementById('groupPdfPreview');
+    if (prev) {
+      prev.style.display = 'block';
+      prev.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;">
+        <div style="font-size:20px;">📄</div>
+        <div style="flex:1;font-size:13px;font-weight:600;color:var(--text-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(file.name)}</div>
+        <button onclick="removeGroupPostPdf()" style="background:none;border:none;color:var(--coral);cursor:pointer;font-size:14px;font-weight:700;padding:4px 8px;">✕</button>
+      </div>`;
+    }
   };
-  reader.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(file);
+}
+
+function removeGroupPostPdf() {
+  groupPostPdfData = null;
+  groupPostPdfName = null;
+  const prev = document.getElementById('groupPdfPreview');
+  if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
 }
 
 function toggleGroupPoll() {
@@ -3544,10 +3776,11 @@ async function submitGroupPost(groupId) {
   const content = box?.value.trim();
   const pollQuestion = document.getElementById('groupPollQuestion')?.value.trim();
   const pollOpts = [...document.querySelectorAll('.group-poll-opt')].map(i => i.value.trim()).filter(Boolean);
-  if (!content && !pollQuestion) { showToast('Write something first.'); return; }
+  if (!content && !pollQuestion && !groupPostPdfData) { showToast('Write something first.'); return; }
   if (pollQuestion && pollOpts.length < 2) { showToast('Add at least 2 poll options.'); return; }
 
   const body = { content, image: groupPostImageData || undefined };
+  if (groupPostPdfData) { body.pdf = groupPostPdfData; body.pdfName = groupPostPdfName; }
   if (pollQuestion) { body.pollQuestion = pollQuestion; body.pollOptions = pollOpts; }
 
   const res = await fetch(`/api/groups/${groupId}/posts`, {
@@ -3558,8 +3791,12 @@ async function submitGroupPost(groupId) {
   if (res.ok) {
     box.value = '';
     groupPostImageData = null;
+    groupPostPdfData = null;
+    groupPostPdfName = null;
     const prev = document.getElementById('groupImagePreview');
     if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
+    const pdfPrev = document.getElementById('groupPdfPreview');
+    if (pdfPrev) { pdfPrev.style.display = 'none'; pdfPrev.innerHTML = ''; }
     const pollBuilder = document.getElementById('groupPollBuilder');
     if (pollBuilder) pollBuilder.style.display = 'none';
     await renderGroupPage(groupId, document.getElementById('sectionContent'));
@@ -3938,30 +4175,18 @@ function openCreateGroupModal() {
 let cgPhotoDataUrl = null;
 let cgCoverDataUrl = null;
 
-function previewGroupPhoto(input) {
+async function previewGroupPhoto(input) {
   if (!input.files || !input.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    cgPhotoDataUrl = e.target.result;
-    const preview = document.getElementById('cgPhotoPreview');
-    if (preview) {
-      preview.innerHTML = `<img src="${cgPhotoDataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:11px;">`;
-    }
-  };
-  reader.readAsDataURL(input.files[0]);
+  cgPhotoDataUrl = await readAndCompress(input.files[0], 800, 800, 0.85);
+  const preview = document.getElementById('cgPhotoPreview');
+  if (preview) preview.innerHTML = `<img src="${cgPhotoDataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:11px;">`;
 }
 
-function previewGroupCover(input) {
+async function previewGroupCover(input) {
   if (!input.files || !input.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    cgCoverDataUrl = e.target.result;
-    const preview = document.getElementById('cgCoverPreview');
-    if (preview) {
-      preview.innerHTML = `<img src="${cgCoverDataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:11px;">`;
-    }
-  };
-  reader.readAsDataURL(input.files[0]);
+  cgCoverDataUrl = await readAndCompress(input.files[0]);
+  const preview = document.getElementById('cgCoverPreview');
+  if (preview) preview.innerHTML = `<img src="${cgCoverDataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:11px;">`;
 }
 
 async function submitCreateGroup() {
@@ -4079,15 +4304,11 @@ function selectSeverity(sev, btnEl) {
 let postPhotoDataUrl = null;
 let postLocationValue = null;
 
-function attachPostPhoto(input) {
+async function attachPostPhoto(input) {
   if (!input.files || !input.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    postPhotoDataUrl = e.target.result;
-    document.getElementById('postPhotoImg').src = postPhotoDataUrl;
-    document.getElementById('postPhotoPreview').style.display = 'block';
-  };
-  reader.readAsDataURL(input.files[0]);
+  postPhotoDataUrl = await readAndCompress(input.files[0]);
+  document.getElementById('postPhotoImg').src = postPhotoDataUrl;
+  document.getElementById('postPhotoPreview').style.display = 'block';
 }
 
 function removePostPhoto() {
@@ -4505,14 +4726,14 @@ async function renderFirstResponders(container) {
   container.innerHTML = `
     <div style="max-width:680px;margin:0 auto;padding:0 0 40px;">
       <div style="margin-bottom:16px;">
-        <h2 style="font-size:22px;font-weight:800;color:var(--text-dark);margin:0 0 4px;">🚨 First Responders</h2>
+        <h2 style="font-size:22px;font-weight:800;color:var(--text-dark);margin:0 0 4px;">🚨 EMTS</h2>
         <p style="font-size:14px;color:var(--text-light);margin:0;">Emergency medical services, preparedness & community support</p>
       </div>
 
       <!-- Tabs -->
       <div style="background:white;border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px;">
         <div style="display:flex;overflow-x:auto;border-bottom:1px solid var(--border);padding:0 4px;">
-          ${[['services','🚑 Services'],['call','📞 Emergency Phrases'],['prepared','⚡ Be Prepared'],['myinfo','👤 My Info'],['guide','📄 Guide']].map(([id,label]) => `
+          ${[['services','🚑 Services'],['call','📞 Emergency Phrases'],['prepared','⚡ Be Prepared'],['myinfo','👤 My Info'],['guide','🤝 Nonprofit']].map(([id,label]) => `
             <button id="frtab-${id}" class="fr-tab-btn" onclick="switchFRTab('${id}')" style="padding:13px 14px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:inherit;white-space:nowrap;background:transparent;color:var(--text-mid);border-bottom:3px solid transparent;transition:all .15s;">${label}</button>
           `).join('')}
         </div>
@@ -4527,26 +4748,46 @@ async function renderFirstResponders(container) {
               <div>
                 <div style="font-size:20px;font-weight:900;letter-spacing:-.3px;">EMTS Panama</div>
                 <div style="font-size:12px;opacity:.8;margin-top:1px;">Private EMS · Buenaventura & Surrounding Communities</div>
-                <div style="font-size:11px;margin-top:3px;background:rgba(255,255,255,.15);display:inline-block;padding:2px 8px;border-radius:20px;">🇺🇸 U.S.-Trained · English Speaking</div>
+                <div style="font-size:11px;margin-top:3px;background:rgba(255,255,255,.15);display:inline-block;padding:2px 8px;border-radius:20px;">🇵🇦 Panamanian Owned and Operated · English Speaking</div>
               </div>
             </div>
 
             <!-- Slogan -->
             <div style="background:rgba(255,255,255,0.12);border-left:3px solid rgba(255,255,255,0.5);border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:16px;">
               <p style="font-size:14px;font-weight:700;margin:0 0 4px;font-style:italic;">"Don't wait until you have an emergency."</p>
-              <p style="font-size:12px;opacity:.85;line-height:1.55;margin:0;">The nearest private EMS to Costa Blanca Villas. Medics trained to American standards with U.S.-level equipment — right here in Panama. When every second counts, we're already close.</p>
+              <p style="font-size:12px;opacity:.85;line-height:1.55;margin:0;">EMTS Panama is the closest private EMS provider to the Costa Blanca Villas community — positioned to reach you faster than any other private service in the area. When every second counts, proximity is everything.</p>
             </div>
 
-            <!-- Mission Statement -->
-            <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px 14px;margin-bottom:10px;">
-              <div style="font-size:12px;font-weight:800;margin-bottom:6px;">❤️ Our Mission</div>
-              <p style="font-size:12px;line-height:1.65;opacity:.9;margin:0;">We strive for excellence in our people and our service — medical response is our passion. Our team is proud to serve the Panamanian community, and equally committed to ensuring that visitors, expats, and travelers from other countries receive the same high standard of care. No one should face a medical emergency alone in a foreign country.</p>
-            </div>
-
-            <!-- Expat Highlight Banner -->
-            <div style="background:rgba(250,204,21,0.18);border:1px solid rgba(250,204,21,0.4);border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
-              <span style="font-size:20px;flex-shrink:0;">🌎</span>
-              <div style="font-size:12px;line-height:1.55;"><strong style="font-size:12.5px;">Serving Everyone.</strong> Proudly rooted in Panama and deeply committed to our Panamanian community — with specialized training and English-speaking staff to ensure visitors and expats from any country receive expert care when they need it most.</div>
+            <!-- Costa Blanca Connect Member Pricing -->
+            <div style="background:rgba(255,255,255,0.95);border-radius:12px;padding:14px 16px;margin-bottom:16px;color:#1a1a2e;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <span style="font-size:18px;">⭐</span>
+                <div style="font-size:13px;font-weight:800;color:#1d4ed8;">Exclusive Member Pricing — Costa Blanca Connect</div>
+              </div>
+              <p style="font-size:12px;line-height:1.65;margin:0 0 10px;color:#374151;">As a valued member of the Costa Blanca Connect community, EMTS Panama is pleased to offer preferred rates that are not available to the general public. We believe that access to quality emergency care should be a priority — not an afterthought.</p>
+              <div style="background:#f0f7ff;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+                <div style="font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:6px;">Member Rate Schedule</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #e5e7eb;">
+                  <div><div style="font-size:12px;color:#374151;">🚑 Monthly ALS Membership</div><div style="font-size:11px;color:#6b7280;">Guaranteed ALS response with paramedics dispatched directly to you</div></div>
+                  <span style="font-size:14px;font-weight:800;color:#16a34a;white-space:nowrap;margin-left:10px;">$20<span style="font-size:10px;font-weight:600;">/mo</span></span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #e5e7eb;">
+                  <div><div style="font-size:12px;color:#374151;">🏥 Transport to Local Hospital (Panama)</div><div style="font-size:11px;color:#6b7280;">Emergency ground transport to nearest facility</div></div>
+                  <span style="font-size:14px;font-weight:800;color:#16a34a;white-space:nowrap;margin-left:10px;">~$400</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #e5e7eb;">
+                  <div><div style="font-size:12px;color:#374151;">🏙️ Transport to Panama City</div><div style="font-size:11px;color:#6b7280;">Long-distance transport to city-based medical facilities</div></div>
+                  <span style="font-size:14px;font-weight:800;color:#16a34a;white-space:nowrap;margin-left:10px;">~$950</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;">
+                  <div><div style="font-size:12px;color:#374151;">💊 Additional Services</div><div style="font-size:11px;color:#6b7280;">Call and mention your Costa Blanca Connect membership</div></div>
+                  <span style="font-size:12px;font-weight:700;color:#1d4ed8;white-space:nowrap;margin-left:10px;">Member Discount</span>
+                </div>
+              </div>
+              <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:8px 12px;margin-bottom:10px;">
+                <p style="font-size:11.5px;line-height:1.6;margin:0;color:#713f12;"><strong>Don't wait for an emergency to prepare for one.</strong> Take advantage of this exclusive promotion available only to Costa Blanca Connect members. Contact EMTS Panama today to register your household and lock in your member rates before you ever need them.</p>
+              </div>
+              <p style="font-size:11px;color:#6b7280;margin:0;line-height:1.5;">* Member pricing applies to Costa Blanca Connect registered users. Additional service fees may vary. Pricing excludes medications administered during transport. Contact EMTS Panama directly for a full schedule of member-discounted rates.</p>
             </div>
 
             <!-- Core Services Grid -->
@@ -4581,36 +4822,6 @@ async function renderFirstResponders(container) {
                   </div>
                 </div>`).join('')}
             </div>` : ''}
-
-            <!-- Why Private EMS -->
-            <div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;margin-bottom:10px;">
-              <div style="font-size:12px;font-weight:800;margin-bottom:8px;">🚨 Why Private EMS — Not Public?</div>
-              <div style="display:flex;flex-direction:column;gap:5px;">
-                ${[
-                  '🕐 Public EMS response in Panama can take 45–90+ min — private gets there in ~10 min from Buenaventura',
-                  '🏥 Public units are often understaffed, under-equipped, or unavailable on weekends & holidays',
-                  '🗣️ Public responders rarely speak English — a language barrier in a crisis costs lives',
-                  '💳 EMTS Panama accepts credit cards — no cash scramble during an emergency',
-                  '📋 Private means a dedicated team who knows your community, your roads, your needs',
-                ].map(t=>`<div style="display:flex;gap:8px;font-size:11.5px;opacity:.9;line-height:1.45;"><span style="flex-shrink:0;margin-top:1px;">→</span><span>${t}</span></div>`).join('')}
-              </div>
-            </div>
-
-            <!-- Why Expats Choose EMTS -->
-            <div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;margin-bottom:10px;">
-              <div style="font-size:12px;font-weight:800;margin-bottom:8px;">✅ Why Expats Choose EMTS Panama</div>
-              <div style="display:flex;flex-direction:column;gap:5px;">
-                ${[
-                  '⚡ ~10 minute response time from Buenaventura',
-                  '🇺🇸 English-speaking paramedics — no language barrier in a crisis',
-                  '🎓 Partner with HSI Training Center (U.S.)',
-                  '🔬 Striving to maintain U.S. EMS standards — protocols, equipment & care',
-                  '💳 Non-members can pay by credit card — flexible payment, no cash required during an emergency',
-                  '🌐 Works with international insurance providers',
-                  '🏥 Clinic + Telehealth means care before AND after an emergency',
-                ].map(t=>`<div style="display:flex;gap:8px;font-size:11.5px;opacity:.9;line-height:1.45;"><span style="flex-shrink:0;margin-top:1px;">→</span><span>${t}</span></div>`).join('')}
-              </div>
-            </div>
 
             <!-- Game Plan CTA -->
             <div style="background:rgba(250,204,21,0.2);border:1px solid rgba(250,204,21,0.5);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
@@ -4775,9 +4986,14 @@ async function renderFirstResponders(container) {
                 <div><div style="font-size:13px;font-weight:700;color:var(--text-dark);">${t}</div><div style="font-size:12px;color:var(--text-mid);margin-top:2px;">${d}</div></div>
               </div>`).join('')}
           </div>
-          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;">
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;margin-bottom:12px;">
             <p style="font-size:13px;color:#059669;font-weight:700;margin:0 0 4px;">💡 IERF Recommends</p>
             <p style="font-size:12.5px;color:var(--text-mid);line-height:1.55;margin:0;">Print this guide and keep it in a binder with your first aid kit, flashlights & batteries. Store emergency contacts in your phone. The more prepared you are, the safer your family will be.</p>
+          </div>
+          <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:12px;padding:16px;text-align:center;">
+            <p style="font-size:13px;font-weight:700;color:white;margin:0 0 4px;">❤️ Support IERF Response</p>
+            <p style="font-size:12px;color:rgba(255,255,255,0.85);line-height:1.5;margin:0 0 12px;">IERF Response provides critical emergency preparedness resources to communities like ours. Your donation helps fund life-saving training and equipment.</p>
+            <a href="https://ierfresponse.org/donate/" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:11px 28px;background:white;color:#dc2626;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;">Donate Today →</a>
           </div>
         </div>
       </div>
@@ -5058,39 +5274,58 @@ async function renderTransport(container) {
 }
 
 // ─── Golf Cart & Transport (DB-backed) ───────────────────────────
-function openCartListingForm() {
+let editingCartId = null;
+let editingCartImageRemoved = false;
+
+function openCartListingForm(cart) {
+  editingCartId = cart?.id || null;
+  editingCartImageRemoved = false;
+  const isEdit = !!cart;
+  const existingImg = cart?.image_url || '';
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;';
   overlay.innerHTML = `
     <div style="background:white;border-radius:20px;width:min(460px,100%);padding:28px;box-shadow:0 24px 60px rgba(0,0,0,0.3);">
       <div style="font-size:24px;margin-bottom:6px;">🛺</div>
-      <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;color:#0d1b2a;">List Your Golf Cart</h3>
+      <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;color:#0d1b2a;">${isEdit ? 'Edit Your Cart Listing' : 'List Your Golf Cart'}</h3>
       <p style="font-size:13px;color:#4a6378;margin-bottom:18px;">Let neighbors rent your cart. You handle the arrangement directly.</p>
       <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
         <div>
           <label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Photo</label>
-          <div id="cartImgPreview" onclick="document.getElementById('cartImgInput').click()" style="width:100%;height:130px;border-radius:10px;border:2px dashed #dde4ed;background:#f8fafc;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;font-size:12.5px;color:#94a3b8;font-weight:600;">
-            📷 Tap to add photo
+          <div id="cartImgPreview" onclick="document.getElementById('cartImgInput').click()" style="width:100%;height:130px;border-radius:10px;border:${existingImg?'1.5px solid #dde4ed':'2px dashed #dde4ed'};background:#f8fafc;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;font-size:12.5px;color:#94a3b8;font-weight:600;${existingImg?'padding:0;':''}">
+            ${existingImg ? `<img src="${existingImg}" style="width:100%;height:100%;object-fit:cover;">` : '📷 Tap to add photo'}
           </div>
+          ${existingImg ? `<button type="button" onclick="clearCartImage()" style="margin-top:6px;background:none;border:none;color:var(--coral);font-size:12px;font-weight:600;cursor:pointer;padding:0;font-family:inherit;">Remove photo</button>` : ''}
           <input id="cartImgInput" type="file" accept="image/*" style="display:none;" onchange="previewCartImage(this)" />
         </div>
         <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Cart description</label>
-          <input id="cartDesc" type="text" placeholder="e.g. 4-seater, 2023, good condition" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
+          <input id="cartDesc" type="text" placeholder="e.g. 4-seater, 2023, good condition" value="${escHtml(cart?.make_model || '')}" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Rate</label>
-            <input id="cartRate" type="text" placeholder="e.g. $25/day" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
+            <input id="cartRate" type="text" placeholder="e.g. $25/day" value="${escHtml(cart?.rate || '')}" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
           <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Contact</label>
-            <input id="cartContact" type="text" placeholder="WhatsApp or villa #" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
+            <input id="cartContact" type="text" placeholder="WhatsApp or villa #" value="${escHtml(cart?.phone || '')}" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
         </div>
         <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Notes</label>
-          <input id="cartNotes" type="text" placeholder="e.g. Weekends only" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
+          <input id="cartNotes" type="text" placeholder="e.g. Weekends only" value="${escHtml(cart?.notes || '')}" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
       </div>
       <div style="display:flex;gap:10px;">
         <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:11px;background:#f0f3f7;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">Cancel</button>
-        <button onclick="submitCartListing(this)" style="flex:1;padding:11px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">Post Listing</button>
+        <button onclick="submitCartListing(this)" style="flex:1;padding:11px;background:#0077B6;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">${isEdit ? 'Save Changes' : 'Post Listing'}</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
+}
+
+function clearCartImage() {
+  editingCartImageRemoved = true;
+  const prev = document.getElementById('cartImgPreview');
+  if (prev) {
+    prev.style.cssText = 'width:100%;height:130px;border-radius:10px;border:2px dashed #dde4ed;background:#f8fafc;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;font-size:12.5px;color:#94a3b8;font-weight:600;';
+    prev.innerHTML = '📷 Tap to add photo';
+  }
+  const input = document.getElementById('cartImgInput');
+  if (input) input.value = '';
 }
 
 function previewCartImage(input) {
@@ -5115,13 +5350,21 @@ async function submitCartListing(btn) {
   let image = null;
   const file = document.getElementById('cartImgInput')?.files?.[0];
   if (file) {
-    image = await new Promise(r => { const fr = new FileReader(); fr.onload = e => r(e.target.result); fr.readAsDataURL(file); });
+    image = await readAndCompress(file);
   }
 
-  const res = await fetch('/api/transport/carts', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ makeModel, rate, phone, notes, image }) });
+  const isEdit = !!editingCartId;
+  const url = isEdit ? `/api/transport/carts/${editingCartId}` : '/api/transport/carts';
+  const method = isEdit ? 'PATCH' : 'POST';
+  const body = { makeModel, rate, phone, notes, image };
+  if (isEdit && editingCartImageRemoved && !image) body.removeImage = true;
+
+  const res = await fetch(url, { method, credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
   btn.closest('[style*=fixed]').remove();
-  if (res.ok) { await renderCartListings(); showToast('Cart listed!'); }
-  else showToast('Could not post listing.');
+  editingCartId = null;
+  editingCartImageRemoved = false;
+  if (res.ok) { await renderCartListings(); showToast(isEdit ? 'Listing updated!' : 'Cart listed!'); }
+  else showToast(isEdit ? 'Could not save changes.' : 'Could not post listing.');
 }
 
 async function renderCartListings() {
@@ -5129,6 +5372,7 @@ async function renderCartListings() {
   if (!el) return;
   const carts = await fetchJSON('/api/transport/carts') || [];
   if (!carts.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:13.5px;">No carts listed yet — be the first!</div>'; return; }
+  window.__cartListingsCache = carts;
   el.innerHTML = carts.map(c => `
     <div style="background:#f8fafc;border-radius:12px;border:1px solid var(--border);overflow:hidden;">
       ${c.image_url ? `<img src="${c.image_url}" style="width:100%;height:160px;object-fit:cover;display:block;">` : ''}
@@ -5143,8 +5387,11 @@ async function renderCartListings() {
         <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Posted by ${escHtml(c.owner_name)} · ${relativeTime(c.created_at)}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
-        ${c.phone ? `<a href="tel:${escHtml(c.phone)}" style="padding:7px 12px;background:var(--ocean);color:white;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;">📞 Contact</a>` : ''}
-        ${currentUser && (c.owner_id === currentUser.id || currentUser.role === 'admin') ? `<button onclick="deleteCart('${c.id}')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-light);">🗑 Remove</button>` : ''}
+        ${c.phone ? `<a href="tel:${escHtml(c.phone)}" style="padding:7px 12px;background:var(--ocean);color:white;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap;">📞 Contact</a>` : ''}
+        ${currentUser && (c.owner_id === currentUser.id || currentUser.role === 'admin') ? `
+          <button onclick="editCart('${c.id}')" style="padding:6px 12px;background:#e0f2fe;color:#0369a1;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">✏️ Edit</button>
+          <button onclick="deleteCart('${c.id}')" style="padding:6px 12px;background:#fee2e2;color:#b91c1c;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">🗑 Remove</button>
+        ` : ''}
       </div>
     </div></div>`).join('');
 }
@@ -5153,6 +5400,12 @@ async function deleteCart(id) {
   if (!confirm('Remove this listing?')) return;
   const res = await fetch(`/api/transport/carts/${id}`, { method:'DELETE', credentials:'include' });
   if (res.ok) { await renderCartListings(); showToast('Listing removed.'); }
+}
+
+function editCart(id) {
+  const cart = (window.__cartListingsCache || []).find(c => c.id === id);
+  if (!cart) { showToast('Listing not found.'); return; }
+  openCartListingForm(cart);
 }
 
 function openTransportPost() {
@@ -5339,8 +5592,75 @@ function showToast(msg) {
 }
 
 // ─── Share ───────────────────────────────────────────────────────
-function handleShare(postId) {
-  showToast('Post link copied to clipboard! 🔗');
+function buildPostShareUrl(postId) {
+  const url = new URL(window.location.href);
+  url.hash = '';
+  url.search = '';
+  url.searchParams.set('post', postId);
+  return url.toString();
+}
+
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (_) {}
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:-1000px;left:-1000px;opacity:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (_) { return false; }
+}
+
+async function handleShare(postId) {
+  const card = document.querySelector(`[data-post-id="${postId}"]`);
+  const snippet = (card?.querySelector('.post-content, .feed-content, [class*="content"]')?.textContent || '').trim().slice(0, 140);
+  const shareUrl = buildPostShareUrl(postId);
+  const shareData = {
+    title: 'Costa Blanca Connect',
+    text: snippet ? `${snippet}…` : 'Check out this post on Costa Blanca Connect',
+    url: shareUrl,
+  };
+  if (navigator.share && navigator.canShare?.(shareData) !== false) {
+    try {
+      await navigator.share(shareData);
+      return;
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+    }
+  }
+  const ok = await copyToClipboard(shareUrl);
+  showToast(ok ? 'Post link copied to clipboard! 🔗' : 'Could not copy link — try long-pressing the URL bar.');
+}
+
+function focusSharedPostFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('post');
+  if (!id) return;
+  let attempts = 0;
+  const tryScroll = () => {
+    const el = document.querySelector(`[data-post-id="${id}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'box-shadow 0.4s ease';
+      el.style.boxShadow = '0 0 0 3px rgba(0,119,182,0.45)';
+      setTimeout(() => { el.style.boxShadow = ''; }, 2400);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('post');
+      window.history.replaceState({}, '', url.toString());
+    } else if (attempts++ < 20) {
+      setTimeout(tryScroll, 250);
+    }
+  };
+  tryScroll();
 }
 
 // ─── Avatar Upload ───────────────────────────────────────────────
@@ -5504,6 +5824,13 @@ function updateAvatarDisplays(avatarUrl) {
   // Profile / settings page avatar
   const profileAv = document.querySelector('.profile-avatar');
   if (profileAv) { profileAv.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; }
+  // New Neighbors sidebar — update current user's avatar if present
+  document.querySelectorAll('#newNeighborsList .avatar-sm img').forEach(img => {
+    const nameEl = img.closest('.new-neighbor')?.querySelector('.nn-name');
+    if (nameEl && currentUser && nameEl.textContent.trim() === (currentUser.name || '').trim()) {
+      img.src = avatarUrl;
+    }
+  });
 }
 
 // ─── Lightbox ────────────────────────────────────────────────────
@@ -5567,7 +5894,7 @@ function postTypeLabel(type) {
   return labels[type] || capitalize(type);
 }
 
-const REACTION_MAP = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+const REACTION_MAP = { like: '👍', insightful: '💡', haha: '😂', wow: '😮', sad: '😢', agree: '👏' };
 
 function reactionEmoji(key) {
   return REACTION_MAP[key] || '👍';
@@ -5657,10 +5984,10 @@ function renderSearchDropdown(results, q) {
   const matchedSection = sectionShortcuts.find(s => s.aliases.some(a => a.includes(lq) || lq.includes(a)));
 
   const all = [
-    ...results.posts.map(r => ({ ...r, _type: 'post', _section: 'feed' })),
-    ...results.businesses.map(r => ({ ...r, _type: 'business', _section: 'businesses' })),
-    ...results.events.map(r => ({ ...r, _type: 'event', _section: 'events' })),
-    ...results.neighbors.map(r => ({ ...r, _type: 'neighbor', _section: 'neighbors' })),
+    ...(results.safety||[]).map(r => ({ ...r, _type: 'safety', _section: 'safety' })),
+    ...(results.events||[]).map(r => ({ ...r, _type: 'event', _section: 'events' })),
+    ...(results.marketplace||[]).map(r => ({ ...r, _type: 'listing', _section: 'marketplace' })),
+    ...(results.groups||[]).map(r => ({ ...r, _type: 'group', _section: 'groups' })),
   ];
 
   let html = '';
@@ -5677,14 +6004,14 @@ function renderSearchDropdown(results, q) {
   }
 
   if (all.length) {
-    const icons = { post: '📝', business: '🏪', event: '📅', neighbor: '👤' };
-    const labels = { post: 'Post', business: 'Business', event: 'Event', neighbor: 'Neighbor' };
+    const icons = { safety: '🛡️', event: '📅', listing: '🛒', group: '👥' };
+    const labels = { safety: 'Safety Alert', event: 'Event', listing: 'Marketplace', group: 'Group' };
     html += all.map(r => `
       <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border);" onmousedown="searchGoTo('${r._section}','${r.id||''}')">
         <span style="font-size:20px;">${icons[r._type]}</span>
         <div style="flex:1;min-width:0;">
           <div style="font-size:14px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(r.title || r.name || r.content || '')}</div>
-          <div style="font-size:12px;color:var(--text-light);margin-top:1px;">${labels[r._type]}${r.category ? ' · ' + escHtml(r.category) : ''}</div>
+          <div style="font-size:12px;color:var(--text-light);margin-top:1px;">${labels[r._type]}${r.category ? ' · ' + escHtml(r.category) : ''}${r.price ? ' · $' + r.price.toLocaleString() : ''}</div>
         </div>
       </div>
     `).join('');
