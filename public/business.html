@@ -729,6 +729,7 @@
         <span class="biz-name-topbar" id="topbarBizName"></span>
         <div id="google_translate_element" style="display:none;"></div>
         <button id="langToggleBtn" onclick="toggleLanguage()" style="background:none;border:1.5px solid #E8EDF2;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;color:#4A5568;font-family:'Inter',sans-serif;white-space:nowrap;">🌐 ES</button>
+        <button onclick="openBusinessHelp()" title="Business Guide" aria-label="Help" style="background:none;border:1.5px solid #E8EDF2;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;color:#4A5568;font-family:'Inter',sans-serif;white-space:nowrap;">❓ Guide</button>
         <a href="/logout" class="btn-logout" style="text-decoration:none;">Sign Out</a>
       </div>
     </div>
@@ -1706,6 +1707,29 @@
       document.getElementById('claimCodeInput').value = '';
     }
 
+    function openBusinessHelp() {
+      const m = document.getElementById('bizHelpModal');
+      if (!m) return;
+      m.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      try { localStorage.setItem('biz_help_seen', '1'); } catch(e){}
+    }
+    function closeBusinessHelp() {
+      const m = document.getElementById('bizHelpModal');
+      if (!m) return;
+      m.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        const m = document.getElementById('bizHelpModal');
+        if (m && m.style.display === 'flex') closeBusinessHelp();
+      }
+    });
+    window.addEventListener('load', () => {
+      try { if (!localStorage.getItem('biz_help_seen')) setTimeout(openBusinessHelp, 800); } catch(e){}
+    });
+
     function googleTranslateElementInit() {
       new google.translate.TranslateElement({ pageLanguage: 'en', includedLanguages: 'en,es', autoDisplay: false }, 'google_translate_element');
     }
@@ -1723,6 +1747,139 @@
 
     init();
   </script>
+
+  <!-- ── BUSINESS HELP MODAL ────────────────────────────────────────── -->
+  <div id="bizHelpModal" onclick="if(event.target===this)closeBusinessHelp()" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:1000;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:white;border-radius:16px;width:min(720px,100%);max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.3);overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid #e5e7eb;background:linear-gradient(135deg,#0077B6,#00B4D8);color:white;">
+        <div>
+          <div style="font-size:18px;font-weight:800;">🇵🇦 Welcome to Costa Blanca Connect for Business</div>
+          <div style="font-size:13px;opacity:0.95;margin-top:2px;">Promoting Panama businesses, supporting our community</div>
+        </div>
+        <button onclick="closeBusinessHelp()" style="background:rgba(255,255,255,0.2);border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;color:white;">×</button>
+      </div>
+
+      <div style="overflow-y:auto;padding:18px 22px;">
+
+        <div style="background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:13.5px;line-height:1.6;color:#713f12;">
+          <b>Our mission:</b> Costa Blanca Connect was built to put <b>local Panama businesses front-and-center</b> for the Costa Blanca Villas community in Farallón. Every booking, every review, every recommendation here keeps money circulating in Panama and strengthens the neighborhoods we live in. Thank you for being part of it.
+        </div>
+
+        <details open style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🚀 Getting Started — Two Paths</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            <b>1. Already listed?</b> If your business already appears in our directory, click <b>Claim My Business</b>. We'll send a verification code to the contact info on file. Once verified, you take over the listing.
+            <br><br>
+            <b>2. Brand new?</b> Click <b>Create New Listing</b>. Fill in your name, category, neighborhood, services, hours, contact info, logo, and a banner photo. Your listing goes live immediately for residents to discover.
+            <br><br>
+            <b>Pro tip:</b> A complete profile with a logo, banner, and clear hours gets <b>3–5× more</b> visits than a bare-bones one.
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🏪 Your Business Profile</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            From your dashboard you can edit:
+            <ul style="margin:8px 0 0 18px;padding:0;">
+              <li><b>Logo &amp; Banner</b> — first impression matters; use a clear photo of your storefront, food, or work</li>
+              <li><b>Hours</b> — keep them current; residents trust businesses that show they're open</li>
+              <li><b>Services</b> — list specific offerings (e.g. "AC repair", "vegan options", "delivery")</li>
+              <li><b>Contact</b> — phone, WhatsApp, email; the WhatsApp button is the most-used</li>
+            </ul>
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">📣 Posting Updates &amp; Offers</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            Use <b>+ New Post</b> from your dashboard to share with the community:
+            <ul style="margin:8px 0 0 18px;padding:0;">
+              <li><b>Offer</b> — a discount, promo, or seasonal deal (set an expiry date)</li>
+              <li><b>Event</b> — happy hour, live music, opening day, workshop</li>
+              <li><b>Update</b> — new menu, new hours, new product</li>
+            </ul>
+            <br>
+            Posts appear on your business page <b>and</b> in the neighborhood feed where residents see them. A great offer can fill seats the same evening.
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">⭐ Reviews &amp; Reputation</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            Residents leave star ratings and recommendations on your page. You'll get a notification each time.
+            <ul style="margin:8px 0 0 18px;padding:0;">
+              <li><b>Always reply</b> — even a short "Gracias!" goes a long way. The reviewer gets notified you responded.</li>
+              <li><b>Address concerns publicly and politely</b> — other residents read every reply</li>
+              <li>Hit the <b>Verified</b> threshold to earn a trust badge that shows up across the app</li>
+            </ul>
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">💬 WhatsApp &amp; Direct Contact</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            Most residents in Panama use WhatsApp daily. Make sure your <b>WhatsApp number includes the country code</b> (e.g. <code>+507 6790-4807</code> for Panama, <code>+1 555-123-4567</code> for USA/Canada). When residents tap the green WhatsApp button on your listing, a chat opens with a friendly intro pre-filled — no typing required.
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🤝 Supporting the Community</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            Costa Blanca Connect works best when businesses give back. A few ways to be a great community member:
+            <ul style="margin:8px 0 0 18px;padding:0;">
+              <li>Offer <b>resident-only discounts</b> — neighbors love being recognized</li>
+              <li>Sponsor or donate to <b>community events</b> posted by residents</li>
+              <li>Help organize <b>beach cleanups, holiday celebrations</b>, or other community gatherings</li>
+              <li>Hire and source from <b>other Panama businesses</b> in the directory when you can</li>
+              <li>Reply to safety alerts (e.g. road closures, lost pets) with helpful info if you're nearby</li>
+            </ul>
+            <br>
+            The more value you bring to the community, the more the community brings to you.
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🔔 Notifications You'll Receive</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            <ul style="margin:0;padding-left:18px;">
+              <li>A resident left you a <b>review or recommendation</b></li>
+              <li>A resident <b>commented or reacted</b> to one of your posts</li>
+              <li>Someone <b>messaged</b> your business directly</li>
+              <li>Someone <b>RSVPed</b> to an event you posted</li>
+              <li>Your business hit a <b>milestone</b> (e.g. earned the Verified badge)</li>
+            </ul>
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">✅ Best Practices</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            <ul style="margin:0;padding-left:18px;">
+              <li>Update your <b>hours</b> for holidays and Carnaval week</li>
+              <li>Post at least <b>one update per week</b> to stay top-of-mind</li>
+              <li>Reply to <b>all reviews</b> within 48 hours</li>
+              <li>Use <b>real photos</b> of your business — no stock images</li>
+              <li>Be polite, even with difficult customers — the whole community is reading</li>
+            </ul>
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">❓ Need Help?</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            Open this guide anytime by clicking <b>❓ Guide</b> in the top right. For account or technical issues, contact the Costa Blanca Connect admin team — message in the app.
+          </div>
+        </details>
+
+      </div>
+
+      <div style="padding:14px 22px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;background:#f8fafc;">
+        <div style="font-size:12px;color:#6b7280;">Reopen anytime from <b>❓ Guide</b> in the topbar.</div>
+        <button onclick="closeBusinessHelp()" style="padding:8px 18px;background:#0077B6;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Got it — let's grow my business</button>
+      </div>
+    </div>
+  </div>
+
   <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>

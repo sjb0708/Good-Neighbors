@@ -91,11 +91,35 @@ function showWelcomeIfNew() {
           </div>`).join('')}
       </div>
       <button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;padding:13px;background:var(--ocean);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Let's Go! 🏖️</button>
+      <button onclick="this.closest('[style*=fixed]').remove();openHelpModal();" style="width:100%;padding:11px;background:none;color:var(--ocean);border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px;">📖 Show me how to use the app</button>
     </div>
   `;
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
   document.body.appendChild(modal);
 }
+
+function openHelpModal() {
+  const m = document.getElementById('helpModal');
+  if (!m) return;
+  m.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  if (currentUser?.id) localStorage.setItem(`help_seen_${currentUser.id}`, '1');
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeHelpModal() {
+  const m = document.getElementById('helpModal');
+  if (!m) return;
+  m.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const m = document.getElementById('helpModal');
+    if (m && m.style.display === 'flex') closeHelpModal();
+  }
+});
 
 function initMobile() {
   if (window.innerWidth > 700) return;
@@ -1562,13 +1586,13 @@ function openVerificationModal() {
         <div style="font-size:13.5px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">✓ What does Verified mean?</div>
         <div style="font-size:13px;color:var(--text-mid);line-height:1.5;">The <strong>Verified Neighbor</strong> badge lets the community know you live or rent here in Costa Blanca Villas. It builds trust with your neighbors and unlocks +20 points.</div>
       </div>
-      <p style="margin:0 0 18px;font-size:13.5px;color:var(--text-mid);">Upload a document showing your name and address at Costa Blanca Villas — a utility bill, HOA letter, or official mail. Our team reviews requests within 1–2 days.</p>
+      <p style="margin:0 0 18px;font-size:13.5px;color:var(--text-mid);">Upload a document showing your name and address at Costa Blanca Villas — a utility bill, lease agreement, or official mail. Our team reviews requests within 1–2 days.</p>
       <div style="display:flex;flex-direction:column;gap:14px;">
         <div>
           <label style="font-size:12px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">Document Type</label>
           <select id="vrDocType" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;background:white;">
             <option value="utility_bill">Utility Bill</option>
-            <option value="hoa_letter">HOA Letter</option>
+            <option value="lease">Lease / Rental Agreement</option>
             <option value="official_mail">Official Mail / Letter</option>
             <option value="other">Other</option>
           </select>

@@ -65,6 +65,10 @@
 
         <button id="hamburgerBtn" onclick="toggleMobileMenu()" style="display:none;background:none;border:none;cursor:pointer;padding:8px;color:#374151;font-size:22px;line-height:1;">☰</button>
 
+        <button class="topbar-btn icon-btn" onclick="openHelpModal()" id="helpBtn" title="How to use Costa Blanca Connect" aria-label="Help">
+          <i data-lucide="help-circle"></i>
+        </button>
+
         <button class="topbar-btn icon-btn" onclick="navigate('notifications')" id="notifBtn">
           <i data-lucide="bell"></i>
           <span class="notif-badge" id="notifBadge" style="display:none"></span>
@@ -88,6 +92,9 @@
           </button>
           <button class="dropdown-item" onclick="navigate('settings'); closeDropdowns()">
             <i data-lucide="settings"></i> Settings
+          </button>
+          <button class="dropdown-item" onclick="openHelpModal(); closeDropdowns()">
+            <i data-lucide="help-circle"></i> How to Use
           </button>
           <div class="dropdown-divider"></div>
           <button class="dropdown-item danger" onclick="logout()">
@@ -596,6 +603,140 @@
         <a href="tel:+5076590-4374" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F8F8F8;border-radius:10px;text-decoration:none;">
           <span>🚔</span><div><div style="font-size:13px;font-weight:700;color:var(--text-dark)">Farallón Station</div><div style="font-size:12px;color:#9AA5B4">507 6590-4374</div></div>
         </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── HELP MODAL ─────────────────────────────────────────────────── -->
+  <div id="helpModal" onclick="if(event.target===this)closeHelpModal()" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:1000;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:white;border-radius:16px;width:min(680px,100%);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.3);overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid #e5e7eb;">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:#0d1b2a;">👋 Welcome to Costa Blanca Connect</div>
+          <div style="font-size:13px;color:#6b7280;margin-top:2px;">Quick guide to get the most out of your community app</div>
+        </div>
+        <button onclick="closeHelpModal()" style="background:#f1f5f9;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;color:#475569;">×</button>
+      </div>
+
+      <div id="helpModalBody" style="overflow-y:auto;padding:18px 22px;">
+
+        <details open style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🏠 Getting Started</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            Costa Blanca Connect is the private app for residents and businesses of Costa Blanca Villas in Farallón, Panamá. Use it to chat with neighbors, share updates, rent a golf cart, support local businesses, and stay informed about what's happening in the community.
+            <ul style="margin:8px 0 0 18px;padding:0;">
+              <li>Use the <b>search bar</b> at the top to find neighbors, businesses, posts, or events</li>
+              <li>The <b>bell icon</b> shows new comments, messages, reviews, and other activity</li>
+              <li>Click your <b>avatar</b> to edit your profile or sign out</li>
+              <li>Tap <b>🌐 ES</b> to switch to Spanish</li>
+            </ul>
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">📝 Posts &amp; Reactions</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            <ul style="margin:0;padding-left:18px;">
+              <li>Tap <b>+ New Post</b> on the Feed to share a story, photo, or poll</li>
+              <li>React to a post with 👍 💡 😂 😮 😢 👏 — hover the React button to pick</li>
+              <li>Tap <b>Comment</b> to reply. The post author gets a notification</li>
+              <li>Tap any poll option to vote (you can change your vote later)</li>
+              <li>Click your own post and choose <b>Edit</b> or <b>Delete</b> to manage it</li>
+            </ul>
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🛒 Marketplace</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            <ul style="margin:0;padding-left:18px;">
+              <li>Go to <b>Marketplace</b> in the left sidebar to browse items for sale or free</li>
+              <li>Tap <b>+ List Item</b> to sell or give something away — add a photo, price, and description</li>
+              <li>Use the <b>Contact Seller</b> button to reach out</li>
+              <li>Mark your item <b>Sold</b> when it's gone, or edit/delete anytime</li>
+              <li>All neighbors get a notification when you post something new</li>
+            </ul>
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">📅 Events</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            <ul style="margin:0;padding-left:18px;">
+              <li>See upcoming community events on the <b>Events</b> page</li>
+              <li>Tap <b>Going</b>, <b>Maybe</b>, or <b>Can't Go</b> to RSVP — the host is notified</li>
+              <li>Anyone can create an event with <b>+ Create Event</b> — add date, location, and a photo</li>
+            </ul>
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🛺 Golf Cart Rentals</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            <ul style="margin:0;padding-left:18px;">
+              <li>Find <b>Golf Cart Rentals</b> in the sidebar to browse available carts</li>
+              <li>Tap the green <b>💬 WhatsApp</b> button to message the owner directly — a friendly intro is pre-filled</li>
+              <li>To list your own, tap <b>+ List My Cart</b> and add a photo, rate, and your WhatsApp number with country code (+507 Panama, +1 USA/Canada)</li>
+              <li>Use the <b>✏️ Edit</b> or <b>🗑 Remove</b> buttons on your own listings</li>
+            </ul>
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">💬 Direct Messages</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            <ul style="margin:0;padding-left:18px;">
+              <li>Click any neighbor's name or avatar to view their profile, then tap <b>Message</b></li>
+              <li>Open <b>Messages</b> in the sidebar to see all your conversations</li>
+              <li>You'll get a notification (and an unread badge) when someone messages you</li>
+              <li>You can <b>block</b> a user from their profile if needed — they won't be able to message you</li>
+            </ul>
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🏢 For Business Owners</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            <ul style="margin:0;padding-left:18px;">
+              <li>Sign up as <b>Business</b> to get a dedicated dashboard</li>
+              <li>If your business is already listed, <b>claim</b> it by entering the verification code we send</li>
+              <li>Post offers, events, and updates from your business dashboard</li>
+              <li>Reply to reviews — the reviewer is notified of your response</li>
+              <li>Add your logo, banner, hours, services, and contact info</li>
+            </ul>
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🔔 Notifications</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            You'll see a red badge on the bell icon when there's something new. You get notified when:
+            <ul style="margin:8px 0 0 18px;padding:0;">
+              <li>Someone <b>comments</b> or <b>reacts</b> to your post</li>
+              <li>Someone <b>messages</b> you</li>
+              <li>Someone <b>RSVPs</b> to your event</li>
+              <li>A neighbor posts a new <b>marketplace</b> item or <b>cart</b> rental</li>
+              <li>(Business) Someone <b>reviews</b> your business or replies</li>
+            </ul>
+          </div>
+        </details>
+
+        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🚨 Safety &amp; Emergency</summary>
+          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
+            <ul style="margin:0;padding-left:18px;">
+              <li>The <b>Safety</b> section is for alerts: lost pets, suspicious activity, road conditions</li>
+              <li>Important community announcements appear at the top of the Feed</li>
+              <li>Emergency contacts (EMTS, police, fire) are always available in the right sidebar — tap to call</li>
+            </ul>
+          </div>
+        </details>
+
+      </div>
+
+      <div style="padding:14px 22px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;background:#f8fafc;">
+        <div style="font-size:12px;color:#6b7280;">Open this anytime from the <b>?</b> icon in the topbar.</div>
+        <button onclick="closeHelpModal()" style="padding:8px 18px;background:#0077B6;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Got it</button>
       </div>
     </div>
   </div>
