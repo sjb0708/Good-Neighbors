@@ -879,8 +879,8 @@ app.post('/api/admin/users/:id/toggle-verified', requireAdmin(async (req, res) =
 }));
 
 app.get('/api/admin/all-users', requireAdmin(async (req, res) => {
-  const rows = await sql`SELECT id, username, name, email, role, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, created_at FROM users WHERE role != 'admin' ORDER BY created_at DESC`;
-  res.json(rows.map(u => ({ id: u.id, username: u.username, name: u.name, email: u.email, role: u.role, avatar: u.avatar_hex, avatarUrl: u.avatar_url, initials: u.initials, verified: u.verified, yearsInNeighborhood: u.years_in_neighborhood, address: u.address })));
+  const rows = await sql`SELECT id, username, name, email, role, avatar_hex, avatar_url, initials, verified, email_verified, years_in_neighborhood, address, created_at FROM users WHERE role != 'admin' ORDER BY created_at DESC`;
+  res.json(rows.map(u => ({ id: u.id, username: u.username, name: u.name, email: u.email, role: u.role, avatar: u.avatar_hex, avatarUrl: u.avatar_url, initials: u.initials, verified: u.verified, emailVerified: u.email_verified, yearsInNeighborhood: u.years_in_neighborhood, address: u.address, joinedAt: u.created_at })));
 }));
 
 app.get('/api/admin/banned', requireAdmin(async (req, res) => {

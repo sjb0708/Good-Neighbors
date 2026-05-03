@@ -123,6 +123,20 @@
     .members-table td { padding: 12px 22px; font-size: 13.5px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     .members-table tr:last-child td { border-bottom: none; }
     .members-table tr:hover td { background: #fafbfc; }
+    .admin-stat-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; min-width:110px; }
+    .admin-stat-card .lbl { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; }
+    .admin-stat-card .val { font-size:20px; font-weight:800; color:#0d1b2a; line-height:1.2; margin-top:2px; }
+    .filter-chip { padding:6px 13px; background:white; border:1.5px solid #dde4ed; border-radius:20px; font-size:12.5px; font-weight:600; color:#475569; cursor:pointer; font-family:inherit; }
+    .filter-chip.active { background:#0077B6; color:white; border-color:#0077B6; }
+    .filter-chip .count { opacity:0.7; margin-left:4px; font-weight:500; }
+    .sort-arrow { font-size:10px; color:#94a3b8; margin-left:3px; }
+    .sort-arrow.active { color:#0077B6; }
+    .status-badge { display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:10px; margin-right:4px; }
+    .status-badge.verified { background:#dcfce7; color:#166534; }
+    .status-badge.pending  { background:#fef9c3; color:#854d0e; }
+    .status-badge.banned   { background:#fee2e2; color:#991b1b; }
+    .status-badge.unclaimed{ background:#fef3c7; color:#92400e; }
+    .status-badge.claimed  { background:#dbeafe; color:#1e40af; }
     .member-name-cell { display: flex; align-items: center; gap: 10px; }
     .member-mini-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: white; flex-shrink: 0; }
 
@@ -303,13 +317,19 @@
               <div class="panel-header-sub">All accounts on Costa Blanca Connect</div>
             </div>
           </div>
+          <div class="admin-stats" id="membersStats" style="display:flex;gap:10px;padding:14px 22px 4px;flex-wrap:wrap;"></div>
+          <div style="padding:10px 22px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <input id="membersSearch" type="search" placeholder="Search by name, username, or email…" style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid #dde4ed;border-radius:10px;font-size:13.5px;font-family:inherit;outline:none;background:#f8fafc;" oninput="renderMembers()" />
+          </div>
+          <div id="membersFilters" style="padding:6px 22px 12px;display:flex;gap:6px;flex-wrap:wrap;"></div>
           <table class="members-table">
             <thead>
               <tr>
-                <th>Member</th>
-                <th>Username</th>
+                <th onclick="sortMembersBy('name')" style="cursor:pointer;user-select:none;">Member <span class="sort-arrow" data-key="name"></span></th>
+                <th onclick="sortMembersBy('username')" style="cursor:pointer;user-select:none;">Username <span class="sort-arrow" data-key="username"></span></th>
                 <th>Email</th>
-                <th>Address</th>
+                <th onclick="sortMembersBy('joinedAt')" style="cursor:pointer;user-select:none;">Joined <span class="sort-arrow" data-key="joinedAt"></span></th>
+                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -672,6 +692,11 @@
       <!-- Manage Businesses View -->
       <div class="view" id="view-businesses">
         <div class="panel-header"><h2>🗂️ Manage Businesses</h2><div class="panel-header-sub">View and remove business listings</div></div>
+        <div class="admin-stats" id="bizStats" style="display:flex;gap:10px;padding:6px 0 4px;flex-wrap:wrap;"></div>
+        <div style="padding:10px 0 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <input id="bizSearch" type="search" placeholder="Search by name, category, or address…" style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid #dde4ed;border-radius:10px;font-size:13.5px;font-family:inherit;outline:none;background:#f8fafc;" oninput="renderBusinesses()" />
+        </div>
+        <div id="bizFilters" style="padding:0 0 12px;display:flex;gap:6px;flex-wrap:wrap;"></div>
         <div id="bizManageList"></div>
       </div>
 
@@ -879,27 +904,127 @@
         </div>`).join('') : '<div class="panel-empty">No new access requests.</div>';
     }
 
+    let membersFilter = 'all';
+    let membersSort = { key: 'joinedAt', dir: 'desc' };
+
+    function sortMembersBy(key) {
+      if (membersSort.key === key) membersSort.dir = membersSort.dir === 'asc' ? 'desc' : 'asc';
+      else { membersSort = { key, dir: 'asc' }; }
+      renderMembers();
+    }
+
+    function setMembersFilter(f) { membersFilter = f; renderMembers(); }
+
+    function fmtJoinedDate(d) {
+      if (!d) return '—';
+      const date = new Date(d);
+      const now = new Date();
+      const days = Math.floor((now - date) / 86400000);
+      if (days === 0) return 'Today';
+      if (days === 1) return 'Yesterday';
+      if (days < 7) return `${days}d ago`;
+      if (days < 30) return `${Math.floor(days/7)}w ago`;
+      return date.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+    }
+
+    function memberStatus(m, isBanned) {
+      if (isBanned) return 'banned';
+      if (m.verified) return 'verified';
+      return 'pending';
+    }
+
     function renderMembers() {
       const tbody = document.getElementById('membersList');
-      tbody.innerHTML = allMembers.map(m => {
+      const search = (document.getElementById('membersSearch')?.value || '').toLowerCase().trim();
+
+      const enriched = allMembers.map(m => {
         const banRecord = allBanned.find(b => b.username === m.username || b.email === m.email);
-        const isBanned = !!banRecord;
+        return { ...m, _banRecord: banRecord, _isBanned: !!banRecord, _status: memberStatus(m, !!banRecord) };
+      });
+
+      // Stats
+      const totalC = enriched.length;
+      const verC   = enriched.filter(m => m._status === 'verified').length;
+      const pendC  = enriched.filter(m => m._status === 'pending').length;
+      const banC   = enriched.filter(m => m._isBanned).length;
+      const bizC   = enriched.filter(m => m.role === 'business').length;
+      const neighC = enriched.filter(m => m.role === 'neighbor').length;
+      const realC  = enriched.filter(m => m.role === 'realtor').length;
+
+      document.getElementById('membersStats').innerHTML = `
+        <div class="admin-stat-card"><div class="lbl">Total</div><div class="val">${totalC}</div></div>
+        <div class="admin-stat-card"><div class="lbl">Verified</div><div class="val" style="color:#166534;">${verC}</div></div>
+        <div class="admin-stat-card"><div class="lbl">Pending</div><div class="val" style="color:#854d0e;">${pendC}</div></div>
+        <div class="admin-stat-card"><div class="lbl">Banned</div><div class="val" style="color:#991b1b;">${banC}</div></div>
+      `;
+
+      // Filter chips
+      const chips = [
+        ['all', `All`, totalC], ['neighbor', '🏠 Neighbors', neighC], ['business', '🏪 Businesses', bizC],
+        ['realtor', '🔑 Realtors', realC], ['verified', '✓ Verified', verC], ['pending', '⏳ Pending', pendC], ['banned', '🚫 Banned', banC]
+      ];
+      document.getElementById('membersFilters').innerHTML = chips.filter(c => c[2] > 0 || c[0] === 'all').map(([k,l,c]) =>
+        `<button class="filter-chip ${membersFilter===k?'active':''}" onclick="setMembersFilter('${k}')">${l}<span class="count">(${c})</span></button>`
+      ).join('');
+
+      // Apply filter + search
+      let list = enriched.filter(m => {
+        if (membersFilter === 'verified') return m._status === 'verified';
+        if (membersFilter === 'pending')  return m._status === 'pending';
+        if (membersFilter === 'banned')   return m._isBanned;
+        if (membersFilter === 'all')      return true;
+        return m.role === membersFilter;
+      });
+      if (search) list = list.filter(m =>
+        (m.name || '').toLowerCase().includes(search) ||
+        (m.username || '').toLowerCase().includes(search) ||
+        (m.email || '').toLowerCase().includes(search)
+      );
+
+      // Sort
+      const { key, dir } = membersSort;
+      list.sort((a, b) => {
+        const av = a[key] || ''; const bv = b[key] || '';
+        if (key === 'joinedAt') return dir === 'asc' ? new Date(av) - new Date(bv) : new Date(bv) - new Date(av);
+        return dir === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+      });
+
+      // Sort arrows
+      document.querySelectorAll('.sort-arrow').forEach(s => {
+        const k = s.dataset.key;
+        if (k === membersSort.key) { s.textContent = membersSort.dir === 'asc' ? '▲' : '▼'; s.classList.add('active'); }
+        else { s.textContent = '↕'; s.classList.remove('active'); }
+      });
+
+      if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px 22px;color:var(--text-light);">No members match.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(m => {
+        const isBanned = m._isBanned;
+        const banRecord = m._banRecord;
+        const statusBadges = [
+          isBanned ? '<span class="status-badge banned">🚫 BANNED</span>' : '',
+          !isBanned && m.verified ? '<span class="status-badge verified">✓ VERIFIED</span>' : '',
+          !isBanned && !m.verified ? '<span class="status-badge pending">⏳ PENDING</span>' : '',
+        ].join('');
+        const roleBadge = `<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:${m.role==='business'?'#dbeafe':m.role==='realtor'?'#fef9c3':'#dcfce7'};color:${m.role==='business'?'#1d4ed8':m.role==='realtor'?'#92400e':'#166534'};">${m.role}</span>`;
         return `
         <tr style="${isBanned ? 'opacity:0.7;background:#fff5f5;' : ''}">
           <td>
             <div class="member-name-cell">
               <div class="member-mini-avatar" style="background:${m.avatar}">${m.initials}</div>
               <span style="font-weight:600">${m.name}</span>
-              ${isBanned ? `<span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:6px;">BANNED</span>` : ''}
             </div>
           </td>
           <td style="color:var(--text-light)">@${m.username}</td>
           <td style="color:var(--text-mid);font-size:13px">${m.email || '—'}</td>
-          <td style="color:var(--text-mid);font-size:13px">${m.address || '—'}</td>
-          <td><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:${m.role==='business'?'#dbeafe':m.role==='realtor'?'#fef9c3':'#dcfce7'};color:${m.role==='business'?'#1d4ed8':m.role==='realtor'?'#92400e':'#166534'};">${m.role}</span></td>
+          <td style="color:var(--text-mid);font-size:13px">${fmtJoinedDate(m.joinedAt)}</td>
+          <td>${statusBadges}<br>${roleBadge}</td>
           <td>
             ${m.username !== currentAdmin?.username ? `
-              <div style="display:flex;gap:6px;">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
                 ${isBanned
                   ? `<button class="btn-dismiss" style="background:rgba(5,150,105,0.08);color:#065f46;border:1px solid rgba(5,150,105,0.2);padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;" onclick="liftBanById('${banRecord.id}')">✓ Lift Ban</button>`
                   : `<button class="btn-remove" style="background:rgba(230,57,70,0.08);color:var(--red);border:1px solid rgba(230,57,70,0.15);padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;" onclick="openBanModal('${m.username}','${m.name.replace(/'/g,"\\'")}')">🚫 Ban</button>`
@@ -1534,19 +1659,82 @@
     }
 
     // ── Business Claims ──────────────────────────────────────────────────────
+    let allBusinesses = [];
+    let bizFilter = 'all';
+    let bizSort = { key: 'name', dir: 'asc' };
+
+    function setBizFilter(f) { bizFilter = f; renderBusinesses(); }
+    function sortBizBy(key) {
+      if (bizSort.key === key) bizSort.dir = bizSort.dir === 'asc' ? 'desc' : 'asc';
+      else bizSort = { key, dir: 'asc' };
+      renderBusinesses();
+    }
+
     async function loadBusinesses() {
       const res = await fetch('/api/admin/businesses', { credentials: 'include' });
-      const businesses = res.ok ? await res.json() : [];
+      allBusinesses = res.ok ? await res.json() : [];
+      renderBusinesses();
+    }
+
+    function renderBusinesses() {
       const el = document.getElementById('bizManageList');
-      if (!businesses.length) { el.innerHTML = '<p style="color:#888;font-size:14px;">No businesses listed.</p>'; return; }
-      el.innerHTML = businesses.map(b => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;background:white;">
-          <div>
-            <div style="font-size:15px;font-weight:700;color:#0d1b2a;">${b.name}</div>
-            <div style="font-size:12px;color:#6b7280;margin-top:2px;">${b.category || 'Uncategorized'} · ${b.claimed ? '✅ Claimed' : '📋 Unclaimed'}</div>
+      const search = (document.getElementById('bizSearch')?.value || '').toLowerCase().trim();
+
+      const totalC = allBusinesses.length;
+      const claimedC = allBusinesses.filter(b => b.claimed).length;
+      const unclaimedC = totalC - claimedC;
+      const verifiedC = allBusinesses.filter(b => b.verified || b.lastVerifiedAt).length;
+
+      document.getElementById('bizStats').innerHTML = `
+        <div class="admin-stat-card"><div class="lbl">Total</div><div class="val">${totalC}</div></div>
+        <div class="admin-stat-card"><div class="lbl">Claimed</div><div class="val" style="color:#1e40af;">${claimedC}</div></div>
+        <div class="admin-stat-card"><div class="lbl">Unclaimed</div><div class="val" style="color:#92400e;">${unclaimedC}</div></div>
+        <div class="admin-stat-card"><div class="lbl">Verified</div><div class="val" style="color:#166534;">${verifiedC}</div></div>
+      `;
+
+      const chips = [
+        ['all', 'All', totalC], ['claimed', '✅ Claimed', claimedC],
+        ['unclaimed', '📋 Unclaimed', unclaimedC], ['verified', '✓ Verified', verifiedC]
+      ];
+      document.getElementById('bizFilters').innerHTML = chips.map(([k,l,c]) =>
+        `<button class="filter-chip ${bizFilter===k?'active':''}" onclick="setBizFilter('${k}')">${l}<span class="count">(${c})</span></button>`
+      ).join('');
+
+      let list = allBusinesses.filter(b => {
+        if (bizFilter === 'claimed') return b.claimed;
+        if (bizFilter === 'unclaimed') return !b.claimed;
+        if (bizFilter === 'verified') return b.verified || b.lastVerifiedAt;
+        return true;
+      });
+      if (search) list = list.filter(b =>
+        (b.name || '').toLowerCase().includes(search) ||
+        (b.category || '').toLowerCase().includes(search) ||
+        (b.address || '').toLowerCase().includes(search)
+      );
+
+      const { key, dir } = bizSort;
+      list.sort((a, b) => {
+        const av = a[key] || ''; const bv = b[key] || '';
+        return dir === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+      });
+
+      if (!list.length) { el.innerHTML = '<p style="color:#888;font-size:14px;text-align:center;padding:30px;">No businesses match.</p>'; return; }
+
+      el.innerHTML = list.map(b => {
+        const claimedBadge = b.claimed ? '<span class="status-badge claimed">✅ CLAIMED</span>' : '<span class="status-badge unclaimed">📋 UNCLAIMED</span>';
+        const verifiedBadge = (b.verified || b.lastVerifiedAt) ? '<span class="status-badge verified">✓ VERIFIED</span>' : '';
+        return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;background:white;gap:12px;flex-wrap:wrap;">
+          <div style="min-width:0;flex:1;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <div style="font-size:15px;font-weight:700;color:#0d1b2a;">${b.name}</div>
+              ${claimedBadge}${verifiedBadge}
+            </div>
+            <div style="font-size:12px;color:#6b7280;margin-top:4px;">${b.category || 'Uncategorized'}${b.address ? ' · 📍 ' + b.address : ''}${b.phone ? ' · 📞 ' + b.phone : ''}</div>
           </div>
-          <button onclick="adminDeleteBusiness('${b.id}','${b.name.replace(/'/g,"\\'")}',this)" style="padding:7px 14px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Delete</button>
-        </div>`).join('');
+          <button onclick="adminDeleteBusiness('${b.id}','${b.name.replace(/'/g,"\\'")}',this)" style="padding:7px 14px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">Delete</button>
+        </div>`;
+      }).join('');
     }
 
     async function adminDeleteBusiness(id, name, btn) {
