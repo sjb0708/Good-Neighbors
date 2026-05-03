@@ -5138,11 +5138,21 @@ async function renderFirstResponders(container) {
               </div>
             </div>`).join('')}
 
-          <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:12px;padding:18px;text-align:center;margin-top:8px;">
-            <div style="width:72px;height:72px;background:white;border-radius:14px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.15);"><img src="/images/ierf-logo.png" alt="IERF Response" style="width:56px;height:56px;object-fit:contain;"></div>
-            <p style="font-size:14px;font-weight:800;color:white;margin:0 0 6px;">Support IERF Response</p>
-            <p style="font-size:12.5px;color:rgba(255,255,255,0.9);line-height:1.55;margin:0 0 14px;">IERF Response prepared the Panama Emergency Guide above and provides critical emergency preparedness resources to communities like ours. Your donation helps fund life-saving training and equipment.</p>
-            <a href="https://ierfresponse.org/donate/" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:11px 30px;background:white;color:#dc2626;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;">Donate Today →</a>
+          <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:14px;padding:22px;text-align:center;margin-top:8px;color:white;">
+            <div style="width:80px;height:80px;background:white;border-radius:16px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.2);"><img src="/images/ierf-logo.png" alt="IERF Response" style="width:64px;height:64px;object-fit:contain;"></div>
+            <p style="font-size:18px;font-weight:900;margin:0 0 8px;letter-spacing:-0.3px;">When seconds count, training saves lives.</p>
+            <p style="font-size:13px;line-height:1.6;margin:0 0 14px;color:rgba(255,255,255,0.92);">IERF Response is on the ground in Panama — training local first responders, equipping rural communities, and producing free preparedness resources like the guide above. Your donation directly funds:</p>
+            <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px 16px;margin-bottom:14px;text-align:left;">
+              <div style="font-size:12.5px;line-height:1.7;color:white;">
+                <div style="display:flex;gap:8px;"><span style="flex-shrink:0;">🚑</span><span><strong>First-responder training</strong> for volunteers in underserved Panama communities</span></div>
+                <div style="display:flex;gap:8px;margin-top:6px;"><span style="flex-shrink:0;">🩹</span><span><strong>Life-saving equipment</strong> — AEDs, oxygen, trauma kits</span></div>
+                <div style="display:flex;gap:8px;margin-top:6px;"><span style="flex-shrink:0;">📘</span><span><strong>Free preparedness guides</strong> distributed across Panama in English &amp; Spanish</span></div>
+                <div style="display:flex;gap:8px;margin-top:6px;"><span style="flex-shrink:0;">🇵🇦</span><span><strong>Disaster readiness</strong> for communities like Costa Blanca Villas</span></div>
+              </div>
+            </div>
+            <p style="font-size:13px;font-weight:700;margin:0 0 14px;color:white;">Every dollar trains someone who can save a life. Will you help?</p>
+            <a href="https://ierfresponse.org/donate/" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:13px 36px;background:white;color:#dc2626;border-radius:12px;font-size:15px;font-weight:900;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.2);">Donate Now →</a>
+            <p style="font-size:11px;color:rgba(255,255,255,0.75);margin:12px 0 0;">100% volunteer-run · Every gift makes a difference</p>
           </div>
         </div>
 
@@ -5253,11 +5263,21 @@ async function renderFirstResponders(container) {
             <p style="font-size:13px;color:#059669;font-weight:700;margin:0 0 4px;">💡 IERF Recommends</p>
             <p style="font-size:12.5px;color:var(--text-mid);line-height:1.55;margin:0;">Print this guide and keep it in a binder with your first aid kit, flashlights & batteries. Store emergency contacts in your phone. The more prepared you are, the safer your family will be.</p>
           </div>
-          <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:12px;padding:16px;text-align:center;">
-            <div style="width:64px;height:64px;background:white;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.15);"><img src="/images/ierf-logo.png" alt="IERF Response" style="width:50px;height:50px;object-fit:contain;"></div>
-            <p style="font-size:13px;font-weight:700;color:white;margin:0 0 4px;">Support IERF Response</p>
-            <p style="font-size:12px;color:rgba(255,255,255,0.85);line-height:1.5;margin:0 0 12px;">IERF Response provides critical emergency preparedness resources to communities like ours. Your donation helps fund life-saving training and equipment.</p>
-            <a href="https://ierfresponse.org/donate/" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:11px 28px;background:white;color:#dc2626;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;">Donate Today →</a>
+          <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:14px;padding:22px;text-align:center;color:white;">
+            <div style="width:80px;height:80px;background:white;border-radius:16px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.2);"><img src="/images/ierf-logo.png" alt="IERF Response" style="width:64px;height:64px;object-fit:contain;"></div>
+            <p style="font-size:18px;font-weight:900;margin:0 0 8px;letter-spacing:-0.3px;">When seconds count, training saves lives.</p>
+            <p style="font-size:13px;line-height:1.6;margin:0 0 14px;color:rgba(255,255,255,0.92);">IERF Response is on the ground in Panama — training local first responders, equipping rural communities, and producing free preparedness resources like the guide above. Your donation directly funds:</p>
+            <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px 16px;margin-bottom:14px;text-align:left;">
+              <div style="font-size:12.5px;line-height:1.7;color:white;">
+                <div style="display:flex;gap:8px;"><span style="flex-shrink:0;">🚑</span><span><strong>First-responder training</strong> for volunteers in underserved Panama communities</span></div>
+                <div style="display:flex;gap:8px;margin-top:6px;"><span style="flex-shrink:0;">🩹</span><span><strong>Life-saving equipment</strong> — AEDs, oxygen, trauma kits</span></div>
+                <div style="display:flex;gap:8px;margin-top:6px;"><span style="flex-shrink:0;">📘</span><span><strong>Free preparedness guides</strong> distributed across Panama in English &amp; Spanish</span></div>
+                <div style="display:flex;gap:8px;margin-top:6px;"><span style="flex-shrink:0;">🇵🇦</span><span><strong>Disaster readiness</strong> for communities like Costa Blanca Villas</span></div>
+              </div>
+            </div>
+            <p style="font-size:13px;font-weight:700;margin:0 0 14px;color:white;">Every dollar trains someone who can save a life. Will you help?</p>
+            <a href="https://ierfresponse.org/donate/" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:13px 36px;background:white;color:#dc2626;border-radius:12px;font-size:15px;font-weight:900;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.2);">Donate Now →</a>
+            <p style="font-size:11px;color:rgba(255,255,255,0.75);margin:12px 0 0;">100% volunteer-run · Every gift makes a difference</p>
           </div>
         </div>
       </div>
