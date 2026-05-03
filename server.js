@@ -354,8 +354,8 @@ app.post('/api/auth/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const ban = await sql`SELECT id FROM banned_users WHERE (username = ${user.username} OR (email IS NOT NULL AND LOWER(email) = LOWER(${user.email||''}))) AND lifted_at IS NULL LIMIT 1`;
-    if (ban.length) return res.status(403).json({ error: 'banned', reason: 'Your account has been suspended.' });
+    const ban = await sql`SELECT id, reason FROM banned_users WHERE (username = ${user.username} OR (email IS NOT NULL AND LOWER(email) = LOWER(${user.email||''}))) AND lifted_at IS NULL LIMIT 1`;
+    if (ban.length) return res.status(403).json({ error: 'banned', reason: ban[0].reason || 'Violation of Member Agreement' });
 
     if (!user.email_verified) return res.status(403).json({ error: 'unverified', reason: 'Please verify your email before logging in. Check your inbox for a confirmation link.' });
 
