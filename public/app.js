@@ -1324,6 +1324,25 @@ async function renderNeighbors(container) {
 }
 
 // ─── Groups ─────────────────────────────────────────────────────
+const GROUP_CATEGORIES = [
+  { key: 'social',     emoji: '🍷', label: 'Social' },
+  { key: 'sports',     emoji: '⛳', label: 'Sports & Fitness' },
+  { key: 'outdoors',   emoji: '🏖️', label: 'Beach & Outdoors' },
+  { key: 'family',     emoji: '👨‍👩‍👧', label: 'Families & Kids' },
+  { key: 'pets',       emoji: '🐕', label: 'Pets & Animals' },
+  { key: 'food',       emoji: '🍳', label: 'Food & Cooking' },
+  { key: 'arts',       emoji: '🎨', label: 'Hobbies & Arts' },
+  { key: 'veterans',   emoji: '🎖️', label: 'Veterans' },
+  { key: 'volunteer',  emoji: '🤝', label: 'Volunteer & Causes' },
+  { key: 'general',    emoji: '🌐', label: 'General' }
+];
+function getGroupCategory(key) {
+  const k = (key || '').toLowerCase();
+  return GROUP_CATEGORIES.find(c => c.key === k) || GROUP_CATEGORIES.find(c => c.key === 'general');
+}
+
+let groupsState = { all: [], filter: 'all', search: '' };
+
 async function renderGroups(container) {
   container.innerHTML = '';
   currentGroupId = null;
@@ -1342,18 +1361,68 @@ async function renderGroups(container) {
   container.appendChild(topBar);
 
   const groups = await fetchJSON('/api/groups?t=' + Date.now());
+  groupsState.all = groups || [];
+
   if (!groups || !groups.length) {
     container.appendChild(Object.assign(document.createElement('div'), { innerHTML: emptyStateHTML('👥', 'No groups yet', 'Be the first to create one!') }));
     return;
   }
+
+  // Search bar
+  const searchWrap = document.createElement('div');
+  searchWrap.style.cssText = 'margin:14px 0 10px;';
+  searchWrap.innerHTML = `<input id="groupsSearch" type="search" placeholder="Search groups by name or description…" oninput="onGroupsSearch(this.value)" value="${escHtml(groupsState.search)}" style="width:100%;padding:11px 14px;border:1.5px solid #dde4ed;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none;background:white;box-sizing:border-box;" />`;
+  container.appendChild(searchWrap);
+
+  // Filter chips
+  const chips = document.createElement('div');
+  chips.id = 'groupsFilters';
+  chips.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;';
+  container.appendChild(chips);
+
   const grid = document.createElement('div');
   grid.className = 'groups-grid';
-  groups.forEach((g, i) => {
+  grid.id = 'groupsGrid';
+  container.appendChild(grid);
+
+  applyGroupsFilter();
+}
+
+function onGroupsSearch(v) { groupsState.search = (v || '').toLowerCase().trim(); applyGroupsFilter(); }
+function setGroupsFilter(f) { groupsState.filter = f; applyGroupsFilter(); }
+
+function applyGroupsFilter() {
+  const groups = groupsState.all;
+  const counts = { all: groups.length };
+  GROUP_CATEGORIES.forEach(c => { counts[c.key] = groups.filter(g => (g.category || 'general').toLowerCase() === c.key).length; });
+
+  const chips = document.getElementById('groupsFilters');
+  if (chips) {
+    const items = [['all','All', counts.all], ...GROUP_CATEGORIES.filter(c => counts[c.key] > 0).map(c => [c.key, `${c.emoji} ${c.label}`, counts[c.key]])];
+    chips.innerHTML = items.map(([k, l, c]) =>
+      `<button class="filter-chip ${groupsState.filter===k?'active':''}" onclick="setGroupsFilter('${k}')" style="padding:6px 13px;background:${groupsState.filter===k?'var(--ocean)':'white'};color:${groupsState.filter===k?'white':'#475569'};border:1.5px solid ${groupsState.filter===k?'var(--ocean)':'#dde4ed'};border-radius:20px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">${l}<span style="opacity:0.7;margin-left:4px;font-weight:500;">(${c})</span></button>`
+    ).join('');
+  }
+
+  let list = groups;
+  if (groupsState.filter !== 'all') list = list.filter(g => (g.category || 'general').toLowerCase() === groupsState.filter);
+  if (groupsState.search) list = list.filter(g =>
+    (g.name || '').toLowerCase().includes(groupsState.search) ||
+    (g.description || '').toLowerCase().includes(groupsState.search)
+  );
+
+  const grid = document.getElementById('groupsGrid');
+  if (!grid) return;
+  if (!list.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;background:white;border:1px solid var(--border);border-radius:14px;padding:30px;text-align:center;color:var(--text-light);font-size:14px;">No groups match. Try a different category or search term.</div>`;
+    return;
+  }
+  grid.innerHTML = '';
+  list.forEach((g, i) => {
     const card = buildGroupCard(g);
     card.style.animationDelay = `${i * 60}ms`;
     grid.appendChild(card);
   });
-  container.appendChild(grid);
 }
 
 // ─── Notifications ───────────────────────────────────────────────
@@ -3516,6 +3585,7 @@ function buildGroupCard(group) {
       <div class="group-card-name">${escHtml(group.name)}</div>
       <div class="group-card-meta">
         👥 ${group.members} members
+        ${(() => { const c = getGroupCategory(group.category); return `<span style="background:#eff6ff;color:#1e40af;padding:2px 8px;border-radius:7px;font-weight:700;font-size:10.5px;">${c.emoji} ${c.label}</span>`; })()}
         ${group.privacy === 'private' ? '<span style="background:rgba(231,111,81,0.1);color:var(--coral);padding:1px 6px;border-radius:7px;font-weight:700;font-size:10px;">Private</span>' : ''}
       </div>
       <div class="group-card-desc">${escHtml(group.description)}</div>
@@ -4067,6 +4137,11 @@ function openEditGroupModal(groupId) {
       </div>
       <div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">GROUP NAME</label><input id="egName" type="text" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" /></div>
       <div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">DESCRIPTION</label><textarea id="egDesc" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:none;height:80px;box-sizing:border-box;"></textarea></div>
+      <div style="margin-bottom:12px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">CATEGORY</label>
+        <select id="egCategory" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:white;box-sizing:border-box;">
+          ${GROUP_CATEGORIES.map(c => `<option value="${c.key}">${c.emoji} ${c.label}</option>`).join('')}
+        </select>
+      </div>
       <div style="margin-bottom:18px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">PRIVACY</label>
         <select id="egPrivacy" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:white;">
           <option value="public">🌐 Public — anyone can join</option>
@@ -4083,6 +4158,9 @@ function openEditGroupModal(groupId) {
     document.getElementById('egName').value = g.name || '';
     document.getElementById('egDesc').value = g.description || '';
     document.getElementById('egPrivacy').value = g.privacy || 'public';
+    const cat = (g.category || 'general').toLowerCase();
+    const sel = document.getElementById('egCategory');
+    if (sel) sel.value = GROUP_CATEGORIES.find(c => c.key === cat) ? cat : 'general';
   });
 }
 
@@ -4090,11 +4168,12 @@ async function saveEditGroup(groupId) {
   const name = document.getElementById('egName')?.value.trim();
   const description = document.getElementById('egDesc')?.value.trim();
   const privacy = document.getElementById('egPrivacy')?.value;
+  const category = document.getElementById('egCategory')?.value;
   if (!name) { showToast('Group name is required'); return; }
   const res = await fetch(`/api/groups/${groupId}`, {
     method: 'PATCH', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, description, privacy })
+    body: JSON.stringify({ name, description, privacy, category })
   });
   if (res.ok) {
     document.getElementById('editGroupModal')?.remove();
@@ -4337,6 +4416,12 @@ function openCreateGroupModal() {
         <input id="cgName" type="text" placeholder="e.g. Golf Enthusiasts" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;" />
       </div>
       <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Category *</label>
+        <select id="cgCategory" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:white;">
+          ${GROUP_CATEGORIES.map(c => `<option value="${c.key}">${c.emoji} ${c.label}</option>`).join('')}
+        </select>
+      </div>
+      <div style="margin-bottom:14px;">
         <label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Description</label>
         <textarea id="cgDesc" placeholder="What is this group about?" style="width:100%;min-height:80px;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;resize:none;outline:none;"></textarea>
       </div>
@@ -4401,6 +4486,7 @@ async function submitCreateGroup() {
     description: document.getElementById('cgDesc')?.value.trim(),
     icon: cgPhotoDataUrl || '👥',
     privacy: document.getElementById('cgPrivacy')?.value || 'public',
+    category: document.getElementById('cgCategory')?.value || 'general',
     coverPhoto: cgCoverDataUrl || ''
   };
   cgPhotoDataUrl = null;
