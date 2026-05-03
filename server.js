@@ -1578,12 +1578,15 @@ app.get('/api/events', async (req, res) => {
   try {
     const user   = await getUser(req);
     const userId = user?.id || null;
+    await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS group_id UUID`;
     const rows   = await sql`
       SELECT e.*, u.username AS host_username, u.name AS host_name, u.avatar_hex AS host_avatar, u.initials AS host_initials, u.verified AS host_verified,
+        g.name AS group_name, g.icon AS group_icon,
         COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='going'),0)    AS going_count,
         COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='maybe'),0)   AS maybe_count,
         COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='cant_go'),0) AS cant_go_count
       FROM events e JOIN users u ON e.host_id = u.id
+      LEFT JOIN groups g ON e.group_id = g.id
       ORDER BY e.event_date ASC
     `;
     let userRsvps = {};
@@ -1597,6 +1600,7 @@ app.get('/api/events', async (req, res) => {
       location: e.location, date: e.event_date, time: e.event_time, endTime: e.end_time,
       category: e.category, isHoaEvent: e.is_hoa_event, image: e.image_url || null, cancelled: e.cancelled || false,
       businessId: e.business_id || null,
+      groupId: e.group_id || null, groupName: e.group_name || null, groupIcon: e.group_icon || null,
       rsvp: { going: e.going_count, maybe: e.maybe_count, cantGo: e.cant_go_count },
       userRsvp: userRsvps[e.id] ? (userRsvps[e.id] === 'cant_go' ? 'cantGo' : userRsvps[e.id]) : null,
       goingAvatars: [],
@@ -2513,9 +2517,18 @@ app.get('/api/groups/:id', async (req, res) => {
     `;
     if (!g) return res.status(404).json({ error: 'Not found' });
 
+    await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS group_id UUID`;
+    await sql`ALTER TABLE group_posts ADD COLUMN IF NOT EXISTS event_id UUID`;
     const posts = await sql`
-      SELECT gp.*, u.username, u.name, u.avatar_hex, u.initials
+      SELECT gp.*, u.username, u.name, u.avatar_hex, u.initials,
+        e.title AS event_title, e.description AS event_description, e.location AS event_location,
+        e.event_date, e.event_time, e.end_time, e.category AS event_category, e.image_url AS event_image_url, e.cancelled AS event_cancelled,
+        COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='going'),0)   AS event_going,
+        COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='maybe'),0)  AS event_maybe,
+        COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='cant_go'),0) AS event_cantgo,
+        (SELECT status FROM event_rsvps WHERE event_id=e.id AND user_id=${userId||null}) AS event_user_rsvp
       FROM group_posts gp JOIN users u ON gp.author_id = u.id
+      LEFT JOIN events e ON gp.event_id = e.id
       WHERE gp.group_id=${g.id} ORDER BY gp.pinned DESC, gp.created_at DESC LIMIT 50
     `;
 
@@ -2530,18 +2543,41 @@ app.get('/api/groups/:id', async (req, res) => {
       joinRequests = jr.map(r => ({ username: r.username, name: r.name, initials: r.initials, avatar: r.avatar_hex, requestedAt: r.requested_at }));
     }
 
+    const formattedGroup = await formatGroupRow({ ...g, created_by_user_id: g.created_by_user_id || g.created_by_user_id_val }, userId, isAdminUser);
+    const myMembership = userId ? await sql`SELECT is_admin FROM group_members WHERE group_id=${g.id} AND user_id=${userId}` : [];
+    const isCoAdmin = !!(myMembership[0]?.is_admin) && !formattedGroup.isCreator;
     res.json({
-      ...(await formatGroupRow({ ...g, created_by_user_id: g.created_by_user_id || g.created_by_user_id_val }, userId, isAdminUser)),
+      ...formattedGroup,
+      isCoAdmin,
       memberList: (await sql`
-        SELECT u.id, u.username, u.name, u.avatar_hex, u.initials, u.avatar_url, gm.joined_at
+        SELECT u.id, u.username, u.name, u.avatar_hex, u.initials, u.avatar_url, gm.joined_at, gm.is_admin
         FROM group_members gm JOIN users u ON gm.user_id = u.id
-        WHERE gm.group_id=${g.id} ORDER BY gm.joined_at ASC
-      `).map(m => ({ id: m.id, username: m.username, name: m.name, avatar: m.avatar_hex, avatarUrl: m.avatar_url, initials: m.initials, joinedAt: m.joined_at })),
+        WHERE gm.group_id=${g.id} ORDER BY gm.is_admin DESC, gm.joined_at ASC
+      `).map(m => ({
+        id: m.id, username: m.username, name: m.name, avatar: m.avatar_hex, avatarUrl: m.avatar_url,
+        initials: m.initials, joinedAt: m.joined_at,
+        isAdmin: !!m.is_admin,
+        isCreator: m.id === (g.created_by_user_id || g.created_by_user_id_val)
+      })),
       posts: posts.map(p => ({
         id: p.id, content: p.content, imageUrl: p.image_url, pdfUrl: p.pdf_url, pdfName: p.pdf_name, pinned: p.pinned,
         pollQuestion: p.poll_question, pollOptions: p.poll_options, pollVotes: p.poll_votes,
         createdAt: p.created_at,
         author: { id: p.author_id, username: p.username, name: p.name, avatar: p.avatar_hex, initials: p.initials },
+        event: p.event_id ? {
+          id: p.event_id,
+          title: p.event_title,
+          description: p.event_description,
+          location: p.event_location,
+          date: p.event_date,
+          time: p.event_time,
+          endTime: p.end_time,
+          category: p.event_category,
+          imageUrl: p.event_image_url,
+          cancelled: p.event_cancelled || false,
+          rsvp: { going: p.event_going||0, maybe: p.event_maybe||0, cantGo: p.event_cantgo||0 },
+          userRsvp: p.event_user_rsvp ? (p.event_user_rsvp === 'cant_go' ? 'cantGo' : p.event_user_rsvp) : null
+        } : null,
       })),
       joinRequests,
     });
@@ -2606,6 +2642,35 @@ app.patch('/api/groups/:id', requireAuth(async (req, res) => {
     console.error('PATCH /api/groups/:id error:', e.message);
     res.status(500).json({ error: e.message });
   }
+}));
+
+app.post('/api/groups/:id/members/:username/promote', requireAuth(async (req, res) => {
+  const [g] = await sql`SELECT id, name, created_by_user_id FROM groups WHERE id=${req.params.id}`;
+  if (!g) return res.status(404).json({ error: 'Group not found' });
+  const u = req.currentUser;
+  if (g.created_by_user_id !== u.id && u.role !== 'admin') return res.status(403).json({ error: 'Only the group creator can manage co-admins' });
+  const [target] = await sql`SELECT id, name, avatar_hex, initials FROM users WHERE username=${req.params.username}`;
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  if (target.id === g.created_by_user_id) return res.status(400).json({ error: 'Group creator is already an admin' });
+  const [mem] = await sql`SELECT is_admin FROM group_members WHERE group_id=${g.id} AND user_id=${target.id}`;
+  if (!mem) return res.status(404).json({ error: 'User is not a member of this group' });
+  if (mem.is_admin) return res.json({ ok: true, alreadyAdmin: true });
+  await sql`UPDATE group_members SET is_admin=true WHERE group_id=${g.id} AND user_id=${target.id}`;
+  await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
+    VALUES (${target.id}, 'group_promote', ${`You're now a co-admin of ${g.name}`}, ${u.avatar_hex}, ${u.initials}, ${g.id})`;
+  res.json({ ok: true });
+}));
+
+app.post('/api/groups/:id/members/:username/demote', requireAuth(async (req, res) => {
+  const [g] = await sql`SELECT id, name, created_by_user_id FROM groups WHERE id=${req.params.id}`;
+  if (!g) return res.status(404).json({ error: 'Group not found' });
+  const u = req.currentUser;
+  if (g.created_by_user_id !== u.id && u.role !== 'admin') return res.status(403).json({ error: 'Only the group creator can manage co-admins' });
+  const [target] = await sql`SELECT id FROM users WHERE username=${req.params.username}`;
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  if (target.id === g.created_by_user_id) return res.status(400).json({ error: "Can't demote the group creator" });
+  await sql`UPDATE group_members SET is_admin=false WHERE group_id=${g.id} AND user_id=${target.id}`;
+  res.json({ ok: true });
 }));
 
 app.post('/api/groups/:id/invite', requireAuth(async (req, res) => {
@@ -2696,34 +2761,65 @@ app.delete('/api/groups/:id/members/:username', requireAuth(async (req, res) => 
 }));
 
 app.post('/api/groups/:id/posts', requireAuth(async (req, res) => {
-  const { content, image, pdf, pdfName, pollQuestion, pollOptions } = req.body;
-  if (!content && !pollQuestion && !pdf) return res.status(400).json({ error: 'Content required' });
+  const { content, image, pdf, pdfName, pollQuestion, pollOptions,
+    eventTitle, eventDate, eventTime, eventEndTime, eventLocation, eventCategory, eventDescription, eventImage } = req.body;
+  const isEvent = !!(eventTitle && eventDate);
+  if (!content && !pollQuestion && !pdf && !isEvent) return res.status(400).json({ error: 'Content required' });
   const [g] = await sql`SELECT id, name FROM groups WHERE id=${req.params.id}`;
   if (!g) return res.status(404).json({ error: 'Group not found' });
   const u = req.currentUser;
   await sql`ALTER TABLE group_posts ADD COLUMN IF NOT EXISTS pdf_url TEXT`;
   await sql`ALTER TABLE group_posts ADD COLUMN IF NOT EXISTS pdf_name TEXT`;
+  await sql`ALTER TABLE group_posts ADD COLUMN IF NOT EXISTS event_id UUID`;
+  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS group_id UUID`;
+  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled BOOLEAN DEFAULT FALSE`;
+
+  let eventId = null;
+  let eventRow = null;
+  if (isEvent) {
+    const eventImageUrl = await storeImage(eventImage, 'event');
+    const [ev] = await sql`
+      INSERT INTO events (title, description, host_id, location, event_date, event_time, end_time, category, image_url, group_id)
+      VALUES (${eventTitle.slice(0,255)}, ${eventDescription||''}, ${u.id}, ${eventLocation||null}, ${eventDate}, ${eventTime||null}, ${eventEndTime||null}, ${eventCategory||'Community'}, ${eventImageUrl||null}, ${g.id})
+      RETURNING *`;
+    eventId = ev.id;
+    eventRow = ev;
+  }
+
   const imageUrl = await storeImage(image, 'group');
   const pdfUrl = await storeImage(pdf, 'group-pdf');
   const safePdfName = pdfUrl ? (pdfName || 'document.pdf').toString().slice(0, 200) : null;
   const pollOpts = pollOptions && pollOptions.length >= 2 ? JSON.stringify(pollOptions) : null;
   const pollVotes = pollOpts ? JSON.stringify({}) : null;
   const [post] = await sql`
-    INSERT INTO group_posts (group_id, author_id, content, image_url, pdf_url, pdf_name, poll_question, poll_options, poll_votes)
-    VALUES (${g.id}, ${u.id}, ${content||''}, ${imageUrl}, ${pdfUrl}, ${safePdfName}, ${pollQuestion||null}, ${pollOpts||null}::jsonb, ${pollVotes||null}::jsonb)
+    INSERT INTO group_posts (group_id, author_id, content, image_url, pdf_url, pdf_name, poll_question, poll_options, poll_votes, event_id)
+    VALUES (${g.id}, ${u.id}, ${content||''}, ${imageUrl}, ${pdfUrl}, ${safePdfName}, ${pollQuestion||null}, ${pollOpts||null}::jsonb, ${pollVotes||null}::jsonb, ${eventId})
     RETURNING *`;
   await sql`UPDATE groups SET last_activity_at=NOW() WHERE id=${g.id}`;
 
   const members = await sql`SELECT user_id FROM group_members WHERE group_id=${g.id} AND user_id != ${u.id}`;
   if (members.length) {
-    const msg = `${u.name} posted in ${g.name}: "${(content||pollQuestion||'').slice(0, 80)}…"`;
+    const msg = isEvent
+      ? `${u.name} scheduled an event in ${g.name}: "${eventTitle.slice(0,80)}"`
+      : `${u.name} posted in ${g.name}: "${(content||pollQuestion||'').slice(0, 80)}…"`;
     await Promise.all(members.map(m =>
       sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
-          VALUES (${m.user_id}, 'group_post', ${msg}, ${u.avatar_hex}, ${u.initials}, ${post.id})`
+          VALUES (${m.user_id}, ${isEvent ? 'group_event' : 'group_post'}, ${msg}, ${u.avatar_hex}, ${u.initials}, ${post.id})`
     ));
   }
 
-  res.json({ id: post.id, content: post.content, imageUrl: post.image_url, pdfUrl: post.pdf_url, pdfName: post.pdf_name, pollQuestion: post.poll_question, pollOptions: post.poll_options, pollVotes: post.poll_votes, pinned: post.pinned, createdAt: post.created_at, author: { id: u.id, username: u.username, name: u.name, avatar: u.avatar_hex, initials: u.initials } });
+  res.json({
+    id: post.id, content: post.content, imageUrl: post.image_url, pdfUrl: post.pdf_url, pdfName: post.pdf_name,
+    pollQuestion: post.poll_question, pollOptions: post.poll_options, pollVotes: post.poll_votes,
+    pinned: post.pinned, createdAt: post.created_at,
+    author: { id: u.id, username: u.username, name: u.name, avatar: u.avatar_hex, initials: u.initials },
+    event: eventRow ? {
+      id: eventRow.id, title: eventRow.title, description: eventRow.description, location: eventRow.location,
+      date: eventRow.event_date, time: eventRow.event_time, endTime: eventRow.end_time,
+      category: eventRow.category, imageUrl: eventRow.image_url, cancelled: false,
+      rsvp: { going: 0, maybe: 0, cantGo: 0 }, userRsvp: null
+    } : null
+  });
 }));
 
 app.post('/api/groups/:id/posts/:postId/pin', requireAuth(async (req, res) => {

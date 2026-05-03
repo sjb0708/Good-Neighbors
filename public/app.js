@@ -3559,7 +3559,7 @@ async function renderGroupPage(groupId, container) {
     <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;">
       <!-- Banner -->
       <div class="group-page-banner" style="${bannerStyle};position:relative;">
-        ${(group.isCreator || group.isAdmin) ? `
+        ${(group.isCreator || group.isCoAdmin || group.isAdmin) ? `
         <label style="position:absolute;top:10px;right:10px;padding:7px 12px;background:rgba(0,0,0,0.5);color:white;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;backdrop-filter:blur(4px);">
           <input type="file" accept="image/*" style="display:none;" onchange="uploadGroupBanner('${group.id}',this)">
           📷 Change Cover
@@ -3567,16 +3567,16 @@ async function renderGroupPage(groupId, container) {
       </div>
       <div class="group-page-header">
         <!-- Icon with click-to-change for admin -->
-        <div class="group-page-icon" style="overflow:hidden;${(group.isCreator||group.isAdmin)?'cursor:pointer;':''}" ${(group.isCreator||group.isAdmin)?`onclick="document.getElementById('groupIconInput-${group.id}').click()"`:''}>
+        <div class="group-page-icon" style="overflow:hidden;${(group.isCreator||group.isCoAdmin||group.isAdmin)?'cursor:pointer;':''}" ${(group.isCreator||group.isCoAdmin||group.isAdmin)?`onclick="document.getElementById('groupIconInput-${group.id}').click()"`:''}>
           ${(group.iconUrl||/^(data:|https?:)/.test(group.icon)) ? `<img src="${group.iconUrl||group.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:18px;">` : group.icon}
-          ${(group.isCreator||group.isAdmin) ? `<div style="position:absolute;inset:0;background:rgba(0,0,0,0);border-radius:18px;display:flex;align-items:center;justify-content:center;transition:.15s;" onmouseover="this.style.background='rgba(0,0,0,0.35)'" onmouseout="this.style.background='rgba(0,0,0,0)'"><span style="color:white;font-size:18px;opacity:0;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">📷</span></div>` : ''}
+          ${(group.isCreator||group.isCoAdmin||group.isAdmin) ? `<div style="position:absolute;inset:0;background:rgba(0,0,0,0);border-radius:18px;display:flex;align-items:center;justify-content:center;transition:.15s;" onmouseover="this.style.background='rgba(0,0,0,0.35)'" onmouseout="this.style.background='rgba(0,0,0,0)'"><span style="color:white;font-size:18px;opacity:0;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">📷</span></div>` : ''}
         </div>
-        ${(group.isCreator||group.isAdmin) ? `<input id="groupIconInput-${group.id}" type="file" accept="image/*" style="display:none;" onchange="uploadGroupIcon('${group.id}',this)">` : ''}
+        ${(group.isCreator||group.isCoAdmin||group.isAdmin) ? `<input id="groupIconInput-${group.id}" type="file" accept="image/*" style="display:none;" onchange="uploadGroupIcon('${group.id}',this)">` : ''}
         <div class="group-page-info">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div class="group-page-name">${escHtml(group.name)}</div>
             <div style="display:flex;gap:8px;flex-shrink:0;margin-top:4px;flex-wrap:wrap;">
-              ${(group.isCreator||group.isAdmin) ? `<button onclick="openEditGroupModal('${group.id}')" style="padding:7px 13px;background:var(--ocean);color:white;border:none;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;">✏️ Edit Group</button>` : ''}
+              ${(group.isCreator||group.isCoAdmin||group.isAdmin) ? `<button onclick="openEditGroupModal('${group.id}')" style="padding:7px 13px;background:var(--ocean);color:white;border:none;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;">✏️ Edit Group</button>` : ''}
               <button onclick="reportGroup('${group.id}')" style="padding:7px 13px;background:none;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text-mid);font-family:inherit;">⚑ Report</button>
               ${(group.isCreator||group.isAdmin) ? `<button onclick="deleteGroup('${group.id}',null,true)" style="padding:7px 13px;background:none;border:1.5px solid #fca5a5;border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;color:var(--coral);font-family:inherit;">🗑️ Delete</button>` : ''}
             </div>
@@ -3590,7 +3590,7 @@ async function renderGroupPage(groupId, container) {
       </div>
     </div>
 
-    ${(group.isCreator || group.isAdmin) && group.joinRequests?.length ? `
+    ${(group.isCreator || group.isCoAdmin || group.isAdmin) && group.joinRequests?.length ? `
     <div style="background:white;border:1px solid #fde68a;border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;box-shadow:var(--shadow-sm);">
       <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:12px;">🔒 Join Requests (${group.joinRequests.length})</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
@@ -3608,7 +3608,7 @@ async function renderGroupPage(groupId, container) {
     <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div style="font-size:13px;font-weight:700;color:var(--text-dark);">👥 Members (${(group.memberList||[]).length})</div>
-        ${(group.isCreator||group.isAdmin) ? `<button onclick="openInviteNeighborModal('${group.id}')" style="padding:6px 13px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">+ Invite Neighbor</button>` : ''}
+        ${(group.isCreator||group.isCoAdmin||group.isAdmin) ? `<button onclick="openInviteNeighborModal('${group.id}')" style="padding:6px 13px;background:var(--ocean);color:white;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">+ Invite Neighbor</button>` : ''}
       </div>
       <!-- Avatar strip: first 8 -->
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
@@ -3626,15 +3626,22 @@ async function renderGroupPage(groupId, container) {
       <div id="membersFull-${group.id}" style="display:none;margin-top:10px;flex-direction:column;gap:8px;">
         ${(group.memberList||[]).map(m => `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9;">
-            <div style="display:flex;align-items:center;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0;">
               <div style="width:34px;height:34px;border-radius:50%;background:${m.avatar};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;overflow:hidden;flex-shrink:0;">
                 ${m.avatarUrl ? `<img src="${m.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(m.initials)}
               </div>
-              <div style="font-size:13px;font-weight:600;color:var(--text-dark);">${escHtml(m.name)}</div>
+              <div style="font-size:13px;font-weight:600;color:var(--text-dark);overflow:hidden;text-overflow:ellipsis;">${escHtml(m.name)}</div>
+              ${m.isCreator ? `<span style="font-size:10px;font-weight:800;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:6px;letter-spacing:0.5px;flex-shrink:0;">👑 CREATOR</span>` : (m.isAdmin ? `<span style="font-size:10px;font-weight:800;background:#dbeafe;color:#1e40af;padding:2px 7px;border-radius:6px;letter-spacing:0.5px;flex-shrink:0;">⭐ CO-ADMIN</span>` : '')}
             </div>
-            ${group.createdBy === currentUser?.username && m.username !== currentUser?.username ? `
-              <button onclick="removeGroupMember('${group.id}','${m.username}')" style="padding:4px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:11px;font-weight:600;color:var(--coral);cursor:pointer;font-family:inherit;">Remove</button>
-            ` : ''}
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              ${group.isCreator && !m.isCreator && m.username !== currentUser?.username ? (m.isAdmin
+                ? `<button onclick="demoteGroupCoAdmin('${group.id}','${m.username}')" style="padding:4px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:11px;font-weight:600;color:var(--text-mid);cursor:pointer;font-family:inherit;">Remove Co-Admin</button>`
+                : `<button onclick="promoteGroupCoAdmin('${group.id}','${m.username}')" style="padding:4px 10px;background:none;border:1.5px solid #93c5fd;border-radius:8px;font-size:11px;font-weight:600;color:#1e40af;cursor:pointer;font-family:inherit;">Make Co-Admin</button>`
+              ) : ''}
+              ${(group.isCreator || group.isCoAdmin) && !m.isCreator && m.username !== currentUser?.username ? `
+                <button onclick="removeGroupMember('${group.id}','${m.username}')" style="padding:4px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:11px;font-weight:600;color:var(--coral);cursor:pointer;font-family:inherit;">Remove</button>
+              ` : ''}
+            </div>
           </div>
         `).join('')}
       </div>` : ''}
@@ -3654,6 +3661,17 @@ async function renderGroupPage(groupId, container) {
             </div>
             <button onclick="addGroupPollOption()" style="font-size:12px;color:var(--ocean);background:none;border:none;cursor:pointer;font-weight:600;padding:0;">+ Add option</button>
           </div>
+          <div id="groupEventBuilder" style="display:none;margin-top:8px;background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;padding:12px;">
+            <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:8px;">📅 Group Event</div>
+            <input id="groupEventTitle" type="text" placeholder="Event title (e.g. Beach cleanup)" style="width:100%;padding:9px 10px;border:1.5px solid #fde68a;border-radius:8px;font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;box-sizing:border-box;background:white;" />
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+              <input id="groupEventDate" type="date" style="padding:9px 10px;border:1.5px solid #fde68a;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:white;" />
+              <input id="groupEventTime" type="time" style="padding:9px 10px;border:1.5px solid #fde68a;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:white;" />
+              <input id="groupEventEndTime" type="time" placeholder="End" style="padding:9px 10px;border:1.5px solid #fde68a;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:white;" />
+            </div>
+            <input id="groupEventLocation" type="text" placeholder="Location (e.g. Costa Blanca beach)" style="width:100%;padding:9px 10px;border:1.5px solid #fde68a;border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;background:white;" />
+            <div style="font-size:11.5px;color:#92400e;margin-top:6px;">Group members will be notified. The event also appears on the community Events page with a group tag.</div>
+          </div>
           <div id="groupImagePreview" style="display:none;margin-top:8px;"></div>
           <div id="groupPdfPreview" style="display:none;margin-top:8px;"></div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
@@ -3667,6 +3685,7 @@ async function renderGroupPage(groupId, container) {
                 📄 PDF
               </label>
               <button onclick="toggleGroupPoll()" title="Create poll" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:600;color:var(--text-mid);background:white;cursor:pointer;font-family:inherit;">📊 Poll</button>
+              <button onclick="toggleGroupEvent()" title="Create event" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:600;color:var(--text-mid);background:white;cursor:pointer;font-family:inherit;">📅 Event</button>
             </div>
             <button onclick="submitGroupPost('${group.id}')" style="padding:9px 22px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Post</button>
           </div>
@@ -3691,10 +3710,11 @@ async function renderGroupPage(groupId, container) {
                 </div>
               </div>
               <div style="display:flex;gap:6px;">
-                ${group.isAdmin || group.isCreator ? `<button onclick="${p.pinned ? `unpinGroupPost('${group.id}','${p.id}')` : `pinGroupPost('${group.id}','${p.id}')`}" title="${p.pinned ? 'Unpin' : 'Pin to top'}" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;">${p.pinned ? '📌 Unpin' : '📌 Pin'}</button>` : ''}
-                ${(group.isAdmin || group.isCreator || p.author?.username === currentUser?.username) ? `<button onclick="deleteGroupPost('${group.id}','${p.id}')" title="Delete" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--coral);">🗑️</button>` : ''}
+                ${group.isAdmin || group.isCreator || group.isCoAdmin ? `<button onclick="${p.pinned ? `unpinGroupPost('${group.id}','${p.id}')` : `pinGroupPost('${group.id}','${p.id}')`}" title="${p.pinned ? 'Unpin' : 'Pin to top'}" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;">${p.pinned ? '📌 Unpin' : '📌 Pin'}</button>` : ''}
+                ${(group.isAdmin || group.isCreator || group.isCoAdmin || p.author?.username === currentUser?.username) ? `<button onclick="deleteGroupPost('${group.id}','${p.id}')" title="Delete" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--coral);">🗑️</button>` : ''}
               </div>
             </div>
+            ${p.event ? buildGroupEventCard(p.event) : ''}
             ${p.content ? `<div style="font-size:14px;color:var(--text-mid);line-height:1.65;margin-bottom:${p.imageUrl||p.pdfUrl||p.pollQuestion?'10px':'0'}">${escHtml(p.content)}</div>` : ''}
             ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:100%;border-radius:10px;max-height:360px;object-fit:cover;margin-bottom:${p.pdfUrl||p.pollQuestion?'10px':'0'}" />` : ''}
             ${p.pdfUrl ? `<a href="${p.pdfUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;text-decoration:none;color:var(--text-dark);margin-bottom:${p.pollQuestion?'10px':'0'};">
@@ -3781,6 +3801,15 @@ function removeGroupPostPdf() {
 function toggleGroupPoll() {
   const el = document.getElementById('groupPollBuilder');
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  const ev = document.getElementById('groupEventBuilder');
+  if (ev && el?.style.display === 'block') ev.style.display = 'none';
+}
+
+function toggleGroupEvent() {
+  const el = document.getElementById('groupEventBuilder');
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  const pl = document.getElementById('groupPollBuilder');
+  if (pl && el?.style.display === 'block') pl.style.display = 'none';
 }
 
 function addGroupPollOption() {
@@ -3795,17 +3824,92 @@ function addGroupPollOption() {
   container.appendChild(inp);
 }
 
+function buildGroupEventCard(ev) {
+  const dateLabel = ev.date ? new Date(ev.date).toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric', year:'numeric' }) : '';
+  const timeLabel = ev.time ? (ev.endTime ? `${ev.time} – ${ev.endTime}` : ev.time) : '';
+  const cancelled = ev.cancelled;
+  const opts = [
+    { key:'going',  label:'✓ Going',   active:ev.userRsvp==='going' },
+    { key:'maybe',  label:'? Maybe',   active:ev.userRsvp==='maybe' },
+    { key:'cantGo', label:"✕ Can't Go", active:ev.userRsvp==='cantGo' }
+  ];
+  return `
+    <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:1.5px solid #f59e0b;border-radius:12px;padding:14px;margin-bottom:10px;${cancelled?'opacity:0.6;':''}">
+      ${cancelled ? `<div style="background:#dc2626;color:white;font-size:11px;font-weight:800;letter-spacing:0.5px;padding:3px 9px;border-radius:6px;display:inline-block;margin-bottom:8px;">CANCELLED</div>` : ''}
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="background:white;border-radius:10px;padding:8px 12px;text-align:center;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <div style="font-size:10px;font-weight:700;color:#92400e;letter-spacing:0.5px;text-transform:uppercase;">${ev.date ? new Date(ev.date).toLocaleDateString(undefined,{month:'short'}) : ''}</div>
+          <div style="font-size:20px;font-weight:800;color:#0d1b2a;line-height:1;">${ev.date ? new Date(ev.date).getDate() : ''}</div>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:15px;font-weight:800;color:#0d1b2a;">📅 ${escHtml(ev.title)}</div>
+          <div style="font-size:12.5px;color:#92400e;margin-top:3px;">${escHtml(dateLabel)}${timeLabel?` · ${escHtml(timeLabel)}`:''}</div>
+          ${ev.location ? `<div style="font-size:12.5px;color:var(--text-mid);margin-top:3px;">📍 ${escHtml(ev.location)}</div>` : ''}
+        </div>
+      </div>
+      ${ev.imageUrl ? `<img src="${ev.imageUrl}" style="width:100%;border-radius:8px;max-height:200px;object-fit:cover;margin-top:10px;" />` : ''}
+      ${cancelled ? '' : `
+      <div style="display:flex;gap:6px;margin-top:12px;">
+        ${opts.map(o => `
+          <button onclick="rsvpGroupEvent('${ev.id}','${o.key}',this)" style="flex:1;padding:8px;border:1.5px solid ${o.active?'#0077B6':'#fde68a'};background:${o.active?'#0077B6':'white'};color:${o.active?'white':'#0d1b2a'};border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">${o.label}</button>
+        `).join('')}
+      </div>
+      <div style="display:flex;gap:14px;margin-top:8px;font-size:11.5px;color:#92400e;font-weight:600;">
+        <span>✓ ${ev.rsvp?.going||0} going</span>
+        <span>? ${ev.rsvp?.maybe||0} maybe</span>
+        <span>✕ ${ev.rsvp?.cantGo||0} can't go</span>
+      </div>`}
+    </div>`;
+}
+
+async function rsvpGroupEvent(eventId, status, btn) {
+  try {
+    const res = await fetch(`/api/events/${eventId}/rsvp`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    if (!res.ok) { showToast('Could not RSVP'); return; }
+    const card = btn.closest('.group-post-card');
+    const groupIdMatch = window.location.hash.match(/group\/([^/]+)/) || document.getElementById('groupComposeBox')?.outerHTML.match(/groups\/([^"']+)\/posts/);
+    const groupId = groupIdMatch ? groupIdMatch[1] : null;
+    if (groupId) await renderGroupPage(groupId, document.getElementById('sectionContent'));
+    showToast(`RSVP saved!`);
+  } catch (e) {
+    showToast('Network error');
+  }
+}
+
 async function submitGroupPost(groupId) {
   const box = document.getElementById('groupPostBox');
   const content = box?.value.trim();
   const pollQuestion = document.getElementById('groupPollQuestion')?.value.trim();
   const pollOpts = [...document.querySelectorAll('.group-poll-opt')].map(i => i.value.trim()).filter(Boolean);
-  if (!content && !pollQuestion && !groupPostPdfData) { showToast('Write something first.'); return; }
+
+  const eventBuilder = document.getElementById('groupEventBuilder');
+  const isEvent = eventBuilder && eventBuilder.style.display !== 'none';
+  const eventTitle = isEvent ? document.getElementById('groupEventTitle')?.value.trim() : '';
+  const eventDate = isEvent ? document.getElementById('groupEventDate')?.value : '';
+  const eventTime = isEvent ? document.getElementById('groupEventTime')?.value : '';
+  const eventEndTime = isEvent ? document.getElementById('groupEventEndTime')?.value : '';
+  const eventLocation = isEvent ? document.getElementById('groupEventLocation')?.value.trim() : '';
+
+  if (isEvent && (!eventTitle || !eventDate)) { showToast('Event needs a title and date.'); return; }
+  if (!isEvent && !content && !pollQuestion && !groupPostPdfData) { showToast('Write something first.'); return; }
   if (pollQuestion && pollOpts.length < 2) { showToast('Add at least 2 poll options.'); return; }
 
   const body = { content, image: groupPostImageData || undefined };
   if (groupPostPdfData) { body.pdf = groupPostPdfData; body.pdfName = groupPostPdfName; }
   if (pollQuestion) { body.pollQuestion = pollQuestion; body.pollOptions = pollOpts; }
+  if (isEvent) {
+    body.eventTitle = eventTitle;
+    body.eventDate = eventDate;
+    if (eventTime) body.eventTime = eventTime;
+    if (eventEndTime) body.eventEndTime = eventEndTime;
+    if (eventLocation) body.eventLocation = eventLocation;
+    if (content) body.eventDescription = content;
+    if (groupPostImageData) body.eventImage = groupPostImageData;
+  }
 
   const res = await fetch(`/api/groups/${groupId}/posts`, {
     method: 'POST', credentials: 'include',
@@ -3823,8 +3927,17 @@ async function submitGroupPost(groupId) {
     if (pdfPrev) { pdfPrev.style.display = 'none'; pdfPrev.innerHTML = ''; }
     const pollBuilder = document.getElementById('groupPollBuilder');
     if (pollBuilder) pollBuilder.style.display = 'none';
+    if (eventBuilder) {
+      eventBuilder.style.display = 'none';
+      ['groupEventTitle','groupEventDate','groupEventTime','groupEventEndTime','groupEventLocation'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+    }
     await renderGroupPage(groupId, document.getElementById('sectionContent'));
-    showToast('Posted to the group! 🎉');
+    showToast(isEvent ? 'Event posted to the group! 📅' : 'Posted to the group! 🎉');
+  } else {
+    const err = await res.json().catch(() => ({}));
+    showToast(err.error || 'Could not post.');
   }
 }
 
@@ -3841,6 +3954,30 @@ async function removeGroupMember(groupId, username) {
   if (!confirm(`Remove ${username} from this group?`)) return;
   const res = await fetch(`/api/groups/${groupId}/members/${username}`, { method: 'DELETE', credentials: 'include' });
   if (res.ok) { await renderGroupPage(groupId, document.getElementById('sectionContent')); showToast('Member removed.'); }
+}
+
+async function promoteGroupCoAdmin(groupId, username) {
+  if (!confirm(`Make ${username} a co-admin? They'll be able to manage posts, members, and group settings — but not delete the group.`)) return;
+  const res = await fetch(`/api/groups/${groupId}/members/${username}/promote`, { method: 'POST', credentials: 'include' });
+  if (res.ok) {
+    await renderGroupPage(groupId, document.getElementById('sectionContent'));
+    showToast(`${username} is now a co-admin ⭐`);
+  } else {
+    const err = await res.json().catch(() => ({}));
+    showToast(err.error || 'Could not promote.');
+  }
+}
+
+async function demoteGroupCoAdmin(groupId, username) {
+  if (!confirm(`Remove co-admin status from ${username}?`)) return;
+  const res = await fetch(`/api/groups/${groupId}/members/${username}/demote`, { method: 'POST', credentials: 'include' });
+  if (res.ok) {
+    await renderGroupPage(groupId, document.getElementById('sectionContent'));
+    showToast(`${username} is no longer a co-admin.`);
+  } else {
+    const err = await res.json().catch(() => ({}));
+    showToast(err.error || 'Could not demote.');
+  }
 }
 
 async function uploadGroupBanner(groupId, input) {
@@ -4495,6 +4632,15 @@ async function renderRealEstate(container) {
     <div class="re-sponsor-cta">View All Listings →</div>
   `;
   container.appendChild(sponsor);
+
+  // Exclusive partnership note
+  const note = document.createElement('div');
+  note.style.cssText = 'background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:11px 14px;margin:12px 0;font-size:12.5px;color:#0c4a6e;line-height:1.5;display:flex;align-items:flex-start;gap:8px;';
+  note.innerHTML = `
+    <span style="font-size:14px;flex-shrink:0;">ℹ️</span>
+    <div>Listings are exclusively managed by <b>Uncover Panama Real Estate</b>, our official partner. To list your property for sale or rent, please contact them directly via the link above.</div>
+  `;
+  container.appendChild(note);
 
   // Realtor / admin bar
   if (currentUser?.role === 'realtor' || currentUser?.role === 'admin') {
