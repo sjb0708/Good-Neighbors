@@ -1558,13 +1558,13 @@ app.post('/api/posts/:id/vote', requireAuth(async (req, res) => {
 app.get('/api/posts/:id/comments', async (req, res) => {
   try {
     const rows = await sql`
-      SELECT c.*, u.username, u.name, u.avatar_hex, u.initials
+      SELECT c.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials
       FROM comments c JOIN users u ON c.author_id = u.id
       WHERE c.post_id=${req.params.id} ORDER BY c.created_at ASC
     `;
     res.json(rows.map(r => ({
       id: r.id, content: r.content, createdAt: r.created_at,
-      author: { id: r.author_id, username: r.username, name: r.name, avatar: r.avatar_hex, initials: r.initials },
+      author: { id: r.author_id, username: r.username, name: r.name, avatar: r.avatar_hex, avatarUrl: r.avatar_url, initials: r.initials },
     })));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
@@ -1599,7 +1599,7 @@ app.post('/api/posts/:id/comments', requireAuth(async (req, res) => {
 
   res.json({
     id: comment.id, content: comment.content, createdAt: comment.created_at,
-    author: { id: u.id, username: u.username, name: u.name, avatar: u.avatar_hex, initials: u.initials },
+    author: { id: u.id, username: u.username, name: u.name, avatar: u.avatar_hex, avatarUrl: u.avatar_url, initials: u.initials },
   });
 }));
 
@@ -1905,7 +1905,7 @@ app.get('/api/businesses/:id', async (req, res) => {
     const [biz]  = await sql`SELECT * FROM businesses WHERE id=${req.params.id}`;
     if (!biz) return res.status(404).json({ error: 'Not found' });
     const reviews = await sql`
-      SELECT r.*, u.name AS author_name, u.avatar_hex, u.initials
+      SELECT r.*, u.name AS author_name, u.avatar_hex, u.avatar_url, u.initials
       FROM business_reviews r JOIN users u ON r.author_id = u.id
       WHERE r.business_id=${biz.id} ORDER BY r.created_at DESC
     `;
@@ -1913,7 +1913,7 @@ app.get('/api/businesses/:id', async (req, res) => {
     res.json({
       ...formatBusiness(biz), ...fd,
       reviews: reviews.map(r => ({
-        id: r.id, author: r.author_name, avatar: r.avatar_hex, initials: r.initials,
+        id: r.id, author: r.author_name, avatar: r.avatar_hex, avatarUrl: r.avatar_url, initials: r.initials,
         rating: r.rating, text: r.text, date: timeAgo(r.created_at),
         photo: r.photo_url || null,
         ownerReply: r.owner_reply_text ? { text: r.owner_reply_text, date: r.owner_reply_date } : undefined,
@@ -1980,13 +1980,13 @@ app.get('/api/business/me', requireAuth(async (req, res) => {
   if (u.role !== 'business') return res.status(403).json({ error: 'Not a business account' });
   const [biz] = await sql`SELECT * FROM businesses WHERE id=${u.business_id}`;
   if (!biz) return res.status(404).json({ error: 'Business not found' });
-  const reviews   = await sql`SELECT r.*, u2.name AS author_name, u2.avatar_hex, u2.initials FROM business_reviews r JOIN users u2 ON r.author_id=u2.id WHERE r.business_id=${biz.id} ORDER BY r.created_at DESC`;
+  const reviews   = await sql`SELECT r.*, u2.name AS author_name, u2.avatar_hex, u2.avatar_url, u2.initials FROM business_reviews r JOIN users u2 ON r.author_id=u2.id WHERE r.business_id=${biz.id} ORDER BY r.created_at DESC`;
   const bizPosts  = await sql`SELECT id FROM posts WHERE business_id=${biz.id}`;
   const fd        = await getBizFaveData(biz.id, u.id);
   const allUsers  = await sql`SELECT COUNT(*)::int AS c FROM users`;
   res.json({
     ...formatBusiness(biz), ...fd,
-    reviews: reviews.map(r => ({ id: r.id, author: r.author_name, avatar: r.avatar_hex, initials: r.initials, rating: r.rating, text: r.text, date: timeAgo(r.created_at) })),
+    reviews: reviews.map(r => ({ id: r.id, author: r.author_name, avatar: r.avatar_hex, avatarUrl: r.avatar_url, initials: r.initials, rating: r.rating, text: r.text, date: timeAgo(r.created_at) })),
     postsCount: bizPosts.length, totalReach: 0, neighborhoodSize: allUsers[0]?.c || 0,
   });
 }));
@@ -2553,7 +2553,7 @@ app.get('/api/groups/:id', async (req, res) => {
     await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled BOOLEAN DEFAULT FALSE`;
     await sql`ALTER TABLE group_posts ADD COLUMN IF NOT EXISTS event_id UUID`;
     const posts = await sql`
-      SELECT gp.*, u.username, u.name, u.avatar_hex, u.initials,
+      SELECT gp.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials,
         e.title AS event_title, e.description AS event_description, e.location AS event_location,
         e.event_date, e.event_time, e.end_time, e.category AS event_category, e.image_url AS event_image_url, e.cancelled AS event_cancelled,
         COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='going'),0)   AS event_going,
@@ -2569,11 +2569,11 @@ app.get('/api/groups/:id', async (req, res) => {
     let joinRequests = undefined;
     if (isCreator || isAdminUser) {
       const jr = await sql`
-        SELECT gjr.*, u.username, u.name, u.avatar_hex, u.initials
+        SELECT gjr.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials
         FROM group_join_requests gjr JOIN users u ON gjr.user_id = u.id
         WHERE gjr.group_id=${g.id} AND gjr.status='pending'
       `;
-      joinRequests = jr.map(r => ({ username: r.username, name: r.name, initials: r.initials, avatar: r.avatar_hex, requestedAt: r.requested_at }));
+      joinRequests = jr.map(r => ({ username: r.username, name: r.name, initials: r.initials, avatar: r.avatar_hex, avatarUrl: r.avatar_url, requestedAt: r.requested_at }));
     }
 
     const formattedGroup = await formatGroupRow({ ...g, created_by_user_id: g.created_by_user_id || g.created_by_user_id_val }, userId, isAdminUser);
@@ -2596,7 +2596,7 @@ app.get('/api/groups/:id', async (req, res) => {
         id: p.id, content: p.content, imageUrl: p.image_url, pdfUrl: p.pdf_url, pdfName: p.pdf_name, pinned: p.pinned,
         pollQuestion: p.poll_question, pollOptions: p.poll_options, pollVotes: p.poll_votes,
         createdAt: p.created_at,
-        author: { id: p.author_id, username: p.username, name: p.name, avatar: p.avatar_hex, initials: p.initials },
+        author: { id: p.author_id, username: p.username, name: p.name, avatar: p.avatar_hex, avatarUrl: p.avatar_url, initials: p.initials },
         event: p.event_id ? {
           id: p.event_id,
           title: p.event_title,

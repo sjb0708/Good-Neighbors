@@ -1847,7 +1847,7 @@ function buildSponsoredCard(post) {
       </div>
       <div class="post-header">
         <div class="post-author">
-          <div class="avatar-post" style="background:${post.avatar}">${post.initials}</div>
+          <div class="avatar-post" style="background:${post.avatar};overflow:hidden;">${post.avatarUrl ? `<img src="${post.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(post.initials)}</div>
           <div class="post-author-info">
             <div class="post-author-name">${escHtml(post.businessName)}</div>
             <div class="post-meta">Community Partner</div>
@@ -1986,7 +1986,7 @@ function buildSharedPostEmbed(sp) {
   return `
     <div onclick="event.stopPropagation();focusPost('${sp.id}')" style="margin-top:12px;border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;cursor:pointer;background:#f8fafc;transition:background 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
       <div style="padding:11px 13px 8px;display:flex;align-items:center;gap:9px;">
-        <div style="width:30px;height:30px;border-radius:50%;background:${sp.author?.avatar||'#0077B6'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0;">${escHtml(sp.author?.initials||'?')}</div>
+        <div style="width:30px;height:30px;border-radius:50%;background:${sp.author?.avatar||'#0077B6'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;">${sp.author?.avatarUrl ? `<img src="${sp.author.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(sp.author?.initials||'?')}</div>
         <div style="min-width:0;flex:1;">
           <div style="font-size:12.5px;font-weight:700;color:var(--text-dark);">${escHtml(sp.author?.name||'Someone')}</div>
           <div style="font-size:11px;color:var(--text-light);">Original post${dateLine?` · ${escHtml(dateLine)}`:''}</div>
@@ -2228,8 +2228,8 @@ function buildCommentEl(c, postId) {
   div.id = `comment-${c.id}`;
   const canDelete = currentUser && (c.author?.id === currentUser.id || currentUser.role === 'admin');
   div.innerHTML = `
-    <div class="avatar-comment" style="background:${c.author?.avatar || '#0077B6'}">
-      ${c.author?.initials || '??'}
+    <div class="avatar-comment" style="background:${c.author?.avatar || '#0077B6'};overflow:hidden;">
+      ${c.author?.avatarUrl ? `<img src="${c.author.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (c.author?.initials || '??')}
     </div>
     <div class="comment-bubble">
       <div class="comment-author">${escHtml(c.author?.name || 'Anonymous')}</div>
@@ -2309,7 +2309,7 @@ function buildMarketCard(item) {
     <div class="market-info">
       <div class="market-title">${escHtml(item.title)}</div>
       <div class="market-seller">
-        <div class="avatar-sm" style="background:${item.seller?.avatar || '#0077B6'};width:20px;height:20px;font-size:8px;">${item.seller?.initials || '??'}</div>
+        <div class="avatar-sm" style="background:${item.seller?.avatar || '#0077B6'};width:20px;height:20px;font-size:8px;overflow:hidden;">${item.seller?.avatarUrl ? `<img src="${item.seller.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (item.seller?.initials || '??')}</div>
         ${escHtml(item.seller?.name?.split(' ')[0] || 'Neighbor')}
         <span class="post-meta-dot" style="margin:0 2px"></span>
         ${relativeTime(item.createdAt)}
@@ -2348,7 +2348,7 @@ function contactSeller(encodedData) {
         <button onclick="document.getElementById('contactSellerModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
       </div>
       <div style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg);border-radius:12px;margin-bottom:14px;">
-        <div class="avatar-sm" style="background:${seller.avatar || '#0077B6'};width:44px;height:44px;font-size:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;flex-shrink:0;">${seller.initials || '??'}</div>
+        <div class="avatar-sm" style="background:${seller.avatar || '#0077B6'};width:44px;height:44px;font-size:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;flex-shrink:0;overflow:hidden;">${seller.avatarUrl ? `<img src="${seller.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (seller.initials || '??')}</div>
         <div>
           <div style="font-weight:800;font-size:15px;">${escHtml(seller.name || 'Neighbor')}</div>
           ${seller.username ? `<div style="font-size:12px;color:var(--text-mid);">@${escHtml(seller.username)}</div>` : ''}
@@ -2686,7 +2686,7 @@ async function openBusinessModal(bizId) {
       ${reviews.length === 0 ? '<p style="color:var(--text-light);font-size:13px;">No reviews yet.</p>' : reviews.map(r => `
         <div style="border-top:1px solid var(--border);padding:14px 0;">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-            <div style="width:34px;height:34px;border-radius:50%;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">${r.initials}</div>
+            <div style="width:34px;height:34px;border-radius:50%;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;">${r.avatarUrl ? `<img src="${r.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(r.initials)}</div>
             <div>
               <div style="font-size:13px;font-weight:700;color:var(--text-dark)">${escHtml(r.author)}</div>
               <div style="display:flex;align-items:center;gap:6px;">
@@ -2900,7 +2900,7 @@ async function renderBusinessPage(bizId, container) {
               ${reviews.slice(0,2).map(r => `
               <div style="padding:14px 0;border-bottom:1px solid var(--border);">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                  <div style="width:38px;height:38px;border-radius:50%;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${r.initials}</div>
+                  <div style="width:38px;height:38px;border-radius:50%;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;">${r.avatarUrl ? `<img src="${r.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(r.initials)}</div>
                   <div>
                     <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${escHtml(r.author)}</div>
                     <div style="display:flex;align-items:center;gap:6px;">${buildStars(r.rating)}<span style="font-size:11px;color:var(--text-light);">${r.date}</span></div>
@@ -2951,7 +2951,7 @@ async function renderBusinessPage(bizId, container) {
             reviews.map(r => `
               <div class="biz-rec-card">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                  <div style="width:40px;height:40px;border-radius:50%;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${r.initials}</div>
+                  <div style="width:40px;height:40px;border-radius:50%;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;">${r.avatarUrl ? `<img src="${r.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(r.initials)}</div>
                   <div>
                     <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${escHtml(r.author)}</div>
                     <div style="display:flex;align-items:center;gap:6px;">${buildStars(r.rating)}<span style="font-size:11.5px;color:var(--text-light);">${r.date}</span></div>
@@ -3639,7 +3639,7 @@ async function renderGroupPage(groupId, container) {
       <div style="display:flex;flex-direction:column;gap:10px;">
         ${group.joinRequests.map(r => `
           <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:36px;height:36px;border-radius:50%;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">${r.initials}</div>
+            <div style="width:36px;height:36px;border-radius:50%;background:${r.avatar};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;">${r.avatarUrl ? `<img src="${r.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(r.initials)}</div>
             <div style="flex:1;font-size:14px;font-weight:600;color:var(--text-dark);">${escHtml(r.name)}</div>
             <button onclick="handleJoinRequest('${group.id}','${r.username}','approve')" style="padding:7px 14px;background:#16a34a;color:white;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Approve</button>
             <button onclick="handleJoinRequest('${group.id}','${r.username}','deny')" style="padding:7px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--coral);">Deny</button>
@@ -3692,7 +3692,7 @@ async function renderGroupPage(groupId, container) {
 
     <div class="group-compose-box" id="groupComposeBox">
       <div style="display:flex;align-items:flex-start;gap:12px;">
-        <div style="width:38px;height:38px;border-radius:50%;background:${currentUser?.avatar || '#0077B6'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${currentUser?.initials || '?'}</div>
+        <div style="width:38px;height:38px;border-radius:50%;background:${currentUser?.avatar || '#0077B6'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;">${currentUser?.avatarUrl ? `<img src="${currentUser.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (currentUser?.initials || '?')}</div>
         <div style="flex:1;">
           <textarea id="groupPostBox" placeholder="Write something to ${escHtml(group.name)}…"></textarea>
           <div id="groupPollBuilder" style="display:none;margin-top:8px;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:10px;">
@@ -3746,7 +3746,7 @@ async function renderGroupPage(groupId, container) {
             ${p.pinned ? `<div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--ocean);margin-bottom:8px;">📌 Pinned post</div>` : ''}
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
               <div style="display:flex;align-items:center;gap:10px;">
-                <div style="width:40px;height:40px;border-radius:50%;background:${p.author.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${escHtml(p.author.initials)}</div>
+                <div style="width:40px;height:40px;border-radius:50%;background:${p.author.avatar};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;">${p.author.avatarUrl ? `<img src="${p.author.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(p.author.initials)}</div>
                 <div>
                   <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${escHtml(p.author.name)}</div>
                   <div style="font-size:11.5px;color:var(--text-light);">${groupTimeAgo(p.createdAt)}</div>
@@ -4423,7 +4423,7 @@ function buildNotifCard(notif) {
   card.className = `notif-card${notif.read ? '' : ' unread'}`;
 
   card.innerHTML = `
-    <div class="notif-avatar" style="background:${notif.avatar || '#0077B6'}">${notif.initials || '??'}</div>
+    <div class="notif-avatar" style="background:${notif.avatar || '#0077B6'};overflow:hidden;">${notif.avatarUrl ? `<img src="${notif.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (notif.initials || '??')}</div>
     <div class="notif-body">
       <div class="notif-msg">${escHtml(notif.message)}</div>
       <div class="notif-time">${relativeTime(notif.time)}</div>
