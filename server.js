@@ -169,10 +169,22 @@ function formatPost(row, reactionRows, commentCountMap, userReactionMap, pollVot
     post.pollOptions = row.poll_options.map(o => ({ id: o.id, text: o.text, votes: parseInt(votes[o.id] || 0, 10) }));
     post.userVote = (userPollVoteMap && userPollVoteMap[row.id]) || null;
   }
+  if (row.sp_id) {
+    post.sharedPost = {
+      id: row.sp_id,
+      content: row.sp_content || '',
+      image: row.sp_image_url && row.sp_image_url.startsWith('data:') ? `/api/posts/${row.sp_id}/image` : (row.sp_image_url || null),
+      eventTitle: row.sp_event_title || null,
+      eventDate: row.sp_event_date || null,
+      createdAt: row.sp_created_at,
+      author: { name: row.sp_author_name, username: row.sp_author_username, avatar: row.sp_author_avatar, initials: row.sp_author_initials }
+    };
+  }
   return post;
 }
 
 async function fetchPostsWithMeta(whereSql, userId) {
+  await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS shared_post_id UUID`;
   const rows = await sql(`
     SELECT p.*,
       u.username  AS author_username,
@@ -184,11 +196,23 @@ async function fetchPostsWithMeta(whereSql, userId) {
       u.address   AS author_address,
       u.role      AS author_role,
       rb.name     AS resolved_by_name,
-      b.logo_url  AS business_logo_url
+      b.logo_url  AS business_logo_url,
+      sp.id          AS sp_id,
+      sp.content     AS sp_content,
+      sp.image_url   AS sp_image_url,
+      sp.event_title AS sp_event_title,
+      sp.event_date  AS sp_event_date,
+      sp.created_at  AS sp_created_at,
+      su.name        AS sp_author_name,
+      su.username    AS sp_author_username,
+      su.avatar_hex  AS sp_author_avatar,
+      su.initials    AS sp_author_initials
     FROM posts p
     JOIN users u ON p.author_id = u.id
     LEFT JOIN users rb ON p.resolved_by_user_id = rb.id
     LEFT JOIN businesses b ON p.business_id = b.id
+    LEFT JOIN posts sp ON p.shared_post_id = sp.id
+    LEFT JOIN users su ON sp.author_id = su.id
     ${whereSql}
     ORDER BY p.created_at DESC
   `);
@@ -1359,7 +1383,7 @@ app.get('/api/posts', async (req, res) => {
 });
 
 app.post('/api/posts', requireAuth(async (req, res) => {
-  const { type, content, price, condition, category, pollOptions, image, location, alertType, severity, offerTitle, offerExpiry } = req.body;
+  const { type, content, price, condition, category, pollOptions, image, location, alertType, severity, offerTitle, offerExpiry, sharedPostId } = req.body;
   const u = req.currentUser;
 
   let resolvedSeverity = severity || 'medium';
@@ -1369,18 +1393,25 @@ app.post('/api/posts', requireAuth(async (req, res) => {
     else if (resolvedSeverity === 'high') resolvedSeverity = 'medium';
   }
 
+  await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS shared_post_id UUID`;
+  let validSharedId = null;
+  if (sharedPostId) {
+    const [check] = await sql`SELECT id FROM posts WHERE id=${sharedPostId}`;
+    if (check) validSharedId = sharedPostId;
+  }
+
   const imageUrl    = await storeImage(image, 'posts');
   const section     = type === 'safety' ? 'safety' : 'feed';
   const pollJson    = pollOptions ? JSON.stringify(pollOptions.map((text, i) => ({ id: `po${i}`, text }))) : null;
 
   const [post] = await sql`
     INSERT INTO posts (type, section, content, author_id, image_url, location, alert_type, severity, is_official,
-      price, condition, category, poll_options, offer_title, offer_expiry)
+      price, condition, category, poll_options, offer_title, offer_expiry, shared_post_id)
     VALUES (${type||'general'}, ${section}, ${content}, ${u.id}, ${imageUrl}, ${location||null},
       ${type==='safety'?alertType||null:null}, ${type==='safety'?resolvedSeverity:null}, ${isOfficial},
       ${price!==undefined?Number(price):null}, ${condition||null}, ${category||null},
       ${pollJson||null}::jsonb,
-      ${offerTitle||null}, ${offerExpiry||null})
+      ${offerTitle||null}, ${offerExpiry||null}, ${validSharedId})
     RETURNING *
   `;
 

@@ -1911,6 +1911,8 @@ function buildPostCard(post) {
 
       ${post.image ? (post.image.match(/\.pdf($|\?)/i) ? `<a href="${post.image}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;background:rgba(0,119,182,0.07);border:1px solid rgba(0,119,182,0.18);border-radius:8px;font-size:13px;font-weight:600;color:var(--ocean);text-decoration:none;">📄 View PDF</a>` : `<div class="post-image-wrap"><img src="${post.image}" alt="Post image" style="width:100%;border-radius:10px;margin-top:12px;object-fit:cover;max-height:360px;display:block;cursor:zoom-in;" onclick="openLightbox('${post.image}')"></div>`) : ''}
 
+      ${post.sharedPost ? buildSharedPostEmbed(post.sharedPost) : ''}
+
       <div class="post-divider"></div>
 
       ${totalReactions > 0 ? `
@@ -1963,6 +1965,35 @@ function buildPostCard(post) {
   }
 
   return card;
+}
+
+function buildSharedPostEmbed(sp) {
+  if (!sp) return '';
+  const snippet = (sp.content || '').slice(0, 200);
+  const dateLine = sp.eventDate ? new Date(sp.eventDate).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }) : '';
+  return `
+    <div onclick="event.stopPropagation();focusPost('${sp.id}')" style="margin-top:12px;border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;cursor:pointer;background:#f8fafc;transition:background 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
+      <div style="padding:11px 13px 8px;display:flex;align-items:center;gap:9px;">
+        <div style="width:30px;height:30px;border-radius:50%;background:${sp.author?.avatar||'#0077B6'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0;">${escHtml(sp.author?.initials||'?')}</div>
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:12.5px;font-weight:700;color:var(--text-dark);">${escHtml(sp.author?.name||'Someone')}</div>
+          <div style="font-size:11px;color:var(--text-light);">Original post${dateLine?` · ${escHtml(dateLine)}`:''}</div>
+        </div>
+      </div>
+      ${sp.eventTitle ? `<div style="padding:0 13px 6px;font-size:13.5px;font-weight:700;color:var(--text-dark);">📅 ${escHtml(sp.eventTitle)}</div>` : ''}
+      ${snippet ? `<div style="padding:0 13px 10px;font-size:13px;color:var(--text-mid);line-height:1.5;">${escHtml(snippet)}${(sp.content||'').length>200?'…':''}</div>` : ''}
+      ${sp.image ? `<img src="${sp.image}" style="width:100%;max-height:240px;object-fit:cover;display:block;" />` : ''}
+      <div style="padding:8px 13px;border-top:1px solid #e5e7eb;font-size:11.5px;color:var(--ocean);font-weight:600;">View original post →</div>
+    </div>
+  `;
+}
+
+function focusPost(postId) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('post', postId);
+  window.history.pushState({}, '', url.toString());
+  if (typeof navigate === 'function') navigate('feed');
+  setTimeout(() => focusSharedPostFromUrl(), 200);
 }
 
 function buildPostContent(post) {
@@ -5791,25 +5822,86 @@ async function copyToClipboard(text) {
   } catch (_) { return false; }
 }
 
-async function handleShare(postId) {
+function handleShare(postId) {
+  openShareModal(postId);
+}
+
+function openShareModal(postId) {
+  const existing = document.getElementById('shareModal');
+  if (existing) existing.remove();
+  const shareUrl = buildPostShareUrl(postId);
   const card = document.querySelector(`[data-post-id="${postId}"]`);
   const snippet = (card?.querySelector('.post-content, .feed-content, [class*="content"]')?.textContent || '').trim().slice(0, 140);
-  const shareUrl = buildPostShareUrl(postId);
-  const shareData = {
-    title: 'Costa Blanca Connect',
-    text: snippet ? `${snippet}…` : 'Check out this post on Costa Blanca Connect',
-    url: shareUrl,
-  };
-  if (navigator.share && navigator.canShare?.(shareData) !== false) {
-    try {
-      await navigator.share(shareData);
-      return;
-    } catch (err) {
-      if (err?.name === 'AbortError') return;
-    }
+  const waText = encodeURIComponent(`${snippet ? snippet + ' — ' : ''}Check out this post on Costa Blanca Connect: ${shareUrl}`);
+  const emailSubj = encodeURIComponent('From Costa Blanca Connect');
+  const emailBody = encodeURIComponent(`${snippet ? snippet + '\n\n' : ''}${shareUrl}`);
+
+  const overlay = document.createElement('div');
+  overlay.id = 'shareModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:16px;width:min(420px,100%);overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.3);">
+      <div style="padding:18px 20px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:16px;font-weight:800;color:#0d1b2a;">📤 Share this post</div>
+        <button onclick="document.getElementById('shareModal').remove()" style="background:#f1f5f9;border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;color:#475569;">×</button>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+        <button onclick="shareToFeed('${postId}')" style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;cursor:pointer;font-family:inherit;text-align:left;width:100%;">
+          <span style="font-size:22px;">📰</span>
+          <div style="flex:1;"><div style="font-size:14px;font-weight:700;color:#1e3a8a;">Share to Community Feed</div><div style="font-size:12px;color:#3b82f6;">Posts to your feed with a preview of this post</div></div>
+        </button>
+        <a href="https://wa.me/?text=${waText}" target="_blank" rel="noopener" onclick="document.getElementById('shareModal').remove()" style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;text-decoration:none;font-family:inherit;">
+          <span style="font-size:22px;">💬</span>
+          <div style="flex:1;"><div style="font-size:14px;font-weight:700;color:#166534;">WhatsApp</div><div style="font-size:12px;color:#16a34a;">Send to a contact or group</div></div>
+        </a>
+        <a href="mailto:?subject=${emailSubj}&body=${emailBody}" onclick="document.getElementById('shareModal').remove()" style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:10px;text-decoration:none;font-family:inherit;">
+          <span style="font-size:22px;">✉️</span>
+          <div style="flex:1;"><div style="font-size:14px;font-weight:700;color:#9a3412;">Email</div><div style="font-size:12px;color:#ea580c;">Open your email app</div></div>
+        </a>
+        <button onclick="copyShareUrl('${postId}')" style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;font-family:inherit;text-align:left;width:100%;">
+          <span style="font-size:22px;">📋</span>
+          <div style="flex:1;"><div style="font-size:14px;font-weight:700;color:#0d1b2a;">Copy Link</div><div style="font-size:12px;color:#64748b;">Paste anywhere</div></div>
+        </button>
+        ${navigator.share ? `<button onclick="nativeShare('${postId}')" style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:10px;cursor:pointer;font-family:inherit;text-align:left;width:100%;">
+          <span style="font-size:22px;">📲</span>
+          <div style="flex:1;"><div style="font-size:14px;font-weight:700;color:#5b21b6;">More Apps…</div><div style="font-size:12px;color:#8b5cf6;">Open your device's share menu</div></div>
+        </button>` : ''}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function copyShareUrl(postId) {
+  const url = buildPostShareUrl(postId);
+  const ok = await copyToClipboard(url);
+  document.getElementById('shareModal')?.remove();
+  showToast(ok ? 'Link copied to clipboard! 🔗' : 'Could not copy — try long-pressing the URL.');
+}
+
+async function nativeShare(postId) {
+  const url = buildPostShareUrl(postId);
+  try { await navigator.share({ title: 'Costa Blanca Connect', url }); } catch (e) {}
+  document.getElementById('shareModal')?.remove();
+}
+
+async function shareToFeed(postId) {
+  document.getElementById('shareModal')?.remove();
+  const note = prompt('Add a note (optional):', '') ?? '';
+  const res = await fetch('/api/posts', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'general', content: note.trim(), sharedPostId: postId })
+  });
+  if (res.ok) {
+    showToast('Shared to your feed! 📰');
+    if (typeof loadPosts === 'function') await loadPosts();
+    else if (typeof navigate === 'function') navigate('feed');
+  } else {
+    const err = await res.json().catch(() => ({}));
+    showToast(err.error || 'Could not share.');
   }
-  const ok = await copyToClipboard(shareUrl);
-  showToast(ok ? 'Post link copied to clipboard! 🔗' : 'Could not copy link — try long-pressing the URL bar.');
 }
 
 function focusSharedPostFromUrl() {
