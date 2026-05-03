@@ -5072,9 +5072,12 @@ async function renderFirstResponders(container) {
   const emtsServices = await fetchJSON('/api/emts-services') || [];
   container.innerHTML = `
     <div style="max-width:680px;margin:0 auto;padding:0 0 40px;">
-      <div style="margin-bottom:16px;">
-        <h2 style="font-size:22px;font-weight:800;color:var(--text-dark);margin:0 0 4px;">🚨 EMTS</h2>
-        <p style="font-size:14px;color:var(--text-light);margin:0;">Emergency medical services, preparedness & community support</p>
+      <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow-sm);">
+        <div style="font-size:30px;line-height:1;">🚨</div>
+        <div style="min-width:0;">
+          <h2 style="font-size:20px;font-weight:800;color:var(--text-dark);margin:0 0 3px;">EMTS</h2>
+          <p style="font-size:13.5px;color:var(--text-mid);margin:0;line-height:1.4;">Emergency medical services, preparedness & community support</p>
+        </div>
       </div>
 
       <!-- Tabs -->
