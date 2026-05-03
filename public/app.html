@@ -636,116 +636,358 @@
       </div>
 
       <div id="helpModalBody" style="overflow-y:auto;padding:18px 22px;">
+        <style>
+          .help-section { margin-bottom:10px; border:1px solid #e5e7eb; border-radius:10px; padding:12px 14px; }
+          .help-section summary { cursor:pointer; font-weight:700; color:#0d1b2a; font-size:15px; }
+          .help-section[open] summary { margin-bottom:8px; }
+          .help-body { margin-top:8px; font-size:13.5px; line-height:1.65; color:#374151; }
+          .help-body h4 { font-size:13px; font-weight:800; color:#0d1b2a; margin:14px 0 6px; text-transform:uppercase; letter-spacing:0.4px; }
+          .help-body h4:first-child { margin-top:0; }
+          .help-body ol, .help-body ul { margin:6px 0 6px 22px; padding:0; }
+          .help-body li { margin-bottom:4px; }
+          .help-body p { margin:6px 0; }
+          .help-body .tip { background:#eff6ff; border-left:3px solid #3b82f6; padding:8px 12px; border-radius:0 8px 8px 0; margin:10px 0; font-size:12.5px; color:#1e3a8a; }
+          .help-body .warn { background:#fef3c7; border-left:3px solid #f59e0b; padding:8px 12px; border-radius:0 8px 8px 0; margin:10px 0; font-size:12.5px; color:#92400e; }
+          .help-body code { background:#f1f5f9; padding:1px 5px; border-radius:4px; font-size:12px; color:#0d1b2a; }
+        </style>
 
-        <details open style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
-          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🏠 Getting Started</summary>
-          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
-            Costa Blanca Connect is the private app for residents and businesses of Costa Blanca Villas in Farallón, Panamá. Use it to chat with neighbors, share updates, rent a golf cart, support local businesses, and stay informed about what's happening in the community.
-            <ul style="margin:8px 0 0 18px;padding:0;">
-              <li>Use the <b>search bar</b> at the top to find neighbors, businesses, posts, or events</li>
-              <li>The <b>bell icon</b> shows new comments, messages, reviews, and other activity</li>
-              <li>Click your <b>avatar</b> to edit your profile or sign out</li>
-              <li>Tap <b>🌐 ES</b> to switch to Spanish</li>
+        <details open class="help-section">
+          <summary>🏠 Getting Started</summary>
+          <div class="help-body">
+            <p>Costa Blanca Connect is the private app for residents and businesses of Costa Blanca Villas in Farallón, Panamá. Use it to chat with neighbors, share updates, rent a golf cart, support local businesses, and stay informed about what's happening in the community.</p>
+            <h4>Quick orientation</h4>
+            <ul>
+              <li><b>Top bar:</b> search box, language toggle (🌐 ES/EN), help (?), notifications (🔔), your avatar</li>
+              <li><b>Left sidebar:</b> Feed, Marketplace, Events, Safety, Businesses, Neighbors, Messages, Groups, Real Estate, Transport, EMTS</li>
+              <li><b>Right sidebar:</b> What's Happening, Next Event, Trending Topics, New Neighbors, Emergency Contacts</li>
+            </ul>
+            <div class="tip">💡 First time? Click your avatar → <b>How to Use</b> to reopen this guide anytime.</div>
+          </div>
+        </details>
+
+        <details class="help-section">
+          <summary>👤 Your Profile &amp; Settings</summary>
+          <div class="help-body">
+            <h4>Edit your profile</h4>
+            <ol>
+              <li>Click your <b>avatar</b> in the top-right → <b>My Profile</b></li>
+              <li>Click <b>Edit Profile</b> to change your display name, bio, or address</li>
+              <li>Click your <b>profile picture</b> to upload a new one (cropped to a circle)</li>
+              <li>Click your <b>banner</b> to upload a cover photo for your profile</li>
+            </ol>
+            <h4>Settings</h4>
+            <p>Click your avatar → <b>Settings</b> to see:</p>
+            <ul>
+              <li><b>Profile</b> — view your username and email (read-only), change your password, edit name and address</li>
+              <li><b>Notifications</b> — toggle which alerts you receive (new posts, safety, events, comments, group activity, marketplace, etc.)</li>
+            </ul>
+            <h4>Get verified</h4>
+            <ol>
+              <li>If you don't have the <b>✓ Verified</b> badge, go to your profile</li>
+              <li>Tap <b>Get Verified</b></li>
+              <li>Upload a document showing your name + address (utility bill, lease, official mail)</li>
+              <li>An admin reviews within 1–2 days. You'll be notified when verified.</li>
+            </ol>
+            <div class="tip">💡 Verified neighbors get a blue checkmark next to their name everywhere — builds trust with others.</div>
+          </div>
+        </details>
+
+        <details class="help-section">
+          <summary>📝 Posts, Reactions &amp; Comments</summary>
+          <div class="help-body">
+            <h4>Create a post</h4>
+            <ol>
+              <li>Go to <b>Feed</b></li>
+              <li>Click the <b>"What's happening in Costa Blanca Villas?"</b> box</li>
+              <li>Type your post. Optionally:
+                <ul>
+                  <li>📷 Attach a photo</li>
+                  <li>📊 Add a poll (question + 2 or more options)</li>
+                  <li>📍 Add a location tag</li>
+                </ul>
+              </li>
+              <li>Click <b>+ Post</b> to publish</li>
+            </ol>
+            <h4>React to a post</h4>
+            <ol>
+              <li>Hover (or long-press on mobile) the <b>React</b> button under any post</li>
+              <li>Pick from 👍 Like, 💡 Insightful, 😂 Haha, 😮 Wow, 😢 Sad, 👏 Agree</li>
+              <li>Click your reaction again to remove it</li>
+            </ol>
+            <p>The post author gets a notification when you react.</p>
+            <h4>Comment on a post</h4>
+            <ol>
+              <li>Click <b>Comment</b> under a post</li>
+              <li>Type your reply, hit Enter or click Send</li>
+              <li>The post author gets a notification</li>
+              <li>You can delete your own comment with the trash icon</li>
+            </ol>
+            <h4>Vote on polls</h4>
+            <p>Just tap the option you want. You can change your vote anytime by tapping a different one. Tap your current option again to remove your vote.</p>
+            <h4>Edit or delete your own post</h4>
+            <p>Click the <b>⋯</b> menu in the top-right of your post → <b>Edit</b> or <b>Delete</b>.</p>
+          </div>
+        </details>
+
+        <details class="help-section">
+          <summary>📤 Sharing Posts</summary>
+          <div class="help-body">
+            <p>Click <b>Share</b> at the bottom of any post. A modal opens with 5 options:</p>
+            <ul>
+              <li><b>📰 Share to Community Feed</b> — reposts to your own feed with a preview card. Add an optional note.</li>
+              <li><b>💬 WhatsApp</b> — opens WhatsApp with the post link pre-filled. Pick a contact or group.</li>
+              <li><b>✉️ Email</b> — opens your email app with subject and link ready</li>
+              <li><b>📋 Copy Link</b> — paste anywhere</li>
+              <li><b>📲 More Apps</b> — only on phones; opens the device's native share sheet</li>
+            </ul>
+            <div class="tip">💡 When you "Share to Community Feed", the original post shows up as an embedded card inside your post. Click the embed to jump back to the original.</div>
+          </div>
+        </details>
+
+        <details class="help-section">
+          <summary>👥 Groups</summary>
+          <div class="help-body">
+            <h4>Find &amp; join groups</h4>
+            <ol>
+              <li>Click <b>Groups</b> in the left sidebar</li>
+              <li>Use the <b>search bar</b> to find by name or description</li>
+              <li>Use the <b>category filter chips</b> (🍷 Social, ⛳ Sports &amp; Fitness, 🏖️ Beach &amp; Outdoors, 🐕 Pets, etc.) to browse</li>
+              <li>On any group card, click <b>Join Group</b> (public) or <b>🔒 Request to Join</b> (private)</li>
+            </ol>
+            <h4>Create a group</h4>
+            <ol>
+              <li>Click <b>+ Create Group</b> at the top of the Groups page</li>
+              <li>Fill in <b>Group Name</b>, pick a <b>Category</b>, write a <b>Description</b></li>
+              <li>Optionally upload a <b>Group Photo</b> (square icon) and <b>Cover Photo</b> (wide banner)</li>
+              <li>Pick <b>Privacy</b>: 🌐 Public (anyone joins) or 🔒 Private (you approve members)</li>
+              <li>Click <b>Create Group</b>. You become the creator/admin automatically.</li>
+            </ol>
+            <h4>Post inside a group</h4>
+            <p>On the group page, use the composer at the top to share with members:</p>
+            <ul>
+              <li>📷 Photo · 📄 PDF · 📊 Poll · 📅 Event</li>
+              <li>Click 📅 <b>Event</b> to schedule a group event with date, time, and location — RSVPable, members get notified</li>
+              <li>Hit <b>Post</b> when ready. All members get a notification.</li>
+            </ul>
+            <h4>Add a co-admin (creator only)</h4>
+            <p>Co-admins can manage posts, members, and group settings — but can't delete the group. Useful as a backup.</p>
+            <ol>
+              <li>Open the group page</li>
+              <li>In the <b>Members</b> card, click <b>"See all X members ▾"</b> to expand</li>
+              <li>Find the member you want to promote</li>
+              <li>Click <b>"Make Co-Admin"</b> (blue outline button) next to their name</li>
+              <li>They'll get a notification: <i>"You're now a co-admin of [Group]"</i> and a ⭐ CO-ADMIN badge</li>
+            </ol>
+            <p>To remove a co-admin: same place, click <b>"Remove Co-Admin"</b>.</p>
+            <div class="tip">💡 Designate at least one co-admin for every active group — if you ever step away, they keep the group running.</div>
+            <h4>Edit, invite, kick, leave</h4>
+            <ul>
+              <li><b>Edit Group</b> (creator/co-admin) — top of group page; change name, description, category, privacy, photos</li>
+              <li><b>+ Invite Neighbor</b> — opens a list of all neighbors; click Invite next to anyone</li>
+              <li><b>Remove member</b> (creator/co-admin) — in expanded member list, click red <b>Remove</b> next to their name</li>
+              <li><b>Leave group</b> — on the group card or page, click <b>Leave</b></li>
+              <li><b>Delete group</b> (creator only) — top of group page, red 🗑️ Delete button</li>
             </ul>
           </div>
         </details>
 
-        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
-          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">📝 Posts &amp; Reactions</summary>
-          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
-            <ul style="margin:0;padding-left:18px;">
-              <li>Tap <b>+ New Post</b> on the Feed to share a story, photo, or poll</li>
-              <li>React to a post with 👍 💡 😂 😮 😢 👏 — hover the React button to pick</li>
-              <li>Tap <b>Comment</b> to reply. The post author gets a notification</li>
-              <li>Tap any poll option to vote (you can change your vote later)</li>
-              <li>Click your own post and choose <b>Edit</b> or <b>Delete</b> to manage it</li>
+        <details class="help-section">
+          <summary>🛒 Marketplace</summary>
+          <div class="help-body">
+            <h4>Browse &amp; buy</h4>
+            <ol>
+              <li>Click <b>Marketplace</b> in the sidebar</li>
+              <li>Use the category chips at the top to filter</li>
+              <li>Click any item to see details and contact the seller</li>
+            </ol>
+            <h4>List an item</h4>
+            <ol>
+              <li>Click <b>+ List Item</b></li>
+              <li>Add a <b>Title</b>, <b>Price</b> (or check Free), <b>Category</b>, <b>Condition</b>, <b>Description</b>, and a <b>Photo</b></li>
+              <li>Click <b>Post Listing</b></li>
+            </ol>
+            <p>All neighbors get a notification: <i>"Steve listed 'Surfboard' in the Marketplace for $200"</i></p>
+            <h4>Manage your listings</h4>
+            <ul>
+              <li>✏️ <b>Edit</b> — update price, description, photo</li>
+              <li>✓ <b>Mark as Sold</b> — keeps the listing visible but greyed out</li>
+              <li>🗑️ <b>Delete</b> — removes it entirely</li>
+            </ul>
+            <div class="warn">⚠️ Marketplace is for <b>local items only</b> — no Panama City, no other provinces, no out-of-country listings. (Member Agreement Section 5.)</div>
+          </div>
+        </details>
+
+        <details class="help-section">
+          <summary>📅 Events</summary>
+          <div class="help-body">
+            <h4>RSVP to an event</h4>
+            <ol>
+              <li>Go to <b>Events</b> in the sidebar</li>
+              <li>Click an event to see details</li>
+              <li>Click <b>✓ Going</b>, <b>? Maybe</b>, or <b>✕ Can't Go</b></li>
+              <li>The event host gets a notification</li>
+            </ol>
+            <h4>Create an event</h4>
+            <ol>
+              <li>On the Events page, click <b>+ Create Event</b></li>
+              <li>Fill in <b>Title</b>, <b>Date</b>, <b>Start time</b>, <b>End time</b>, <b>Location</b>, <b>Description</b>, <b>Category</b></li>
+              <li>Optionally upload a photo</li>
+              <li>Click <b>Create Event</b></li>
+            </ol>
+            <p>Anyone can RSVP. As the host, you get a notification each time someone does.</p>
+            <h4>Group events</h4>
+            <p>You can also schedule events from inside a group — see the Groups section. Group events appear in both the group feed and the main Events page (tagged with the group name).</p>
+          </div>
+        </details>
+
+        <details class="help-section">
+          <summary>🛺 Golf Cart Rentals</summary>
+          <div class="help-body">
+            <h4>Find a cart</h4>
+            <ol>
+              <li>Click <b>Transport</b> in the sidebar</li>
+              <li>Browse listed carts under <b>Community Cart Rentals</b></li>
+              <li>Click the green <b>💬 WhatsApp</b> button on any listing — opens a chat with the owner with a friendly intro pre-filled</li>
+            </ol>
+            <h4>List your own cart</h4>
+            <ol>
+              <li>Click <b>+ List My Cart</b></li>
+              <li>Add a <b>Photo</b> of the cart</li>
+              <li>Fill in <b>Description</b> (e.g. "4-seater, 2023, good condition")</li>
+              <li>Set a <b>Rate</b> (e.g. <code>$25/day</code>)</li>
+              <li>Add your <b>WhatsApp number with country code</b> — <code>+507 6790-4807</code> for Panama, <code>+1 555-123-4567</code> for USA/Canada</li>
+              <li>Optional <b>Notes</b> (e.g. "Weekends only")</li>
+              <li>Click <b>Post Listing</b></li>
+            </ol>
+            <p>All neighbors get notified about your new listing.</p>
+            <h4>Manage your listing</h4>
+            <p>On your own listings you'll see:</p>
+            <ul>
+              <li>✏️ <b>Edit</b> (blue) — change description, rate, contact, photo</li>
+              <li>🗑 <b>Remove</b> (red) — take it down</li>
+            </ul>
+            <div class="warn">⚠️ Always include the country code in your WhatsApp number, or the chat link won't work.</div>
+          </div>
+        </details>
+
+        <details class="help-section">
+          <summary>💬 Direct Messages</summary>
+          <div class="help-body">
+            <h4>Start a conversation</h4>
+            <ol>
+              <li>Click any neighbor's <b>name or avatar</b> anywhere in the app to view their profile</li>
+              <li>Click the <b>Message</b> button on their profile</li>
+              <li>Type your message and send</li>
+            </ol>
+            <p>Or open <b>Messages</b> in the sidebar to see all your existing conversations.</p>
+            <h4>Get notified</h4>
+            <p>You'll see an unread badge on the bell icon and on Messages in the sidebar when someone messages you. Open the message to mark it read.</p>
+            <h4>Block a user</h4>
+            <ol>
+              <li>Open their profile (or open the conversation and click their name at the top)</li>
+              <li>Click <b>Block</b></li>
+              <li>They can no longer message you. Unblock anytime from the same spot.</li>
+            </ol>
+            <div class="tip">💡 Messages are 1-on-1 only. For group chats, create a Group instead.</div>
+          </div>
+        </details>
+
+        <details class="help-section">
+          <summary>🏪 Businesses &amp; Reviews</summary>
+          <div class="help-body">
+            <h4>Find a local business</h4>
+            <ol>
+              <li>Click <b>Businesses</b> in the sidebar</li>
+              <li>Filter by category, search by name</li>
+              <li>Click any business to see details, hours, photos, reviews, and contact options</li>
+            </ol>
+            <h4>Recommend a business</h4>
+            <ol>
+              <li>Open the business page</li>
+              <li>Click <b>+ Recommend</b> or <b>Leave a Review</b></li>
+              <li>Pick a star rating (1–5), write your review, optionally add a photo</li>
+              <li>Click <b>Post</b>. The business owner is notified.</li>
+            </ol>
+            <h4>Contact a business</h4>
+            <ul>
+              <li>Tap <b>📞 Call</b> to dial</li>
+              <li>Tap <b>💬 WhatsApp</b> if listed</li>
+              <li>Tap <b>📧 Email</b> if listed</li>
             </ul>
           </div>
         </details>
 
-        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
-          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🛒 Marketplace</summary>
-          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
-            <ul style="margin:0;padding-left:18px;">
-              <li>Go to <b>Marketplace</b> in the left sidebar to browse items for sale or free</li>
-              <li>Tap <b>+ List Item</b> to sell or give something away — add a photo, price, and description</li>
-              <li>Use the <b>Contact Seller</b> button to reach out</li>
-              <li>Mark your item <b>Sold</b> when it's gone, or edit/delete anytime</li>
-              <li>All neighbors get a notification when you post something new</li>
+        <details class="help-section">
+          <summary>🏠 Real Estate</summary>
+          <div class="help-body">
+            <p>The Real Estate section shows properties for sale and rent in and around Costa Blanca Villas. <b>Listings are exclusively managed by Uncover Panama Real Estate</b>, our official partner.</p>
+            <ul>
+              <li>Use the <b>For Sale / For Rent</b> tabs to filter</li>
+              <li>Click any listing to see details and contact info</li>
+              <li>Tap <b>View All Listings →</b> on the sponsor banner to visit Uncover Panama's site</li>
             </ul>
+            <div class="tip">💡 Have a property to list? Contact Uncover Panama directly via the link on the Real Estate page.</div>
           </div>
         </details>
 
-        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
-          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">📅 Events</summary>
-          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
-            <ul style="margin:0;padding-left:18px;">
-              <li>See upcoming community events on the <b>Events</b> page</li>
-              <li>Tap <b>Going</b>, <b>Maybe</b>, or <b>Can't Go</b> to RSVP — the host is notified</li>
-              <li>Anyone can create an event with <b>+ Create Event</b> — add date, location, and a photo</li>
+        <details class="help-section">
+          <summary>🚨 Safety, EMTS &amp; Important Links</summary>
+          <div class="help-body">
+            <h4>Safety section</h4>
+            <p>Use the <b>Safety</b> tab in the sidebar to:</p>
+            <ul>
+              <li>Post lost &amp; found items, suspicious activity, road conditions</li>
+              <li>See alerts from neighbors</li>
+              <li>Important community announcements appear pinned at the top</li>
             </ul>
+            <h4>EMTS page</h4>
+            <p>Click <b>EMTS</b> in the sidebar — your one-stop emergency hub:</p>
+            <ul>
+              <li>🚑 <b>Services</b> — EMTS Panama (private EMS) info and member pricing</li>
+              <li>📞 <b>Emergency Phrases</b> — Spanish phrases for medical, fire, police</li>
+              <li>⚡ <b>Be Prepared</b> — checklists for first aid, vehicle kit, generators, AEDs</li>
+              <li>🔗 <b>Important Links</b> — Naturgy (power), IMHPA (weather), Mas Móvil, Tigo, plus Panama Emergency Guide PDF and donate to IERF</li>
+              <li>👤 <b>My Info</b> — personal medical info form for first responders (saved on your device)</li>
+            </ul>
+            <h4>Emergency contacts (always visible)</h4>
+            <p>The right sidebar always shows emergency numbers — SUME, EMTS, police, fire. Tap to call directly.</p>
+            <div class="warn">⚠️ For real emergencies, always call <b>911</b> or the appropriate authority directly. Don't rely on this app as your primary channel.</div>
           </div>
         </details>
 
-        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
-          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🛺 Golf Cart Rentals</summary>
-          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
-            <ul style="margin:0;padding-left:18px;">
-              <li>Find <b>Golf Cart Rentals</b> in the sidebar to browse available carts</li>
-              <li>Tap the green <b>💬 WhatsApp</b> button to message the owner directly — a friendly intro is pre-filled</li>
-              <li>To list your own, tap <b>+ List My Cart</b> and add a photo, rate, and your WhatsApp number with country code (+507 Panama, +1 USA/Canada)</li>
-              <li>Use the <b>✏️ Edit</b> or <b>🗑 Remove</b> buttons on your own listings</li>
-            </ul>
-          </div>
-        </details>
-
-        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
-          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">💬 Direct Messages</summary>
-          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
-            <ul style="margin:0;padding-left:18px;">
-              <li>Click any neighbor's name or avatar to view their profile, then tap <b>Message</b></li>
-              <li>Open <b>Messages</b> in the sidebar to see all your conversations</li>
-              <li>You'll get a notification (and an unread badge) when someone messages you</li>
-              <li>You can <b>block</b> a user from their profile if needed — they won't be able to message you</li>
-            </ul>
-          </div>
-        </details>
-
-        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
-          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🏢 For Business Owners</summary>
-          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
-            <ul style="margin:0;padding-left:18px;">
-              <li>Sign up as <b>Business</b> to get a dedicated dashboard</li>
-              <li>If your business is already listed, <b>claim</b> it by entering the verification code we send</li>
-              <li>Post offers, events, and updates from your business dashboard</li>
-              <li>Reply to reviews — the reviewer is notified of your response</li>
-              <li>Add your logo, banner, hours, services, and contact info</li>
-            </ul>
-          </div>
-        </details>
-
-        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
-          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🔔 Notifications</summary>
-          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
-            You'll see a red badge on the bell icon when there's something new. You get notified when:
-            <ul style="margin:8px 0 0 18px;padding:0;">
+        <details class="help-section">
+          <summary>🔔 Notifications</summary>
+          <div class="help-body">
+            <p>The 🔔 bell icon shows a red badge when you have unread activity. Click it to see your notifications. You'll be notified when:</p>
+            <ul>
               <li>Someone <b>comments</b> or <b>reacts</b> to your post</li>
               <li>Someone <b>messages</b> you</li>
               <li>Someone <b>RSVPs</b> to your event</li>
               <li>A neighbor posts a new <b>marketplace</b> item or <b>cart</b> rental</li>
-              <li>(Business) Someone <b>reviews</b> your business or replies</li>
+              <li>A new event is scheduled in a <b>group</b> you belong to</li>
+              <li>Someone posts in a <b>group</b> you belong to</li>
+              <li>You're <b>promoted to co-admin</b> of a group</li>
+              <li>(Business) Someone leaves a <b>review</b> on your business or you receive a reply to your review</li>
             </ul>
+            <p>Open the notifications page to mark them all read. You can turn individual notification types on/off in <b>Settings</b>.</p>
           </div>
         </details>
 
-        <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
-          <summary style="cursor:pointer;font-weight:700;color:#0d1b2a;font-size:15px;">🚨 Safety &amp; Emergency</summary>
-          <div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#374151;">
-            <ul style="margin:0;padding-left:18px;">
-              <li>The <b>Safety</b> section is for alerts: lost pets, suspicious activity, road conditions</li>
-              <li>Important community announcements appear at the top of the Feed</li>
-              <li>Emergency contacts (EMTS, police, fire) are always available in the right sidebar — tap to call</li>
-            </ul>
+        <details class="help-section">
+          <summary>🌐 Language &amp; Accessibility</summary>
+          <div class="help-body">
+            <p>Click <b>🌐 ES</b> in the top bar to translate the entire app to Spanish (powered by Google Translate). Click again to return to English.</p>
+            <p>Your language choice is saved on your device — next time you log in, the app remembers.</p>
+            <div class="tip">💡 The login page has a separate ENG / ESP toggle at the bottom.</div>
+          </div>
+        </details>
+
+        <details class="help-section">
+          <summary>❓ Help &amp; Support</summary>
+          <div class="help-body">
+            <p>You can reopen this guide anytime by clicking the <b>?</b> icon in the top bar, or your avatar → <b>How to Use</b>.</p>
+            <p>For bugs, account issues, or questions, contact a Costa Blanca Connect admin via direct message in the app.</p>
+            <p>Read the <b>Member Agreement</b> and <b>Privacy Policy</b> from the login screen to understand the platform rules.</p>
           </div>
         </details>
 
