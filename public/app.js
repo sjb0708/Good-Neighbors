@@ -5303,8 +5303,9 @@ function openCartListingForm(cart) {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Rate</label>
             <input id="cartRate" type="text" placeholder="e.g. $25/day" value="${escHtml(cart?.rate || '')}" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
-          <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Contact</label>
-            <input id="cartContact" type="text" placeholder="WhatsApp or villa #" value="${escHtml(cart?.phone || '')}" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
+          <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">WhatsApp</label>
+            <input id="cartContact" type="text" placeholder="+507 6790-4807 or +1 555-123-4567" value="${escHtml(cart?.phone || '')}" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" />
+            <div style="font-size:11px;color:#6b7280;margin-top:4px;">Include country code (+507 Panama, +1 USA/Canada)</div></div>
         </div>
         <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Notes</label>
           <input id="cartNotes" type="text" placeholder="e.g. Weekends only" value="${escHtml(cart?.notes || '')}" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
@@ -5387,7 +5388,7 @@ async function renderCartListings() {
         <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Posted by ${escHtml(c.owner_name)} · ${relativeTime(c.created_at)}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
-        ${c.phone ? `<a href="tel:${escHtml(c.phone)}" style="padding:7px 12px;background:var(--ocean);color:white;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap;">📞 Contact</a>` : ''}
+        ${c.phone ? `<a href="https://wa.me/${c.phone.replace(/\D/g,'')}?text=${encodeURIComponent(`Hi! I saw your golf cart "${c.make_model}" listed on Costa Blanca Connect — is it available?`)}" target="_blank" rel="noopener" style="padding:7px 12px;background:#25D366;color:white;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap;">💬 WhatsApp</a>` : ''}
         ${currentUser && (c.owner_id === currentUser.id || currentUser.role === 'admin') ? `
           <button onclick="editCart('${c.id}')" style="padding:6px 12px;background:#e0f2fe;color:#0369a1;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">✏️ Edit</button>
           <button onclick="deleteCart('${c.id}')" style="padding:6px 12px;background:#fee2e2;color:#b91c1c;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">🗑 Remove</button>
