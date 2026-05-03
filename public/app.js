@@ -5137,8 +5137,7 @@ async function renderFirstResponders(container) {
         <div id="frpanel-links" class="fr-tab-panel" style="padding:20px;display:none;">
           <div style="background:linear-gradient(135deg,#dc2626,#ef4444);border-radius:14px;padding:20px;color:white;margin-bottom:16px;text-align:center;">
             <div style="font-size:32px;margin-bottom:8px;">📄</div>
-            <div style="font-size:18px;font-weight:800;margin-bottom:4px;">Panama Emergency Guide</div>
-            <div style="font-size:13px;opacity:.85;margin-bottom:16px;">2025 Edition · Prepared by IERF Response</div>
+            <div style="font-size:18px;font-weight:800;margin-bottom:14px;">Panama Emergency Guide</div>
             <a href="/panama-emergency-guide.pdf" download style="display:inline-block;padding:12px 28px;background:white;color:#dc2626;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;">⬇️ Download Full Guide (PDF)</a>
           </div>
 
@@ -5242,8 +5241,7 @@ async function renderFirstResponders(container) {
         <div id="frpanel-guide" class="fr-tab-panel" style="padding:20px;display:none;">
           <div style="background:linear-gradient(135deg,#dc2626,#ef4444);border-radius:14px;padding:20px;color:white;margin-bottom:16px;text-align:center;">
             <div style="font-size:32px;margin-bottom:8px;">📄</div>
-            <div style="font-size:18px;font-weight:800;margin-bottom:4px;">Panama Emergency Guide</div>
-            <div style="font-size:13px;opacity:.85;margin-bottom:16px;">2025 Edition · Prepared by IERF Response</div>
+            <div style="font-size:18px;font-weight:800;margin-bottom:14px;">Panama Emergency Guide</div>
             <a href="/panama-emergency-guide.pdf" download style="display:inline-block;padding:12px 28px;background:white;color:#dc2626;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;">⬇️ Download Full Guide (PDF)</a>
           </div>
           <div style="font-size:13px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">What's Inside</div>
