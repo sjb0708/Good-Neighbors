@@ -3213,7 +3213,7 @@ async function ensureTransportFaresTable() {
 
 app.get('/api/transport/fares', async (req, res) => {
   await ensureTransportFaresTable();
-  const rows = await sql`SELECT f.*, u.name AS author_name, u.username, u.avatar_hex, u.initials FROM transport_fares f JOIN users u ON f.author_id=u.id ORDER BY f.created_at DESC LIMIT 50`;
+  const rows = await sql`SELECT f.*, u.name AS author_name, u.username, u.avatar_hex, u.avatar_url, u.initials FROM transport_fares f JOIN users u ON f.author_id=u.id ORDER BY f.created_at DESC LIMIT 50`;
   res.json(rows);
 });
 

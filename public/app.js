@@ -6117,7 +6117,7 @@ async function renderTransportFares() {
     const waLink = phoneClean ? `https://wa.me/${phoneClean.replace(/^\+/, '')}` : null;
     return `
     <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid var(--border);">
-      <div style="width:38px;height:38px;border-radius:10px;background:${p.avatar_hex||'#f57c00'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${p.initials||'?'}</div>
+      <div style="width:38px;height:38px;border-radius:10px;background:${p.avatar_hex||'#f57c00'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;">${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;">` : (p.initials||'?')}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${typeEmoji[p.transport_type]||'🚗'} ${escHtml(p.from_place)} → ${escHtml(p.to_place)}</div>
         <div style="margin-top:4px;"><span style="font-size:13.5px;color:#16a34a;font-weight:800;">💵 ${escHtml(p.fare)}</span></div>
