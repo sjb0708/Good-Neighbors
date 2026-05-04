@@ -2554,6 +2554,7 @@ app.get('/api/groups/:id', async (req, res) => {
     await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS group_id UUID`;
     await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled BOOLEAN DEFAULT FALSE`;
     await sql`ALTER TABLE group_posts ADD COLUMN IF NOT EXISTS event_id UUID`;
+    await ensureGroupPostInteractionTables();
     const posts = await sql`
       SELECT gp.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials,
         e.title AS event_title, e.description AS event_description, e.location AS event_location,
@@ -2561,7 +2562,10 @@ app.get('/api/groups/:id', async (req, res) => {
         COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='going'),0)   AS event_going,
         COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='maybe'),0)  AS event_maybe,
         COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='cant_go'),0) AS event_cantgo,
-        (SELECT status FROM event_rsvps WHERE event_id=e.id AND user_id=${userId||null}) AS event_user_rsvp
+        (SELECT status FROM event_rsvps WHERE event_id=e.id AND user_id=${userId||null}) AS event_user_rsvp,
+        (SELECT COUNT(*)::int FROM group_post_likes WHERE post_id=gp.id) AS like_count,
+        ${userId ? sql`EXISTS(SELECT 1 FROM group_post_likes WHERE post_id=gp.id AND user_id=${userId})` : sql`FALSE`} AS you_liked,
+        (SELECT COUNT(*)::int FROM group_post_comments WHERE post_id=gp.id) AS comment_count
       FROM group_posts gp JOIN users u ON gp.author_id = u.id
       LEFT JOIN events e ON gp.event_id = e.id
       WHERE gp.group_id=${g.id} ORDER BY gp.pinned DESC, gp.created_at DESC LIMIT 50
@@ -2598,6 +2602,7 @@ app.get('/api/groups/:id', async (req, res) => {
         id: p.id, content: p.content, imageUrl: p.image_url, pdfUrl: p.pdf_url, pdfName: p.pdf_name, pinned: p.pinned,
         pollQuestion: p.poll_question, pollOptions: p.poll_options, pollVotes: p.poll_votes,
         createdAt: p.created_at,
+        likeCount: p.like_count || 0, youLiked: !!p.you_liked, commentCount: p.comment_count || 0,
         author: { id: p.author_id, username: p.username, name: p.name, avatar: p.avatar_hex, avatarUrl: p.avatar_url, initials: p.initials },
         event: p.event_id ? {
           id: p.event_id,
@@ -2900,6 +2905,72 @@ app.delete('/api/groups/:id/posts/:postId', requireAuth(async (req, res) => {
   const isGroupAdmin = g?.created_by_user_id === u.id || u.role === 'admin';
   if (!isPostAuthor && !isGroupAdmin) return res.status(403).json({ error: 'Not authorized' });
   await sql`DELETE FROM group_posts WHERE id=${req.params.postId} AND group_id=${req.params.id}`;
+  res.json({ ok: true });
+}));
+
+async function ensureGroupPostInteractionTables() {
+  await sql`CREATE TABLE IF NOT EXISTS group_post_likes (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), post_id UUID NOT NULL REFERENCES group_posts(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(post_id, user_id))`;
+  await sql`CREATE TABLE IF NOT EXISTS group_post_comments (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), post_id UUID NOT NULL REFERENCES group_posts(id) ON DELETE CASCADE, author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, content TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW())`;
+}
+
+app.post('/api/group-posts/:postId/like', requireAuth(async (req, res) => {
+  await ensureGroupPostInteractionTables();
+  const userId = req.currentUser.id;
+  const [p] = await sql`SELECT gp.id, gp.author_id, g.id AS group_id FROM group_posts gp JOIN groups g ON gp.group_id=g.id WHERE gp.id=${req.params.postId}`;
+  if (!p) return res.status(404).json({ error: 'Not found' });
+  const isMember = await sql`SELECT 1 FROM group_members WHERE group_id=${p.group_id} AND user_id=${userId}`;
+  if (!isMember.length) return res.status(403).json({ error: 'Not a member' });
+  const [existing] = await sql`SELECT id FROM group_post_likes WHERE post_id=${req.params.postId} AND user_id=${userId}`;
+  if (existing) {
+    await sql`DELETE FROM group_post_likes WHERE id=${existing.id}`;
+  } else {
+    await sql`INSERT INTO group_post_likes (post_id, user_id) VALUES (${req.params.postId}, ${userId})`;
+    if (p.author_id !== userId) {
+      await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id) VALUES (${p.author_id}, 'group_like', ${`${req.currentUser.name} liked your post`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials}, ${req.params.postId})`;
+    }
+  }
+  const [{ n }] = await sql`SELECT COUNT(*)::int AS n FROM group_post_likes WHERE post_id=${req.params.postId}`;
+  res.json({ likeCount: n, youLiked: !existing });
+}));
+
+app.get('/api/group-posts/:postId/comments', requireAuth(async (req, res) => {
+  await ensureGroupPostInteractionTables();
+  const rows = await sql`
+    SELECT c.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials
+    FROM group_post_comments c JOIN users u ON c.author_id = u.id
+    WHERE c.post_id=${req.params.postId} ORDER BY c.created_at ASC
+  `;
+  res.json(rows.map(r => ({
+    id: r.id, content: r.content, createdAt: r.created_at,
+    author: { id: r.author_id, username: r.username, name: r.name, avatar: r.avatar_hex, avatarUrl: r.avatar_url, initials: r.initials },
+  })));
+}));
+
+app.post('/api/group-posts/:postId/comments', requireAuth(async (req, res) => {
+  await ensureGroupPostInteractionTables();
+  const userId = req.currentUser.id;
+  const { content } = req.body;
+  if (!content?.trim()) return res.status(400).json({ error: 'Content required' });
+  const [p] = await sql`SELECT gp.id, gp.author_id, g.id AS group_id FROM group_posts gp JOIN groups g ON gp.group_id=g.id WHERE gp.id=${req.params.postId}`;
+  if (!p) return res.status(404).json({ error: 'Not found' });
+  const isMember = await sql`SELECT 1 FROM group_members WHERE group_id=${p.group_id} AND user_id=${userId}`;
+  if (!isMember.length) return res.status(403).json({ error: 'Not a member' });
+  const [c] = await sql`INSERT INTO group_post_comments (post_id, author_id, content) VALUES (${req.params.postId}, ${userId}, ${content.trim()}) RETURNING *`;
+  if (p.author_id !== userId) {
+    await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id) VALUES (${p.author_id}, 'group_comment', ${`${req.currentUser.name} commented on your post`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials}, ${req.params.postId})`;
+  }
+  res.json({
+    id: c.id, content: c.content, createdAt: c.created_at,
+    author: { id: userId, username: req.currentUser.username, name: req.currentUser.name, avatar: req.currentUser.avatar_hex, avatarUrl: req.currentUser.avatar_url, initials: req.currentUser.initials },
+  });
+}));
+
+app.delete('/api/group-posts/:postId/comments/:commentId', requireAuth(async (req, res) => {
+  const userId = req.currentUser.id;
+  const [c] = await sql`SELECT author_id FROM group_post_comments WHERE id=${req.params.commentId} AND post_id=${req.params.postId}`;
+  if (!c) return res.status(404).json({ error: 'Not found' });
+  if (c.author_id !== userId && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  await sql`DELETE FROM group_post_comments WHERE id=${req.params.commentId}`;
   res.json({ ok: true });
 }));
 

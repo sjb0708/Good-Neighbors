@@ -2394,6 +2394,88 @@ function buildCommentEl(c, postId) {
   return div;
 }
 
+async function toggleGroupPostLike(postId, btn) {
+  if (!currentUser) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/group-posts/${postId}/like`, { method: 'POST', credentials: 'include' });
+    if (!res.ok) return;
+    const data = await res.json();
+    const countEl = btn.querySelector('.gp-like-count');
+    if (countEl) countEl.textContent = data.likeCount;
+    btn.style.color = data.youLiked ? 'var(--ocean)' : 'var(--text-mid)';
+  } finally { btn.disabled = false; }
+}
+
+async function toggleGroupPostComments(postId, btn) {
+  const wrap = document.getElementById(`gp-comments-${postId}`);
+  if (!wrap) return;
+  if (wrap.style.display === 'block') { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  wrap.innerHTML = '<div style="font-size:12px;color:var(--text-light);padding:6px;">Loading…</div>';
+  const comments = await fetchJSON(`/api/group-posts/${postId}/comments`) || [];
+  renderGroupPostComments(postId, comments);
+}
+
+function renderGroupPostComments(postId, comments) {
+  const wrap = document.getElementById(`gp-comments-${postId}`);
+  if (!wrap) return;
+  const list = comments.map(c => {
+    const canDel = currentUser && (c.author?.id === currentUser.id || currentUser.role === 'admin');
+    return `
+      <div style="display:flex;gap:8px;margin-bottom:8px;" id="gpc-${c.id}">
+        <div style="width:30px;height:30px;border-radius:50%;background:${c.author?.avatar || '#0077B6'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;">${c.author?.avatarUrl ? `<img src="${c.author.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(c.author?.initials || '?')}</div>
+        <div style="flex:1;background:#f8fafc;border-radius:12px;padding:8px 12px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+            <span style="font-size:12.5px;font-weight:700;color:var(--text-dark);">${escHtml(c.author?.name || 'Anonymous')}</span>
+            <span style="font-size:10.5px;color:var(--text-light);">${relativeTime(c.createdAt)}</span>
+            ${canDel ? `<button onclick="deleteGroupPostComment('${postId}','${c.id}')" style="margin-left:auto;background:none;border:none;color:var(--coral);font-size:11px;cursor:pointer;font-family:inherit;">Delete</button>` : ''}
+          </div>
+          <div style="font-size:13px;color:var(--text-mid);line-height:1.5;">${escHtml(c.content)}</div>
+        </div>
+      </div>`;
+  }).join('');
+  wrap.innerHTML = `
+    ${list}
+    ${currentUser ? `
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <input id="gpc-input-${postId}" type="text" placeholder="Write a comment…" onkeydown="if(event.key==='Enter')postGroupPostComment('${postId}')" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:20px;font-size:13px;font-family:inherit;outline:none;" />
+        <button onclick="postGroupPostComment('${postId}')" style="padding:8px 14px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Send</button>
+      </div>
+    ` : ''}
+  `;
+}
+
+async function postGroupPostComment(postId) {
+  const input = document.getElementById(`gpc-input-${postId}`);
+  if (!input) return;
+  const content = input.value.trim();
+  if (!content) return;
+  input.disabled = true;
+  const res = await fetch(`/api/group-posts/${postId}/comments`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content })
+  });
+  input.disabled = false;
+  if (!res.ok) { showToast('Could not post comment'); return; }
+  input.value = '';
+  const comments = await fetchJSON(`/api/group-posts/${postId}/comments`) || [];
+  renderGroupPostComments(postId, comments);
+  // bump count on the button
+  const btn = document.querySelector(`#gp-comments-${postId}`)?.previousElementSibling?.querySelector('.gp-comment-count');
+  if (btn) btn.textContent = comments.length;
+}
+
+async function deleteGroupPostComment(postId, commentId) {
+  if (!confirm('Delete this comment?')) return;
+  const res = await fetch(`/api/group-posts/${postId}/comments/${commentId}`, { method: 'DELETE', credentials: 'include' });
+  if (!res.ok) { showToast('Could not delete'); return; }
+  document.getElementById(`gpc-${commentId}`)?.remove();
+  const btn = document.querySelector(`#gp-comments-${postId}`)?.previousElementSibling?.querySelector('.gp-comment-count');
+  if (btn) btn.textContent = Math.max(0, parseInt(btn.textContent || '0', 10) - 1);
+}
+
 async function toggleCommentLike(commentId, btn) {
   if (!currentUser) return;
   btn.disabled = true;
@@ -4039,6 +4121,16 @@ async function renderGroupPage(groupId, container) {
                   </div>`;
                 }).join('')}
               </div>` : ''}
+
+            <div style="display:flex;gap:6px;align-items:center;border-top:1px solid var(--border);margin-top:12px;padding-top:8px;">
+              <button onclick="toggleGroupPostLike('${p.id}', this)" style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:none;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:${p.youLiked?'var(--ocean)':'var(--text-mid)'};border-radius:8px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">
+                👍 <span class="gp-like-count">${p.likeCount || 0}</span> Like
+              </button>
+              <button onclick="toggleGroupPostComments('${p.id}', this)" style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:none;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--text-mid);border-radius:8px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">
+                💬 <span class="gp-comment-count">${p.commentCount || 0}</span> Comment
+              </button>
+            </div>
+            <div id="gp-comments-${p.id}" style="display:none;border-top:1px solid var(--border);margin-top:6px;padding-top:10px;"></div>
           </div>`).join('')}
     </div>
   `;
