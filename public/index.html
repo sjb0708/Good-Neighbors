@@ -623,6 +623,7 @@
     let suClaimBizId = null;
     let suClaimBizName = null;
     let suClaimBizClaimed = false;
+    let suSuccessEmail = '';
     let suSearchTimer = null;
     // Steps: 0=role, 1=find listing (biz only), 2=account details / success(3)
     // For neighbor: 0 → 2 (skip step 1)
@@ -759,13 +760,25 @@
         footer.style.display = 'none';
         document.getElementById('suTitle').textContent = '';
         document.getElementById('suSubtitle').textContent = '';
+        const safeEmail = (suSuccessEmail || '').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
         body.innerHTML = `
           <div class="su-success">
-            <div class="su-success-icon">📧</div>
-            <h3>Check Your Email!</h3>
-            <p>We sent a confirmation link to your email address. Click it to activate your account, then sign in.</p>
-            <p style="font-size:12px;color:#a0aec0;margin-top:8px;">Didn't get it? Check your spam folder or <a href="#" onclick="resendVerification();return false;" style="color:#0077B6;">resend the email</a>.</p>
-            <button class="su-btn-next" style="margin-top:24px;width:100%" onclick="closeSignUp()">Got It</button>
+            <div class="su-success-icon" style="font-size:56px;">✅</div>
+            <h3 style="color:#0d8a4a;">Account Created!</h3>
+            <p style="font-size:14px;color:#1a2b3c;">Welcome to Costa Blanca Connect. Your account is ready — there's just one quick step left.</p>
+
+            <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:12px;padding:14px 16px;margin:18px 0;text-align:left;">
+              <div style="font-size:13px;font-weight:800;color:#1E3A8A;margin-bottom:6px;">📧 Check your email to activate</div>
+              <div style="font-size:13px;color:#1a2b3c;line-height:1.55;">We sent a confirmation link to:<br><b style="word-break:break-all;">${safeEmail}</b></div>
+              <div style="font-size:12px;color:#475569;margin-top:8px;line-height:1.5;">Click the link in that email, then come back and sign in. The link expires in 24 hours.</div>
+            </div>
+
+            <div style="background:#FFF9F0;border-left:3px solid #F59E0B;border-radius:0 8px 8px 0;padding:10px 12px;text-align:left;margin-bottom:16px;">
+              <div style="font-size:12px;color:#92400e;line-height:1.5;"><b>Don't see it?</b> Check your spam/junk folder. The email comes from <b>Costa Blanca Connect</b>.</div>
+            </div>
+
+            <p style="font-size:12px;color:#6b7280;margin-top:8px;">Still nothing? <a href="#" onclick="resendVerification();return false;" style="color:#0077B6;font-weight:600;">Resend the confirmation email</a></p>
+            <button class="su-btn-next" style="margin-top:18px;width:100%" onclick="closeSignUp()">Got It — I'll Check My Email</button>
           </div>
         `;
       }
@@ -969,6 +982,7 @@
           });
           const data = await res.json();
           if (!res.ok) { showSuErr(data.error || 'Something went wrong.'); nextBtn.textContent = 'Sign Up'; nextBtn.disabled = false; return; }
+          suSuccessEmail = email;
           suStep = 3; renderSuStep();
         } catch {
           showSuErr('Connection error. Please try again.');
