@@ -1352,11 +1352,15 @@ app.delete('/api/admin/sponsored-posts/:id', requireAdmin(async (req, res) => {
 
 // ─── Posts ────────────────────────────────────────────────────────────────────
 
+const ALLOWED_POST_SECTIONS = new Set(['feed','marketplace','safety','events','promo','hoa']);
+
 app.get('/api/posts', async (req, res) => {
   try {
     const user    = await getUser(req);
     const userId  = user?.id || null;
-    const section = req.query.section || 'feed';
+    const rawSection = req.query.section || 'feed';
+    if (!ALLOWED_POST_SECTIONS.has(rawSection)) return res.status(400).json({ error: 'Invalid section' });
+    const section = rawSection;
 
     if (section === 'marketplace' || section === 'safety') {
       await sql`DELETE FROM posts WHERE section=${section} AND created_at < NOW() - INTERVAL '90 days'`;
@@ -3344,7 +3348,6 @@ app.get('/api/tides', (req, res) => {
 });
 
 app.get('/api/version', (req, res) => res.json({ v: assetVersion('app.js') }));
-app.post('/api/debug-log', (req, res) => { console.log('[DEBUG]', JSON.stringify(req.body)); res.json({ok:true}); });
 
 ;
 
@@ -3352,7 +3355,11 @@ app.post('/api/debug-log', (req, res) => { console.log('[DEBUG]', JSON.stringify
 
 app.get('/',                (req, res) => res.sendFile(path.join(__dirname, 'public', 'landing.html')));
 app.get('/login',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('/admin',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get('/admin', async (req, res) => {
+  const user = await getUser(req);
+  if (!user || user.role !== 'admin') return res.redirect('/login');
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
 app.get('/app',             serveWithCacheBust('app.html'));
 app.get('/app.html',        serveWithCacheBust('app.html'));
 app.get('/business',        serveWithCacheBust('business.html'));
@@ -3445,12 +3452,5 @@ app.get('/api/admin/run-migrations', requireAdmin(async (req, res) => {
   await runMigrations();
   res.json({ ok: true, message: 'Migrations complete' });
 }));
-
-app.get('/api/debug/events-schema', async (req, res) => {
-  try {
-    const cols = await sql`SELECT column_name FROM information_schema.columns WHERE table_name='events' ORDER BY ordinal_position`;
-    res.json({ columns: cols.map(c => c.column_name) });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
 
 module.exports = app;
