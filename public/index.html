@@ -1309,7 +1309,7 @@
           const data = await res.json();
           btn.textContent = 'Welcome! 🌊';
           setTimeout(() => {
-            const routes = { business: '/business', hoa: '/hoa' };
+            const routes = { business: '/business' };
             window.location.href = routes[data.role] || '/app';
           }, 600);
         } else {
@@ -1384,7 +1384,7 @@
 
     fetch('/api/auth/me', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) { const routes = { business: '/business', hoa: '/hoa' }; window.location.href = routes[data.role] || '/app'; } })
+      .then(data => { if (data) { const routes = { business: '/business' }; window.location.href = routes[data.role] || '/app'; } })
       .catch(() => {});
   </script>
 </body>

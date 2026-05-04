@@ -1998,7 +1998,7 @@ function buildPostCard(post) {
 
   const totalReactions = Object.values(post.reactions || {}).reduce((a, b) => a + b, 0);
   const topReactions = getTopReactions(post.reactions);
-  const canResolve = (currentUser?.role === 'admin' || currentUser?.role === 'hoa') && post.type === 'safety' && post.severity !== 'resolved';
+  const canResolve = currentUser?.role === 'admin' && post.type === 'safety' && post.severity !== 'resolved';
   card.innerHTML = `
     <div class="post-card-inner">
       ${post.alertType ? `<div class="alert-badge ${post.severity === 'resolved' ? 'resolved' : (post.severity || 'medium')}">${post.severity === 'resolved' ? '✅ Resolved' : `⚠ ${post.alertType}`}</div>` : ''}
@@ -4735,11 +4735,11 @@ function selectPostType(type, btnEl) {
   document.getElementById('pollOptions').style.display = type === 'poll' ? 'block' : 'none';
   document.getElementById('safetyFields').style.display = type === 'safety' ? 'block' : 'none';
 
-  // Show official note only for HOA/admin
+  // Show official note only for admin
   const officialNote = document.getElementById('officialAlertNote');
   const highBtn = document.querySelector('.sev-high-btn');
   if (type === 'safety') {
-    const isPrivileged = currentUser?.role === 'hoa' || currentUser?.role === 'admin';
+    const isPrivileged = currentUser?.role === 'admin';
     if (officialNote) officialNote.style.display = isPrivileged ? 'block' : 'none';
     if (highBtn) highBtn.style.display = isPrivileged ? 'inline-block' : 'none';
     if (!isPrivileged) selectSeverity('medium', document.querySelector('[data-sev="medium"]'));

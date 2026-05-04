@@ -132,7 +132,6 @@ function buildReactionsObj(reactionRows, postId) {
 function formatPost(row, reactionRows, commentCountMap, userReactionMap, pollVoteMap, userPollVoteMap) {
   const author = formatAuthor(row);
   if (row.is_business_post) author.isBusiness = true;
-  if (row.is_hoa_post)      author.isHoa      = true;
 
   const post = {
     id: row.id, type: row.type, section: row.section,
@@ -142,7 +141,6 @@ function formatPost(row, reactionRows, commentCountMap, userReactionMap, pollVot
     commentCount: parseInt(commentCountMap[row.id] || 0, 10),
     userReaction: userReactionMap[row.id] || null,
     isBusinessPost: row.is_business_post || false,
-    isHoaPost:      row.is_hoa_post      || false,
     isOfficial:     row.is_official      || false,
     forwardedToDecameron: row.forwarded_to_decameron || false,
     isPinned:       row.is_pinned        || false,
@@ -762,7 +760,6 @@ app.post('/api/admin/team/promote/:username', requireOwner(async (req, res) => {
   const [u] = await sql`SELECT id, role FROM users WHERE username=${req.params.username}`;
   if (!u) return res.status(404).json({ error: 'User not found' });
   if (u.role === 'admin') return res.status(400).json({ error: 'Already an admin' });
-  if (u.role === 'hoa') return res.status(400).json({ error: 'Cannot promote HOA accounts' });
   const [updated] = await sql`UPDATE users SET role='admin', is_owner=false WHERE id=${u.id} RETURNING *`;
   res.json({ ok: true, user: formatUser(updated) });
 }));
@@ -785,7 +782,6 @@ app.post('/api/admin/users/:username/ban', requireAdmin(async (req, res) => {
   if (!u) return res.status(404).json({ error: 'User not found' });
   if (u.id === req.currentUser.id) return res.status(400).json({ error: 'Cannot ban yourself' });
   if (u.is_owner) return res.status(400).json({ error: 'Cannot ban the platform owner' });
-  if (u.role === 'hoa') return res.status(400).json({ error: 'Cannot ban HOA accounts' });
 
   const [ban] = await sql`
     INSERT INTO banned_users (user_id, username, email, name, address, avatar_hex, initials, original_role, reason, banned_by_user_id)
@@ -892,7 +888,7 @@ app.get('/api/admin/banned', requireAdmin(async (req, res) => {
   })));
 }));
 
-// ─── Security alerts & HOA contacts ──────────────────────────────────────────
+// ─── Security alerts ──────────────────────────────────────────────────────────
 
 app.get('/api/admin/community-safety', requireAdmin(async (req, res) => {
   const safetyPosts = await fetchPostsWithMeta(`WHERE p.type = 'safety'`, req.currentUser.id);
@@ -1012,28 +1008,6 @@ app.get('/api/admin/marketplace', requireAdmin(async (req, res) => {
     category: r.category, sold: r.sold, image: r.image_url || null, createdAt: r.created_at,
     seller: { name: r.seller_name, username: r.seller_username },
   })));
-}));
-
-app.get('/api/admin/hoa-contacts', requireAdmin(async (req, res) => {
-  const rows = await sql`SELECT * FROM hoa_contacts ORDER BY created_at`;
-  res.json(rows.map(r => ({ id: r.id, name: r.name, email: r.email, addedAt: r.created_at })));
-}));
-
-app.post('/api/admin/hoa-contacts', requireAdmin(async (req, res) => {
-  const { name, email } = req.body;
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Valid email required' });
-  const [row] = await sql`
-    INSERT INTO hoa_contacts (email, name, added_by_user_id) VALUES (${email}, ${name||email}, ${req.currentUser.id})
-    ON CONFLICT (email) DO NOTHING
-    RETURNING *
-  `;
-  if (!row) return res.status(409).json({ error: 'Email already in list' });
-  res.json({ ok: true, contact: { id: row.id, name: row.name, email: row.email } });
-}));
-
-app.delete('/api/admin/hoa-contacts/:id', requireAdmin(async (req, res) => {
-  await sql`DELETE FROM hoa_contacts WHERE id=${req.params.id}`;
-  res.json({ ok: true });
 }));
 
 app.get('/api/admin/emts-services', requireAdmin(async (req, res) => {
@@ -1192,19 +1166,14 @@ app.get('/api/admin/security-alerts', requireAdmin(async (req, res) => {
   res.json(rows.map(r => ({
     id: r.id, alertType: r.alert_type, severity: r.severity,
     title: r.title, message: r.message, postToFeed: r.post_to_feed,
-    emailHOA: r.email_hoa, sentTo: r.sent_to, emailStatus: r.email_status,
+    sentTo: r.sent_to, emailStatus: r.email_status,
     emailError: r.email_error, createdAt: r.created_at,
   })));
 }));
 
 app.post('/api/admin/security-alerts', requireAdmin(async (req, res) => {
-  const { alertType, severity, title, message, postToFeed, emailHOA } = req.body;
+  const { alertType, severity, title, message, postToFeed } = req.body;
   if (!title || !message) return res.status(400).json({ error: 'Title and message required' });
-
-  const contacts     = emailHOA ? await sql`SELECT email FROM hoa_contacts` : [];
-  const sentTo       = contacts.map(c => c.email);
-  let   emailStatus  = 'not_sent';
-  let   emailError   = null;
 
   if (postToFeed) {
     await sql`
@@ -1213,20 +1182,9 @@ app.post('/api/admin/security-alerts', requireAdmin(async (req, res) => {
     `;
   }
 
-  if (emailHOA && contacts.length) {
-    try {
-      await sendEmail({
-        to: sentTo,
-        subject: `[${severity||'Alert'}] ${title} — Costa Blanca Villas`,
-        html: `<div style="font-family:sans-serif;max-width:600px;"><h2 style="color:#0077B6;">${title}</h2><p>${message.replace(/\n/g,'<br>')}</p><hr style="border:none;border-top:1px solid #eee;"><p style="color:#888;font-size:12px;">Costa Blanca Connect · Costa Blanca Villas, Farallón, Coclé, Panamá</p></div>`
-      });
-      emailStatus = 'sent';
-    } catch (err) { emailStatus = 'failed'; emailError = err.message; }
-  }
-
   const [alert] = await sql`
-    INSERT INTO security_alerts (alert_type, severity, title, message, post_to_feed, email_hoa, sent_to, email_status, email_error, created_by_user_id)
-    VALUES (${alertType||'general'}, ${severity||'medium'}, ${title}, ${message}, ${!!postToFeed}, ${!!emailHOA}, ${JSON.stringify(sentTo)}, ${emailStatus}, ${emailError}, ${req.currentUser.id})
+    INSERT INTO security_alerts (alert_type, severity, title, message, post_to_feed, sent_to, email_status, created_by_user_id)
+    VALUES (${alertType||'general'}, ${severity||'medium'}, ${title}, ${message}, ${!!postToFeed}, ${JSON.stringify([])}, 'not_sent', ${req.currentUser.id})
     RETURNING *
   `;
   res.json({ ok: true, alert });
@@ -1237,7 +1195,7 @@ app.post('/api/admin/security-alerts', requireAdmin(async (req, res) => {
 app.post('/api/admin/create-account', requireOwner(async (req, res) => {
   const { displayName, username, password, role, address, bio, email } = req.body;
   if (!displayName || !username || !password || !role) return res.status(400).json({ error: 'Missing required fields' });
-  if (!['hoa','business','realtor','neighbor'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
+  if (!['business','realtor','neighbor'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
 
   const existing = await sql`SELECT id FROM users WHERE username=${username} UNION SELECT id FROM pending_registrations WHERE username=${username} LIMIT 1`;
   if (existing.length) return res.status(409).json({ error: 'Username already taken' });
@@ -1261,7 +1219,7 @@ app.get('/api/admin/realtors', requireAdmin(async (req, res) => {
 }));
 
 app.get('/api/admin/managed-accounts', requireOwner(async (req, res) => {
-  const rows = await sql`SELECT * FROM users WHERE managed_account=true OR role='hoa' ORDER BY name`;
+  const rows = await sql`SELECT * FROM users WHERE managed_account=true ORDER BY name`;
   res.json(rows.map(u => ({ username: u.username, name: u.name, role: u.role, avatar: u.avatar_hex, initials: u.initials })));
 }));
 
@@ -1352,7 +1310,7 @@ app.delete('/api/admin/sponsored-posts/:id', requireAdmin(async (req, res) => {
 
 // ─── Posts ────────────────────────────────────────────────────────────────────
 
-const ALLOWED_POST_SECTIONS = new Set(['feed','marketplace','safety','events','promo','hoa']);
+const ALLOWED_POST_SECTIONS = new Set(['feed','marketplace','safety','events','promo']);
 
 app.get('/api/posts', async (req, res) => {
   try {
@@ -1393,7 +1351,7 @@ app.post('/api/posts', requireAuth(async (req, res) => {
   let resolvedSeverity = severity || 'medium';
   let isOfficial       = false;
   if (type === 'safety') {
-    if (u.role === 'hoa' || u.role === 'admin') { isOfficial = true; resolvedSeverity = severity || 'high'; }
+    if (u.role === 'admin') { isOfficial = true; resolvedSeverity = severity || 'high'; }
     else if (resolvedSeverity === 'high') resolvedSeverity = 'medium';
   }
 
@@ -1492,7 +1450,7 @@ app.delete('/api/posts/:id', requireAuth(async (req, res) => {
 
 app.post('/api/posts/:id/resolve', requireAuth(async (req, res) => {
   const u = req.currentUser;
-  if (u.role !== 'admin' && u.role !== 'hoa') return res.status(403).json({ error: 'Admin/HOA only' });
+  if (u.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
   const [post] = await sql`
     UPDATE posts SET severity='resolved', resolved_by_user_id=${u.id}, resolved_at=NOW()
     WHERE id=${req.params.id} RETURNING *
@@ -1662,7 +1620,7 @@ app.get('/api/events', async (req, res) => {
       id: e.id, title: e.title, description: e.description,
       host: { id: e.host_id, username: e.host_username, name: e.host_name, avatar: e.host_avatar, initials: e.host_initials, verified: e.host_verified },
       location: e.location, date: e.event_date, time: e.event_time, endTime: e.end_time,
-      category: e.category, isHoaEvent: e.is_hoa_event, image: e.image_url || null, cancelled: e.cancelled || false,
+      category: e.category, image: e.image_url || null, cancelled: e.cancelled || false,
       businessId: e.business_id || null,
       groupId: e.group_id || null, groupName: e.group_name || null, groupIcon: e.group_icon || null,
       rsvp: { going: e.going_count, maybe: e.maybe_count, cantGo: e.cant_go_count },
@@ -2043,8 +2001,8 @@ app.post('/api/business/post', requireAuth(async (req, res) => {
       sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS event_location TEXT`,
     ]);
     await sql`
-      INSERT INTO events (title, description, host_id, location, event_date, event_time, end_time, category, is_hoa_event, image_url, business_id)
-      VALUES (${eventTitle}, ${content}, ${u.id}, ${eventLocation||'Costa Blanca Villas'}, ${eventDate}, ${eventTime||null}, null, 'Official Business', false, ${imageUrl}, ${biz.id})
+      INSERT INTO events (title, description, host_id, location, event_date, event_time, end_time, category, image_url, business_id)
+      VALUES (${eventTitle}, ${content}, ${u.id}, ${eventLocation||'Costa Blanca Villas'}, ${eventDate}, ${eventTime||null}, null, 'Official Business', ${imageUrl}, ${biz.id})
       RETURNING *
     `;
     // Also insert a feed post so it shows in the neighborhood feed
@@ -3233,40 +3191,6 @@ app.post('/api/profile/banner', requireAuth(async (req, res) => {
   res.json({ bannerUrl });
 }));
 
-// ─── HOA ─────────────────────────────────────────────────────────────────────
-
-app.get('/api/hoa/me', requireAuth(async (req, res) => {
-  const u = req.currentUser;
-  if (u.role !== 'hoa') return res.status(403).json({ error: 'Not an HOA account' });
-  const [eventCount] = await sql`SELECT COUNT(*)::int AS c FROM events WHERE event_date >= CURRENT_DATE`;
-  const [residentCount] = await sql`SELECT COUNT(*)::int AS c FROM users`;
-  const [groupCount] = await sql`SELECT COUNT(*)::int AS c FROM groups`;
-  const [postCount]  = await sql`SELECT COUNT(*)::int AS c FROM posts WHERE is_hoa_post=true`;
-  res.json({ ...formatUser(u), hoaPostsCount: postCount?.c||0, upcomingEvents: eventCount?.c||0, totalResidents: residentCount?.c||0, totalGroups: groupCount?.c||0 });
-}));
-
-app.post('/api/hoa/post', requireAuth(async (req, res) => {
-  const u = req.currentUser;
-  if (u.role !== 'hoa') return res.status(403).json({ error: 'Not an HOA account' });
-  const { postType, content, image } = req.body;
-  if (!content) return res.status(400).json({ error: 'Content required' });
-  const imageUrl = await storeImage(image, 'hoa');
-  const [post]   = await sql`
-    INSERT INTO posts (type, section, content, author_id, image_url, is_hoa_post)
-    VALUES (${postType||'general'}, 'feed', ${content}, ${u.id}, ${imageUrl}, true)
-    RETURNING *
-  `;
-  const full = await fetchPostsWithMeta(`WHERE p.id = '${post.id}'`, u.id);
-  res.json(full[0] || post);
-}));
-
-app.get('/api/hoa/posts', requireAuth(async (req, res) => {
-  const u = req.currentUser;
-  if (u.role !== 'hoa') return res.status(403).json({ error: 'Not an HOA account' });
-  const posts = await fetchPostsWithMeta(`WHERE p.is_hoa_post = true`, u.id);
-  res.json(posts);
-}));
-
 app.post('/api/events', requireAuth(async (req, res) => {
   try {
     const u = req.currentUser;
@@ -3276,11 +3200,11 @@ app.post('/api/events', requireAuth(async (req, res) => {
     // Ensure image_url column exists before inserting
     await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS image_url TEXT`;
     const [ev] = await sql`
-      INSERT INTO events (title, description, host_id, location, event_date, event_time, end_time, category, is_hoa_event, image_url)
-      VALUES (${title}, ${description||''}, ${u.id}, ${location||'Costa Blanca Villas'}, ${eventDate}, ${eventTime||'TBD'}, ${endTime||''}, ${category||'Community'}, false, ${imageUrl})
+      INSERT INTO events (title, description, host_id, location, event_date, event_time, end_time, category, image_url)
+      VALUES (${title}, ${description||''}, ${u.id}, ${location||'Costa Blanca Villas'}, ${eventDate}, ${eventTime||'TBD'}, ${endTime||''}, ${category||'Community'}, ${imageUrl})
       RETURNING *
     `;
-    res.json({ id: ev.id, title: ev.title, description: ev.description, host: formatUser(u), location: ev.location, date: ev.event_date, time: ev.event_time, endTime: ev.end_time, category: ev.category, isHoaEvent: false, image: ev.image_url || null, rsvp: { going:0, maybe:0, cantGo:0 }, userRsvp: null, goingAvatars: [] });
+    res.json({ id: ev.id, title: ev.title, description: ev.description, host: formatUser(u), location: ev.location, date: ev.event_date, time: ev.event_time, endTime: ev.end_time, category: ev.category, image: ev.image_url || null, rsvp: { going:0, maybe:0, cantGo:0 }, userRsvp: null, goingAvatars: [] });
   } catch (err) {
     console.error('POST /api/events error:', err.message);
     res.status(500).json({ error: err.message });
@@ -3308,19 +3232,6 @@ app.delete('/api/events/:id', requireAuth(async (req, res) => {
     console.error('DELETE /api/events error:', err.message);
     res.status(500).json({ error: err.message });
   }
-}));
-
-app.post('/api/hoa/events', requireAuth(async (req, res) => {
-  const u = req.currentUser;
-  if (u.role !== 'hoa') return res.status(403).json({ error: 'Not an HOA account' });
-  const { title, description, location, date, time, endTime, category } = req.body;
-  if (!title || !date) return res.status(400).json({ error: 'Title and date required' });
-  const [ev] = await sql`
-    INSERT INTO events (title, description, host_id, location, event_date, event_time, end_time, category, is_hoa_event)
-    VALUES (${title}, ${description||''}, ${u.id}, ${location||'Costa Blanca Villas'}, ${date}, ${time||'TBD'}, ${endTime||''}, ${category||'Community'}, true)
-    RETURNING *
-  `;
-  res.json({ id: ev.id, title: ev.title, description: ev.description, host: formatUser(u), location: ev.location, date: ev.event_date, time: ev.event_time, endTime: ev.end_time, category: ev.category, isHoaEvent: ev.is_hoa_event, rsvp: { going:0, maybe:0, cantGo:0 }, userRsvp: null, goingAvatars: [] });
 }));
 
 // ─── Community Stats ──────────────────────────────────────────────────────────
@@ -3413,7 +3324,6 @@ app.get('/admin', async (req, res) => {
 app.get('/app',             serveWithCacheBust('app.html'));
 app.get('/app.html',        serveWithCacheBust('app.html'));
 app.get('/business',        serveWithCacheBust('business.html'));
-app.get('/hoa',             serveWithCacheBust('hoa.html'));
 app.get('/reset-password',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
 app.get('/verify-email',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-email.html')));
 
