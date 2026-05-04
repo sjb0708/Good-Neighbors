@@ -1703,6 +1703,7 @@ function formatBusiness(b) {
     logoUrl: b.logo_url ? (b.logo_url.startsWith('data:') ? `/api/businesses/${b.id}/logo-image?v=${b.img_version||0}` : b.logo_url) : null,
     menuUrl: b.menu_url||null, menuText: b.menu_text||null,
     addedByUserId: b.added_by_user_id||null, claimedByUserId: b.claimed_by_user_id||null,
+    addedByName: b.added_by_name||null, addedByUsername: b.added_by_username||null,
     services: b.services || [],
     lastVerifiedAt: b.last_verified_at||null,
   };
@@ -1841,7 +1842,7 @@ app.get('/api/businesses/search', async (req, res) => {
 app.get('/api/businesses', async (req, res) => {
   try {
     const user  = await getUser(req);
-    const rows  = await sql`SELECT * FROM businesses ORDER BY name`;
+    const rows  = await sql`SELECT b.*, u.name AS added_by_name, u.username AS added_by_username FROM businesses b LEFT JOIN users u ON b.added_by_user_id = u.id ORDER BY b.name`;
     const year  = new Date().getFullYear();
     const faves = await sql`SELECT business_id, COUNT(*)::int AS cnt FROM business_faves WHERE year=${year} GROUP BY business_id`;
     const faveMap = {};
@@ -1892,7 +1893,7 @@ app.get('/api/businesses/:id/photo/:index', async (req, res) => {
 app.get('/api/businesses/:id', async (req, res) => {
   try {
     const user   = await getUser(req);
-    const [biz]  = await sql`SELECT * FROM businesses WHERE id=${req.params.id}`;
+    const [biz]  = await sql`SELECT b.*, u.name AS added_by_name, u.username AS added_by_username FROM businesses b LEFT JOIN users u ON b.added_by_user_id = u.id WHERE b.id=${req.params.id}`;
     if (!biz) return res.status(404).json({ error: 'Not found' });
     const reviews = await sql`
       SELECT r.*, u.name AS author_name, u.avatar_hex, u.avatar_url, u.initials

@@ -2770,6 +2770,7 @@ function buildBusinessCard(biz) {
       <span class="rating-num">${biz.rating}</span>
       <span class="review-count">(${biz.reviewCount} reviews)</span>
     </div>
+    ${(!biz.claimed && biz.addedByName) ? `<div style="display:inline-flex;align-items:center;gap:6px;background:#FFF9F0;border:1px solid #F5D78E;color:#854d0e;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:8px;">✋ Recommended by ${escHtml(biz.addedByName)}</div>` : ''}
     <div class="recommended-badge">👥 Recommended by ${biz.recommendedBy} neighbors</div>
     <div class="business-desc">${escHtml(biz.description)}</div>
     <div class="business-meta">
@@ -2836,6 +2837,15 @@ async function openBusinessModal(bizId) {
           </div>
         </div>
       </div>
+
+      ${(!biz.claimed && biz.addedByName) ? `
+        <div style="background:#FFF9F0;border:1px solid #F5D78E;border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:18px;">✋</span>
+          <div style="flex:1;font-size:13px;color:#854d0e;line-height:1.45;">
+            <b>Recommended by ${escHtml(biz.addedByName)}</b> — this listing was added by a neighbor. The owner can <b>claim it</b> below to manage hours, photos, and reply to reviews.
+          </div>
+        </div>
+      ` : ''}
 
       <div style="background:var(--bg);border-radius:12px;padding:14px;margin-bottom:16px;font-size:13px;color:var(--text-mid);line-height:1.6">
         ${escHtml(biz.description)}
