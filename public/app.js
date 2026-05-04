@@ -79,19 +79,23 @@ function showWelcomeIfNew() {
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
   modal.innerHTML = `
-    <div style="background:white;border-radius:20px;width:min(420px,100%);padding:32px 28px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
-      <div style="font-size:48px;margin-bottom:12px;">👋</div>
-      <h2 style="font-size:22px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Welcome to Costa Blanca Connect!</h2>
-      <p style="font-size:14px;color:var(--text-mid);line-height:1.6;margin-bottom:24px;">Your neighborhood community app. Stay connected with neighbors, find local services, report safety concerns, and more.</p>
-      <div style="display:flex;flex-direction:column;gap:10px;text-align:left;margin-bottom:24px;">
+    <div style="background:white;border-radius:20px;width:min(440px,100%);padding:32px 28px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,0.25);max-height:90vh;overflow-y:auto;">
+      <div style="font-size:48px;margin-bottom:12px;">🏖️</div>
+      <h2 style="font-size:22px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Welcome to Costa Blanca Connect</h2>
+      <p style="font-size:14px;color:var(--text-mid);line-height:1.6;margin-bottom:20px;">Built to bring our community closer — a place where neighbors stay connected, share what matters, and look out for one another. Welcome to the family.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;text-align:left;margin-bottom:20px;">
         ${[['📰','Feed','Share updates, ask questions, connect with neighbors'],['🛒','Marketplace','Buy & sell within the community'],['📅','Events','See what\'s happening in Costa Blanca Villas'],['🏪','Businesses','Find local services & support community businesses'],['🚨','Safety','Report and stay informed about safety concerns']].map(([icon,name,desc]) =>
           `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f8fafc;border-radius:10px;">
             <span style="font-size:20px;">${icon}</span>
             <div><div style="font-size:13px;font-weight:700;color:var(--text-dark);">${name}</div><div style="font-size:12px;color:var(--text-light);">${desc}</div></div>
           </div>`).join('')}
       </div>
-      <button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;padding:13px;background:var(--ocean);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Let's Go! 🏖️</button>
-      <button onclick="this.closest('[style*=fixed]').remove();openHelpModal();" style="width:100%;padding:11px;background:none;color:var(--ocean);border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px;">📖 Show me how to use the app</button>
+      <div style="background:#FFF9F0;border:1px solid #F5D78E;border-radius:12px;padding:12px 14px;text-align:left;margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:800;color:var(--text-dark);margin-bottom:4px;">💡 New here? Start with the Help Guide.</div>
+        <div style="font-size:12px;color:var(--text-mid);line-height:1.5;">Tap the <b>?</b> icon in the top bar anytime for a full walkthrough of every feature.</div>
+      </div>
+      <button onclick="this.closest('[style*=fixed]').remove();openHelpModal();" style="width:100%;padding:13px;background:var(--ocean);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">📖 Show Me How It Works</button>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;padding:11px;background:none;color:var(--ocean);border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px;">Let's Explore 🏖️</button>
     </div>
   `;
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
