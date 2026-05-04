@@ -1559,19 +1559,47 @@ app.post('/api/posts/:id/vote', requireAuth(async (req, res) => {
   res.json({ pollOptions, userVote: uv?.option_id || null });
 }));
 
+async function ensureCommentLikesTable() {
+  await sql`CREATE TABLE IF NOT EXISTS comment_likes (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), comment_id UUID NOT NULL REFERENCES comments(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(comment_id, user_id))`;
+}
+
 app.get('/api/posts/:id/comments', async (req, res) => {
   try {
+    await ensureCommentLikesTable();
+    const me = await getUser(req);
+    const meId = me?.id || null;
     const rows = await sql`
-      SELECT c.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials
+      SELECT c.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials,
+        (SELECT COUNT(*)::int FROM comment_likes WHERE comment_id = c.id) AS like_count,
+        ${meId ? sql`EXISTS(SELECT 1 FROM comment_likes WHERE comment_id = c.id AND user_id = ${meId})` : sql`FALSE`} AS you_liked
       FROM comments c JOIN users u ON c.author_id = u.id
       WHERE c.post_id=${req.params.id} ORDER BY c.created_at ASC
     `;
     res.json(rows.map(r => ({
       id: r.id, content: r.content, createdAt: r.created_at,
+      likeCount: r.like_count || 0, youLiked: !!r.you_liked,
       author: { id: r.author_id, username: r.username, name: r.name, avatar: r.avatar_hex, avatarUrl: r.avatar_url, initials: r.initials },
     })));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
+
+app.post('/api/comments/:commentId/like', requireAuth(async (req, res) => {
+  await ensureCommentLikesTable();
+  const userId = req.currentUser.id;
+  const [c] = await sql`SELECT id, author_id FROM comments WHERE id=${req.params.commentId}`;
+  if (!c) return res.status(404).json({ error: 'Not found' });
+  const [existing] = await sql`SELECT id FROM comment_likes WHERE comment_id=${req.params.commentId} AND user_id=${userId}`;
+  if (existing) {
+    await sql`DELETE FROM comment_likes WHERE id=${existing.id}`;
+  } else {
+    await sql`INSERT INTO comment_likes (comment_id, user_id) VALUES (${req.params.commentId}, ${userId})`;
+    if (c.author_id !== userId) {
+      await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id) VALUES (${c.author_id}, 'comment_like', ${`${req.currentUser.name} liked your comment`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials}, ${req.params.commentId})`;
+    }
+  }
+  const [{ n }] = await sql`SELECT COUNT(*)::int AS n FROM comment_likes WHERE comment_id=${req.params.commentId}`;
+  res.json({ likeCount: n, youLiked: !existing });
+}));
 
 app.delete('/api/posts/:id/comments/:commentId', requireAuth(async (req, res) => {
   const [comment] = await sql`SELECT author_id FROM comments WHERE id=${req.params.commentId}`;

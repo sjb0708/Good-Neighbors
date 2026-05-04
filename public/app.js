@@ -2385,12 +2385,27 @@ function buildCommentEl(c, postId) {
       </div>
       <div class="comment-meta-row">
         <span class="comment-meta-time">${relativeTime(c.createdAt)}</span>
+        ${currentUser ? `<button class="comment-meta-action comment-like-btn${c.youLiked ? ' liked' : ''}" data-comment-id="${c.id}" onclick="toggleCommentLike('${c.id}', this)" style="${c.youLiked ? 'color:var(--ocean);font-weight:700;' : ''}">👍 <span class="comment-like-count">${c.likeCount || 0}</span></button>` : `<span class="comment-meta-action">👍 ${c.likeCount || 0}</span>`}
         ${currentUser ? `<button class="comment-meta-action" onclick="replyToComment('${postId}','${username}')">Reply</button>` : ''}
         ${canDelete ? `<button class="comment-meta-action danger" onclick="deleteComment('${postId}','${c.id}')">Delete</button>` : ''}
       </div>
     </div>
   `;
   return div;
+}
+
+async function toggleCommentLike(commentId, btn) {
+  if (!currentUser) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/comments/${commentId}/like`, { method: 'POST', credentials: 'include' });
+    if (!res.ok) return;
+    const data = await res.json();
+    const countEl = btn.querySelector('.comment-like-count');
+    if (countEl) countEl.textContent = data.likeCount;
+    if (data.youLiked) { btn.style.color = 'var(--ocean)'; btn.style.fontWeight = '700'; btn.classList.add('liked'); }
+    else { btn.style.color = ''; btn.style.fontWeight = ''; btn.classList.remove('liked'); }
+  } finally { btn.disabled = false; }
 }
 
 function replyToComment(postId, username) {
