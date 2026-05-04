@@ -2984,6 +2984,8 @@ app.post('/api/profile/change-password', requireAuth(async (req, res) => {
 
 async function ensureMessagingTables() {
   await sql`CREATE TABLE IF NOT EXISTS conversations (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user1_id UUID REFERENCES users(id) ON DELETE CASCADE, user2_id UUID REFERENCES users(id) ON DELETE CASCADE, last_message_at TIMESTAMPTZ DEFAULT NOW(), created_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(user1_id, user2_id))`;
+  await sql`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS hidden_for_user1 BOOLEAN DEFAULT FALSE`;
+  await sql`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS hidden_for_user2 BOOLEAN DEFAULT FALSE`;
   await sql`CREATE TABLE IF NOT EXISTS direct_messages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE, sender_id UUID REFERENCES users(id) ON DELETE CASCADE, content TEXT NOT NULL, read BOOLEAN DEFAULT false, created_at TIMESTAMPTZ DEFAULT NOW())`;
   await sql`CREATE TABLE IF NOT EXISTS blocked_users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, blocked_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(user_id, blocked_user_id))`;
 }
@@ -3012,7 +3014,8 @@ app.get('/api/conversations', requireAuth(async (req, res) => {
       EXISTS(SELECT 1 FROM blocked_users WHERE user_id = ${userId} AND blocked_user_id = CASE WHEN c.user1_id = ${userId} THEN c.user2_id ELSE c.user1_id END) AS you_blocked_them
     FROM conversations c
     JOIN users u ON u.id = CASE WHEN c.user1_id = ${userId} THEN c.user2_id ELSE c.user1_id END
-    WHERE c.user1_id = ${userId} OR c.user2_id = ${userId}
+    WHERE (c.user1_id = ${userId} OR c.user2_id = ${userId})
+      AND NOT ((c.user1_id = ${userId} AND c.hidden_for_user1) OR (c.user2_id = ${userId} AND c.hidden_for_user2))
     ORDER BY c.last_message_at DESC
   `;
   res.json(rows.map(r => ({ id: r.id, partner: { id: r.partner_id, name: r.partner_name, username: r.partner_username, avatar: r.partner_avatar, avatarUrl: r.partner_avatar_url, initials: r.partner_initials }, lastMessage: r.last_message, unreadCount: r.unread_count, lastMessageAt: r.last_message_at, youBlockedThem: r.you_blocked_them })));
@@ -3039,7 +3042,7 @@ app.post('/api/conversations/:id/messages', requireAuth(async (req, res) => {
   const [blocked] = await sql`SELECT 1 FROM blocked_users WHERE user_id = ${partnerId} AND blocked_user_id = ${userId}`;
   if (blocked) return res.status(403).json({ error: 'Unable to send message' });
   const [msg] = await sql`INSERT INTO direct_messages (conversation_id, sender_id, content) VALUES (${req.params.id}, ${userId}, ${content.trim()}) RETURNING *`;
-  await sql`UPDATE conversations SET last_message_at = NOW() WHERE id=${req.params.id}`;
+  await sql`UPDATE conversations SET last_message_at = NOW(), hidden_for_user1 = FALSE, hidden_for_user2 = FALSE WHERE id=${req.params.id}`;
   await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id) VALUES (${partnerId}, 'message', ${`${req.currentUser.name} sent you a message`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials}, ${req.params.id})`;
   res.json({ id: msg.id, senderId: msg.sender_id, content: msg.content, read: msg.read, createdAt: msg.created_at });
 }));
@@ -3060,6 +3063,22 @@ app.post('/api/conversations/:id/block', requireAuth(async (req, res) => {
   await sql`INSERT INTO blocked_users (user_id, blocked_user_id) VALUES (${userId}, ${partnerId}) ON CONFLICT DO NOTHING`;
   // Auto-file a report
   await sql`INSERT INTO reports (target_type, target_id, target_label, reason, note, reported_by_user_id) VALUES ('member', ${partner.username}, ${partner.name}, 'Harassment', 'Blocked via direct message', ${userId})`;
+  res.json({ ok: true });
+}));
+
+app.delete('/api/conversations/:id', requireAuth(async (req, res) => {
+  await ensureMessagingTables();
+  const userId = req.currentUser.id;
+  const [conv] = await sql`SELECT id, user1_id, user2_id FROM conversations WHERE id=${req.params.id} AND (user1_id=${userId} OR user2_id=${userId})`;
+  if (!conv) return res.status(404).json({ error: 'Not found' });
+  const [msgCount] = await sql`SELECT COUNT(*)::int AS n FROM direct_messages WHERE conversation_id=${req.params.id}`;
+  if (msgCount.n === 0) {
+    await sql`DELETE FROM conversations WHERE id=${req.params.id}`;
+  } else if (conv.user1_id === userId) {
+    await sql`UPDATE conversations SET hidden_for_user1 = TRUE WHERE id=${req.params.id}`;
+  } else {
+    await sql`UPDATE conversations SET hidden_for_user2 = TRUE WHERE id=${req.params.id}`;
+  }
   res.json({ ok: true });
 }));
 

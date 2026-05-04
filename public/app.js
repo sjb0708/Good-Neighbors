@@ -3521,6 +3521,7 @@ async function renderMessages(container) {
       const item = document.createElement('div');
       item.className = 'conv-item' + (conv.id === activeConversationId ? ' active' : '');
       item.dataset.convId = conv.id;
+      const safeName = escHtml(conv.partner.name).replace(/'/g,"\\'");
       item.innerHTML = `
         <div class="conv-avatar" style="background:${conv.partner.avatar};overflow:hidden;">
           ${conv.partner.avatarUrl ? `<img src="${conv.partner.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : escHtml(conv.partner.initials)}
@@ -3530,6 +3531,7 @@ async function renderMessages(container) {
           <div class="conv-preview">${conv.lastMessage ? escHtml(conv.lastMessage.slice(0, 50)) : 'Start a conversation'}</div>
         </div>
         ${conv.unreadCount > 0 ? `<div class="conv-unread">${conv.unreadCount}</div>` : ''}
+        <button title="Remove conversation" onclick="event.stopPropagation();removeConversation('${conv.id}','${safeName}',${conv.lastMessage ? 'true' : 'false'})" style="background:none;border:none;color:var(--text-light);cursor:pointer;font-size:18px;padding:4px 8px;line-height:1;border-radius:6px;" onmouseover="this.style.background='#fee2e2';this.style.color='#dc2626'" onmouseout="this.style.background='none';this.style.color='var(--text-light)'">✕</button>
       `;
       item.onclick = () => openConversationPanel(conv.id, conv.partner, layout, conv.youBlockedThem);
       leftPanel.appendChild(item);
@@ -3617,6 +3619,21 @@ async function blockAndReport(convId, partnerName, btn) {
   } else {
     showToast('Something went wrong. Try again.');
     btn.disabled = false; btn.textContent = 'Block & Report';
+  }
+}
+
+async function removeConversation(convId, partnerName, hasMessages) {
+  const msg = hasMessages
+    ? `Remove conversation with ${partnerName}? It will be hidden from your inbox. ${partnerName} keeps their copy. If either of you sends a new message, it reappears.`
+    : `Remove this empty conversation with ${partnerName}?`;
+  if (!confirm(msg)) return;
+  const res = await fetch(`/api/conversations/${convId}`, { method: 'DELETE', credentials: 'include' });
+  if (res.ok) {
+    if (activeConversationId === convId) activeConversationId = null;
+    showToast('Conversation removed.');
+    await renderMessages(document.getElementById('sectionContent'));
+  } else {
+    showToast('Could not remove. Try again.');
   }
 }
 
