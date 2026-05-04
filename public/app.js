@@ -2044,7 +2044,7 @@ function buildPostCard(post) {
 
       ${post.pollOptions ? buildPollHTML(post) : ''}
 
-      ${post.image ? (post.image.match(/\.pdf($|\?)/i) ? `<a href="${post.image}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;background:rgba(0,119,182,0.07);border:1px solid rgba(0,119,182,0.18);border-radius:8px;font-size:13px;font-weight:600;color:var(--ocean);text-decoration:none;">📄 View PDF</a>` : `<div class="post-image-wrap"><img src="${post.image}" alt="Post image" style="width:100%;border-radius:10px;margin-top:12px;object-fit:cover;max-height:360px;display:block;cursor:zoom-in;" onclick="openLightbox('${post.image}')"></div>`) : ''}
+      ${post.image ? (post.image.match(/\.pdf($|\?)/i) ? `<a href="${post.image}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;background:rgba(0,119,182,0.07);border:1px solid rgba(0,119,182,0.18);border-radius:8px;font-size:13px;font-weight:600;color:var(--ocean);text-decoration:none;">📄 View PDF</a>` : `<div class="post-image-wrap"><img src="${post.image}" alt="Post image" style="width:100%;height:auto;border-radius:10px;margin-top:12px;display:block;cursor:zoom-in;" onclick="openLightbox('${post.image}')"></div>`) : ''}
 
       ${post.sharedPost ? buildSharedPostEmbed(post.sharedPost) : ''}
 
@@ -4013,7 +4013,7 @@ async function renderGroupPage(groupId, container) {
             </div>
             ${p.event ? buildGroupEventCard(p.event) : ''}
             ${p.content ? `<div style="font-size:14px;color:var(--text-mid);line-height:1.65;margin-bottom:${p.imageUrl||p.pdfUrl||p.pollQuestion?'10px':'0'}">${escHtml(p.content)}</div>` : ''}
-            ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:100%;border-radius:10px;max-height:360px;object-fit:cover;margin-bottom:${p.pdfUrl||p.pollQuestion?'10px':'0'}" />` : ''}
+            ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:100%;height:auto;border-radius:10px;display:block;margin-bottom:${p.pdfUrl||p.pollQuestion?'10px':'0'}" />` : ''}
             ${p.pdfUrl ? `<a href="${p.pdfUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;text-decoration:none;color:var(--text-dark);margin-bottom:${p.pollQuestion?'10px':'0'};">
               <div style="font-size:22px;">📄</div>
               <div style="flex:1;min-width:0;">
