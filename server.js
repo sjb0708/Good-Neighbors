@@ -1255,8 +1255,18 @@ app.post('/api/admin/create-account', requireOwner(async (req, res) => {
 }));
 
 app.get('/api/admin/realtors', requireAdmin(async (req, res) => {
-  const rows = await sql`SELECT * FROM users WHERE role='realtor' ORDER BY name`;
-  res.json(rows.map(u => ({ username: u.username, name: u.name, avatar: u.avatar_hex, initials: u.initials, address: u.address, bio: u.bio })));
+  const rows = await sql`
+    SELECT u.*, COALESCE(c.cnt, 0)::int AS listing_count
+    FROM users u
+    LEFT JOIN (
+      SELECT posted_by_user_id, COUNT(*) AS cnt
+      FROM real_estate_listings
+      GROUP BY posted_by_user_id
+    ) c ON c.posted_by_user_id = u.id
+    WHERE u.role='realtor'
+    ORDER BY u.name
+  `;
+  res.json(rows.map(u => ({ username: u.username, name: u.name, avatar: u.avatar_hex, initials: u.initials, address: u.address, bio: u.bio, listingCount: u.listing_count })));
 }));
 
 app.get('/api/admin/managed-accounts', requireOwner(async (req, res) => {
