@@ -426,15 +426,26 @@ app.post('/api/auth/register', async (req, res) => {
       await sql`INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES (${newUser.id}, ${verifyToken}, ${new Date(Date.now() + 24 * 3600 * 1000)})`;
       await sendEmail({
         to: email,
-        subject: 'Confirm your Costa Blanca Connect account',
+        subject: 'One quick click to activate your Costa Blanca Connect account 🏖️',
         html: `
-          <div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
-            <h2 style="color:#0077B6;">Welcome to Costa Blanca Connect!</h2>
-            <p>Hi ${displayName},</p>
-            <p>Thank you for registering! Please confirm your email address to activate your account.</p>
-            <a href="${appUrl}/verify-email?token=${verifyToken}" style="display:inline-block;background:#0077B6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:16px 0;">Confirm Email</a>
-            <p>This link expires in 24 hours.</p>
-            <hr style="border:none;border-top:1px solid #eee;margin-top:24px;">
+          <div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#1a2b3c;">
+            <h2 style="color:#0077B6;margin-bottom:8px;">Welcome to Costa Blanca Connect, ${displayName}!</h2>
+            <p style="font-size:15px;">You're almost in. Just one quick step to activate your account.</p>
+            <p style="text-align:center;margin:24px 0;">
+              <a href="${appUrl}/verify-email?token=${verifyToken}" style="display:inline-block;background:#0077B6;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">✓ Confirm My Email</a>
+            </p>
+            <div style="background:#F0F7FF;border-left:4px solid #0077B6;padding:14px 16px;border-radius:0 8px 8px 0;margin:20px 0;">
+              <p style="margin:0 0 6px;font-weight:700;color:#0077B6;">What happens when you click:</p>
+              <ol style="margin:6px 0 0 18px;padding:0;font-size:14px;line-height:1.6;">
+                <li>Your email gets confirmed</li>
+                <li>A page opens that says you're all set</li>
+                <li>Head back to <a href="${appUrl}/login" style="color:#0077B6;">${appUrl.replace(/^https?:\/\//,'')}</a> and sign in with the username and password you just created</li>
+                <li>You're in — start connecting with neighbors</li>
+              </ol>
+            </div>
+            <p style="font-size:13px;color:#4a5568;">If the button doesn't work, copy and paste this link:<br><span style="font-size:12px;color:#6b7280;word-break:break-all;">${appUrl}/verify-email?token=${verifyToken}</span></p>
+            <p style="font-size:13px;color:#4a5568;">This link expires in 24 hours. If you didn't sign up for Costa Blanca Connect, you can safely ignore this email.</p>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin-top:24px;">
             <p style="color:#888;font-size:12px;">Costa Blanca Connect · Costa Blanca Villas, Farallón, Coclé, Panamá</p>
           </div>
         `
@@ -472,15 +483,26 @@ app.post('/api/auth/register', async (req, res) => {
     await sql`INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES (${newBiz.id}, ${verifyToken}, ${new Date(Date.now() + 24 * 3600 * 1000)})`;
     await sendEmail({
       to: email,
-      subject: 'Confirm your Costa Blanca Connect business account',
+      subject: 'One quick click to activate your business account 🏪',
       html: `
-        <div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
-          <h2 style="color:#0077B6;">Welcome to Costa Blanca Connect!</h2>
-          <p>Hi ${displayName},</p>
-          <p>Thank you for registering! Please confirm your email to activate your account${pendingClaimId ? ' and claim your listing' : ''}.</p>
-          <a href="${appUrl}/verify-email?token=${verifyToken}" style="display:inline-block;background:#0077B6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:16px 0;">Confirm Email</a>
-          <p>This link expires in 24 hours.</p>
-          <hr style="border:none;border-top:1px solid #eee;margin-top:24px;">
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#1a2b3c;">
+          <h2 style="color:#0077B6;margin-bottom:8px;">Welcome to Costa Blanca Connect, ${displayName}!</h2>
+          <p style="font-size:15px;">You're almost in. Just one quick step to activate your business account${pendingClaimId ? ' and claim your listing' : ''}.</p>
+          <p style="text-align:center;margin:24px 0;">
+            <a href="${appUrl}/verify-email?token=${verifyToken}" style="display:inline-block;background:#0077B6;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">✓ Confirm My Email</a>
+          </p>
+          <div style="background:#F0F7FF;border-left:4px solid #0077B6;padding:14px 16px;border-radius:0 8px 8px 0;margin:20px 0;">
+            <p style="margin:0 0 6px;font-weight:700;color:#0077B6;">What happens when you click:</p>
+            <ol style="margin:6px 0 0 18px;padding:0;font-size:14px;line-height:1.6;">
+              <li>Your email gets confirmed${pendingClaimId ? ' and your listing is claimed' : ''}</li>
+              <li>A page opens that says you're all set</li>
+              <li>Head back to <a href="${appUrl}/login" style="color:#0077B6;">${appUrl.replace(/^https?:\/\//,'')}</a> and sign in with the username and password you just created</li>
+              <li>You're in — manage your listing, reply to reviews, and post promotions</li>
+            </ol>
+          </div>
+          <p style="font-size:13px;color:#4a5568;">If the button doesn't work, copy and paste this link:<br><span style="font-size:12px;color:#6b7280;word-break:break-all;">${appUrl}/verify-email?token=${verifyToken}</span></p>
+          <p style="font-size:13px;color:#4a5568;">This link expires in 24 hours. If you didn't sign up for Costa Blanca Connect, you can safely ignore this email.</p>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin-top:24px;">
           <p style="color:#888;font-size:12px;">Costa Blanca Connect · Costa Blanca Villas, Farallón, Coclé, Panamá</p>
         </div>
       `
@@ -657,15 +679,25 @@ app.post('/api/auth/resend-verification', async (req, res) => {
     await sql`INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES (${user.id}, ${verifyToken}, ${new Date(Date.now() + 24 * 3600 * 1000)})`;
     await sendEmail({
       to: user.email,
-      subject: 'Confirm your Costa Blanca Connect account',
+      subject: 'Your new Costa Blanca Connect confirmation link',
       html: `
-        <div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
-          <h2 style="color:#0077B6;">Confirm your email</h2>
-          <p>Hi ${user.name},</p>
-          <p>Click below to confirm your email and activate your account.</p>
-          <a href="${appUrl}/verify-email?token=${verifyToken}" style="display:inline-block;background:#0077B6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:16px 0;">Confirm Email</a>
-          <p>This link expires in 24 hours.</p>
-          <hr style="border:none;border-top:1px solid #eee;margin-top:24px;">
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#1a2b3c;">
+          <h2 style="color:#0077B6;margin-bottom:8px;">Here's your new confirmation link, ${user.name}</h2>
+          <p style="font-size:15px;">Click below to confirm your email and activate your account.</p>
+          <p style="text-align:center;margin:24px 0;">
+            <a href="${appUrl}/verify-email?token=${verifyToken}" style="display:inline-block;background:#0077B6;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">✓ Confirm My Email</a>
+          </p>
+          <div style="background:#F0F7FF;border-left:4px solid #0077B6;padding:14px 16px;border-radius:0 8px 8px 0;margin:20px 0;">
+            <p style="margin:0 0 6px;font-weight:700;color:#0077B6;">What happens when you click:</p>
+            <ol style="margin:6px 0 0 18px;padding:0;font-size:14px;line-height:1.6;">
+              <li>Your email gets confirmed</li>
+              <li>A page opens that says you're all set</li>
+              <li>Head back to <a href="${appUrl}/login" style="color:#0077B6;">${appUrl.replace(/^https?:\/\//,'')}</a> and sign in with the username and password you created</li>
+            </ol>
+          </div>
+          <p style="font-size:13px;color:#4a5568;">If the button doesn't work, copy and paste this link:<br><span style="font-size:12px;color:#6b7280;word-break:break-all;">${appUrl}/verify-email?token=${verifyToken}</span></p>
+          <p style="font-size:13px;color:#4a5568;">This link expires in 24 hours.</p>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin-top:24px;">
           <p style="color:#888;font-size:12px;">Costa Blanca Connect · Costa Blanca Villas, Farallón, Coclé, Panamá</p>
         </div>
       `
