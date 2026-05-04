@@ -1529,7 +1529,7 @@ app.get('/api/posts/:id/comments', async (req, res) => {
     const rows = await sql`
       SELECT c.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials,
         (SELECT COUNT(*)::int FROM comment_likes WHERE comment_id = c.id) AS like_count,
-        ${meId ? sql`EXISTS(SELECT 1 FROM comment_likes WHERE comment_id = c.id AND user_id = ${meId})` : sql`FALSE`} AS you_liked
+        EXISTS(SELECT 1 FROM comment_likes WHERE comment_id = c.id AND user_id = ${meId}) AS you_liked
       FROM comments c JOIN users u ON c.author_id = u.id
       WHERE c.post_id=${req.params.id} ORDER BY c.created_at ASC
     `;
@@ -2500,8 +2500,8 @@ app.get('/api/groups', async (req, res) => {
     const rows = await sql`
       SELECT g.*, cb.username AS created_by_username,
         COUNT(DISTINCT gm.user_id)::int AS member_count,
-        ${userId ? sql`EXISTS(SELECT 1 FROM group_members WHERE group_id=g.id AND user_id=${userId})` : sql`false`} AS user_joined,
-        ${userId ? sql`EXISTS(SELECT 1 FROM group_join_requests WHERE group_id=g.id AND user_id=${userId} AND status='pending')` : sql`false`} AS user_pending
+        EXISTS(SELECT 1 FROM group_members WHERE group_id=g.id AND user_id=${userId}) AS user_joined,
+        EXISTS(SELECT 1 FROM group_join_requests WHERE group_id=g.id AND user_id=${userId} AND status='pending') AS user_pending
       FROM groups g
       JOIN users cb ON g.created_by_user_id = cb.id
       LEFT JOIN group_members gm ON gm.group_id = g.id
@@ -2541,8 +2541,8 @@ app.get('/api/groups/:id', async (req, res) => {
     const [g] = await sql`
       SELECT g.*, cb.username AS created_by_username, cb.id AS created_by_user_id_val,
         COUNT(DISTINCT gm.user_id)::int AS member_count,
-        ${userId ? sql`EXISTS(SELECT 1 FROM group_members WHERE group_id=g.id AND user_id=${userId})` : sql`false`} AS user_joined,
-        ${userId ? sql`EXISTS(SELECT 1 FROM group_join_requests WHERE group_id=g.id AND user_id=${userId} AND status='pending')` : sql`false`} AS user_pending
+        EXISTS(SELECT 1 FROM group_members WHERE group_id=g.id AND user_id=${userId}) AS user_joined,
+        EXISTS(SELECT 1 FROM group_join_requests WHERE group_id=g.id AND user_id=${userId} AND status='pending') AS user_pending
       FROM groups g
       JOIN users cb ON g.created_by_user_id = cb.id
       LEFT JOIN group_members gm ON gm.group_id = g.id
@@ -2564,7 +2564,7 @@ app.get('/api/groups/:id', async (req, res) => {
         COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='cant_go'),0) AS event_cantgo,
         (SELECT status FROM event_rsvps WHERE event_id=e.id AND user_id=${userId||null}) AS event_user_rsvp,
         (SELECT COUNT(*)::int FROM group_post_likes WHERE post_id=gp.id) AS like_count,
-        ${userId ? sql`EXISTS(SELECT 1 FROM group_post_likes WHERE post_id=gp.id AND user_id=${userId})` : sql`FALSE`} AS you_liked,
+        EXISTS(SELECT 1 FROM group_post_likes WHERE post_id=gp.id AND user_id=${userId}) AS you_liked,
         (SELECT COUNT(*)::int FROM group_post_comments WHERE post_id=gp.id) AS comment_count
       FROM group_posts gp JOIN users u ON gp.author_id = u.id
       LEFT JOIN events e ON gp.event_id = e.id
