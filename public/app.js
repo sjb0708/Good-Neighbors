@@ -1346,6 +1346,8 @@ async function submitAddBusiness() {
 async function renderNeighbors(container) {
   container.innerHTML = sectionHeaderHTML('neighbors');
   const neighbors = await fetchJSON('/api/neighbors');
+  const nbCount = document.getElementById('sidebarNeighbors');
+  if (nbCount) nbCount.textContent = (neighbors || []).length;
   if (!neighbors || !neighbors.length) {
     container.innerHTML += emptyStateHTML('👋', 'No neighbors yet', 'Invite your neighbors to join!');
     return;

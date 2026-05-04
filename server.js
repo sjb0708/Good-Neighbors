@@ -2932,7 +2932,10 @@ app.post('/api/notifications/read', requireAuth(async (req, res) => {
 
 app.get('/api/neighbors', async (req, res) => {
   try {
-    const rows = await sql`SELECT id, username, name, email, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, email_verified FROM users WHERE role IN ('neighbor','realtor') ORDER BY created_at DESC`;
+    const me = await getUser(req);
+    const rows = me
+      ? await sql`SELECT id, username, name, email, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, email_verified FROM users WHERE role IN ('neighbor','realtor') AND id != ${me.id} ORDER BY created_at DESC`
+      : await sql`SELECT id, username, name, email, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, email_verified FROM users WHERE role IN ('neighbor','realtor') ORDER BY created_at DESC`;
     res.json(rows.map(u => ({ id: u.id, username: u.username, name: u.name, email: u.email, avatar: u.avatar_hex, avatarUrl: u.avatar_url, initials: u.initials, verified: u.verified, yearsInNeighborhood: u.years_in_neighborhood, address: u.address, emailVerified: u.email_verified })));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
