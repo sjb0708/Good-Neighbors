@@ -510,7 +510,7 @@ async function renderFeed(container) {
   compose.onclick = () => openCreatePost();
   compose.innerHTML = `
     <div style="width:38px;height:38px;border-radius:50%;background-color:${currentUser?.avatar||'#0077B6'};${currentUser?.avatarUrl?`background-image:url(${currentUser.avatarUrl});background-size:cover;background-position:center;`:''}display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;">${currentUser?.avatarUrl ? '' : (currentUser?.initials||'?')}</div>
-    <div style="flex:1;padding:9px 14px;background:var(--bg);border-radius:30px;font-size:14px;color:var(--text-light);font-family:inherit;">What's happening in Costa Blanca Villas?</div>
+    <div style="flex:1;padding:9px 14px;background:var(--bg);border-radius:30px;font-size:14px;color:var(--text-mid);font-family:inherit;">What's happening in Costa Blanca Villas?</div>
     <button onclick="event.stopPropagation();openCreatePost()" style="padding:8px 18px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">+ Post</button>
   `;
   container.appendChild(compose);
