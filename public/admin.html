@@ -1005,6 +1005,7 @@
                   : `<button class="btn-remove" style="background:rgba(230,57,70,0.08);color:var(--red);border:1px solid rgba(230,57,70,0.15);padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;" onclick="openBanModal('${m.username}','${m.name.replace(/'/g,"\\'")}')">🚫 Ban</button>`
                 }
                 <button class="btn-dismiss" style="background:${m.verified?'rgba(5,150,105,0.08)':'rgba(0,119,182,0.08)'};color:${m.verified?'#065f46':'#0077B6'};border:1px solid ${m.verified?'rgba(5,150,105,0.2)':'rgba(0,119,182,0.2)'};" onclick="toggleVerified('${m.id}','${m.name.replace(/'/g,"\\'")}',this)">${m.verified?'✓ Verified':'Verify'}</button>
+                ${!m.emailVerified ? `<button class="btn-dismiss" style="background:rgba(245,158,11,0.1);color:#92400e;border:1px solid rgba(245,158,11,0.3);" onclick="confirmEmail('${m.id}','${m.name.replace(/'/g,"\\'")}')" title="Use when their confirmation email got stuck in spam">📧 Confirm Email</button>` : ''}
                 <button class="btn-dismiss" onclick="removeMember('${m.username}','${m.name.replace(/'/g,"\\'")}')">Remove</button>
               </div>` : '<span style="font-size:12px;color:var(--text-light)">You</span>'}
           </td>
@@ -1091,6 +1092,14 @@
       const data = await res.json();
       await loadMembers();
       showToast(data.verified ? `✓ ${name} is now Verified` : `${name} verification removed`);
+    }
+
+    async function confirmEmail(userId, name) {
+      if (!confirm(`Manually confirm ${name}'s email so they can log in? (Use this when their confirmation email got stuck in spam.)`)) return;
+      const res = await fetch(`/api/admin/users/${userId}/confirm-email`, { method: 'POST', credentials: 'include' });
+      if (!res.ok) { showToast('Error confirming email'); return; }
+      await loadMembers();
+      showToast(`📧 ${name}'s email confirmed — they can now log in`);
     }
 
     async function liftBanById(id) {

@@ -901,12 +901,18 @@ app.post('/api/admin/verification-requests/:id/deny', requireAdmin(async (req, r
 }));
 
 app.post('/api/admin/users/:id/toggle-verified', requireAdmin(async (req, res) => {
-  // Admin manual verification ALSO waives the email-confirmation gate so the
-  // user can log in immediately. Email verification is just an identity check —
-  // an admin manually verifying a resident is a stronger trust signal.
-  const [u] = await sql`UPDATE users SET verified = NOT verified, email_verified = CASE WHEN NOT verified THEN true ELSE email_verified END WHERE id=${req.params.id} RETURNING id, verified, email_verified`;
+  // Verified = "we saw their proof of residence" (power bill, lease, etc.)
+  // It is intentionally NOT linked to email_verified. Use /confirm-email to bypass the email gate.
+  const [u] = await sql`UPDATE users SET verified = NOT verified WHERE id=${req.params.id} RETURNING id, verified`;
   if (!u) return res.status(404).json({ error: 'Not found' });
-  res.json({ ok: true, verified: u.verified, emailVerified: u.email_verified });
+  res.json({ ok: true, verified: u.verified });
+}));
+
+app.post('/api/admin/users/:id/confirm-email', requireAdmin(async (req, res) => {
+  // For users whose confirmation email got stuck in spam — admin manually marks the email as confirmed.
+  const [u] = await sql`UPDATE users SET email_verified = true WHERE id=${req.params.id} RETURNING id, email_verified`;
+  if (!u) return res.status(404).json({ error: 'Not found' });
+  res.json({ ok: true, emailVerified: u.email_verified });
 }));
 
 app.get('/api/admin/all-users', requireAdmin(async (req, res) => {
