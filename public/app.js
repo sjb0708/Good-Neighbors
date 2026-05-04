@@ -3840,6 +3840,7 @@ function buildGroupCard(group) {
   card.innerHTML = `
     <div class="group-card-banner" style="${bannerStyle}">
       <div class="group-card-icon" style="overflow:hidden;">${(group.iconUrl||/^(data:|https?:)/.test(group.icon)) ? `<img src="${group.iconUrl||group.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">` : group.icon}</div>
+      ${group.joined ? `<div style="position:absolute;top:10px;right:10px;background:#16a34a;color:white;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">✓ Member</div>` : ''}
     </div>
     <div class="group-card-body">
       <div class="group-card-name">${escHtml(group.name)}</div>
