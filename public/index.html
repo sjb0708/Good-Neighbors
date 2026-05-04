@@ -736,11 +736,7 @@
           <div class="su-field">
             <label>Email Address *</label>
             <input id="suEmail" type="email" placeholder="your@email.com" autocomplete="email" />
-          </div>
-          <div class="su-field">
-            <label>Username *</label>
-            <input id="suUsername" type="text" placeholder="e.g. mariatorres" autocomplete="off" />
-            <div style="font-size:11px;color:#a0aec0;margin-top:4px;">3–20 characters, lowercase letters, numbers, underscores only</div>
+            <div style="font-size:11px;color:#a0aec0;margin-top:4px;">You'll use this email to sign in.</div>
           </div>
           <div class="su-field-row">
             <div class="su-field" style="margin-bottom:0">
@@ -947,14 +943,11 @@
         const isBiz = suRole === 'business';
         const fullName = document.getElementById('fullName')?.value.trim();
         const email = document.getElementById('suEmail')?.value.trim();
-        const username = document.getElementById('suUsername')?.value.trim();
         const password = document.getElementById('suPassword')?.value;
         const confirm = document.getElementById('suConfirmPw')?.value;
 
         if (!fullName) { showSuErr('Please enter your name.'); return; }
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showSuErr('Please enter a valid email address.'); return; }
-        if (!username) { showSuErr('Please choose a username.'); return; }
-        if (!/^[a-z0-9_]{3,20}$/.test(username)) { showSuErr('Username must be 3–20 lowercase letters, numbers, or underscores.'); return; }
         if (!password || password.length < 6) { showSuErr('Password must be at least 6 characters.'); return; }
         if (password !== confirm) { showSuErr('Passwords do not match.'); return; }
 
@@ -970,7 +963,7 @@
 
         try {
           const payload = {
-            fullName, email, username, password, role: suRole,
+            fullName, email, password, role: suRole,
             businessName: document.getElementById('bizName')?.value.trim() || null,
             businessCategory: document.getElementById('bizCat')?.value || null,
             claimBusinessId: suClaimBizId || null,

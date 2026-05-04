@@ -389,18 +389,18 @@ app.get('/api/auth/me', requireAuth(async (req, res) => {
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { fullName, email, username, password, role, businessName, businessCategory, claimBusinessId } = req.body;
+    const { fullName, email, password, role, businessName, businessCategory, claimBusinessId } = req.body;
 
-    if (!fullName || !email || !username || !password || !role)
+    if (!fullName || !email || !password || !role)
       return res.status(400).json({ error: 'Missing required fields.' });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       return res.status(400).json({ error: 'Please enter a valid email address.' });
-    if (!/^[a-z0-9_]{3,20}$/.test(username))
-      return res.status(400).json({ error: 'Username must be 3–20 lowercase letters, numbers, or underscores.' });
     if (password.length < 6)
       return res.status(400).json({ error: 'Password must be at least 6 characters.' });
     if (!['neighbor','business'].includes(role))
       return res.status(400).json({ error: 'Invalid account type.' });
+
+    const username = email.toLowerCase();
 
     const existing = await sql`SELECT id FROM users WHERE username = ${username} OR email = ${email} UNION SELECT id FROM pending_registrations WHERE username = ${username} OR email = ${email} LIMIT 1`;
     if (existing.length) return res.status(409).json({ error: 'That username or email is already registered.' });
@@ -2326,7 +2326,7 @@ app.post('/api/admin/claims/:id/approve', requireAdmin(async (req, res) => {
   await sql`UPDATE business_claims SET status='approved', reviewed_by_user_id=${req.currentUser.id}, reviewed_at=NOW(), generated_username=${username} WHERE id=${claim.id}`;
 
   // Email credentials to business owner
-  const appUrl = process.env.APP_URL || 'https://costablancaconnect.vercel.app';
+  const appUrl = process.env.APP_URL || 'https://costablancaconnect.org';
   await sendEmail({
     to: claim.email,
     subject: `Welcome to Costa Blanca Connect — Your business login for ${claim.biz_name}`,
