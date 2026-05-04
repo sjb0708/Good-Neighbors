@@ -1401,7 +1401,15 @@ async function renderGroups(container) {
   groupsState.all = groups || [];
 
   if (!groups || !groups.length) {
-    container.appendChild(Object.assign(document.createElement('div'), { innerHTML: emptyStateHTML('👥', 'No groups yet', 'Be the first to create one!') }));
+    const empty = document.createElement('div');
+    empty.innerHTML = `
+      ${emptyStateHTML('👥', 'No groups yet', 'Be the first to create one!')}
+      <div style="text-align:center;margin-top:-20px;">
+        <button onclick="openCreateGroupModal()" style="display:inline-flex;align-items:center;gap:8px;padding:13px 26px;background:var(--ocean);color:white;border:none;border-radius:24px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(0,119,182,0.25);">
+          <span style="font-size:20px;line-height:1">+</span> Create Your First Group
+        </button>
+      </div>`;
+    container.appendChild(empty);
     return;
   }
 
