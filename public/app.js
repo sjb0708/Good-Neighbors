@@ -881,6 +881,16 @@ async function submitCreateEvent() {
 async function renderSafety(container) {
   container.innerHTML = sectionHeaderHTML('safety');
 
+  container.insertAdjacentHTML('beforeend', `
+    <div style="background:#FEF2F2;border:1.5px solid #FCA5A5;border-left:4px solid #DC2626;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start;">
+      <span style="font-size:22px;line-height:1;">⚠️</span>
+      <div>
+        <div style="font-size:13px;font-weight:800;color:#991B1B;margin-bottom:4px;">This is NOT an emergency service.</div>
+        <div style="font-size:12.5px;color:#7F1D1D;line-height:1.5;">Reports posted here are shared with neighbors only — they do <b>not</b> reach police, fire, or medical services. If you have a true emergency, contact emergency officials directly.</div>
+      </div>
+    </div>
+  `);
+
   const btn = document.createElement('button');
   btn.onclick = () => { openSafetyReportModal(); };
   btn.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 20px;background:#E63946;color:white;border:none;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:16px;';
@@ -933,6 +943,10 @@ function openSafetyReportModal() {
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <h3 style="margin:0;font-size:17px;font-weight:800;">🚨 Report Safety Alert</h3>
         <button onclick="document.getElementById('safetyReportModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-light);">✕</button>
+      </div>
+      <div style="background:#FEF2F2;border:1px solid #FCA5A5;border-left:3px solid #DC2626;border-radius:10px;padding:10px 12px;margin:8px 0 14px;">
+        <div style="font-size:12px;font-weight:800;color:#991B1B;margin-bottom:2px;">⚠️ Not an emergency service</div>
+        <div style="font-size:11.5px;color:#7F1D1D;line-height:1.45;">This reaches neighbors only — not police/fire/medical. For true emergencies, call emergency officials.</div>
       </div>
       <p style="font-size:13px;color:var(--text-mid);margin:0 0 16px;">Select a category to report:</p>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;">
