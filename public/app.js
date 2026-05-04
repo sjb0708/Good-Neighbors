@@ -6072,8 +6072,14 @@ function openTransportPost() {
         </div>
         <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Cost</label>
           <input id="tpCost" type="text" placeholder="e.g. $65" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Driver name <span style="color:#94a3b8;font-weight:400">(optional)</span></label>
+            <input id="tpDriverName" type="text" placeholder="e.g. Carlos" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
+          <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">WhatsApp <span style="color:#94a3b8;font-weight:400">(with country code)</span></label>
+            <input id="tpDriverPhone" type="tel" placeholder="+507 6790-4807" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
+        </div>
         <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Notes (optional)</label>
-          <input id="tpNotes" type="text" placeholder="e.g. driver contact, took ~2.5 hrs" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
+          <input id="tpNotes" type="text" placeholder="e.g. took ~2.5 hrs, very friendly" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;" /></div>
       </div>
       <div style="display:flex;gap:10px;">
         <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:11px;background:#f0f3f7;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">Cancel</button>
@@ -6089,9 +6095,11 @@ async function submitTransportPost(btn) {
   const fare = document.getElementById('tpCost')?.value.trim();
   const transportType = document.getElementById('tpType')?.value;
   const notes = document.getElementById('tpNotes')?.value.trim();
+  const driverName = document.getElementById('tpDriverName')?.value.trim();
+  const driverPhone = document.getElementById('tpDriverPhone')?.value.trim();
   if (!fromPlace || !toPlace || !fare) { showToast('From, to, and cost are required'); return; }
   btn.disabled = true;
-  const res = await fetch('/api/transport/fares', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ fromPlace, toPlace, fare, transportType, notes }) });
+  const res = await fetch('/api/transport/fares', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ fromPlace, toPlace, fare, transportType, notes, driverName, driverPhone }) });
   btn.closest('[style*=fixed]').remove();
   if (res.ok) { await renderTransportFares(); showToast('Fare posted — thanks!'); }
   else showToast('Could not post fare.');
@@ -6104,16 +6112,26 @@ async function renderTransportFares() {
   if (!el) return;
   const fares = await fetchJSON('/api/transport/fares') || [];
   if (!fares.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:13.5px;">No fares posted yet — share what you paid!</div>'; return; }
-  el.innerHTML = fares.map(p => `
+  el.innerHTML = fares.map(p => {
+    const phoneClean = (p.driver_phone || '').replace(/[^\d+]/g, '');
+    const waLink = phoneClean ? `https://wa.me/${phoneClean.replace(/^\+/, '')}` : null;
+    return `
     <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid var(--border);">
       <div style="width:38px;height:38px;border-radius:10px;background:${p.avatar_hex||'#f57c00'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${p.initials||'?'}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${typeEmoji[p.transport_type]||'🚗'} ${escHtml(p.from_place)} → ${escHtml(p.to_place)}</div>
         <div style="margin-top:4px;"><span style="font-size:13.5px;color:#16a34a;font-weight:800;">💵 ${escHtml(p.fare)}</span></div>
+        ${(p.driver_name || p.driver_phone) ? `
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--text-mid);">
+            ${p.driver_name ? `<span>👤 <b>${escHtml(p.driver_name)}</b></span>` : ''}
+            ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:#25D366;color:white;border-radius:14px;font-size:11.5px;font-weight:700;text-decoration:none;">💬 ${escHtml(p.driver_phone)}</a>` : ''}
+          </div>
+        ` : ''}
         ${p.notes ? `<div style="font-size:12.5px;color:var(--text-mid);margin-top:3px;">💬 ${escHtml(p.notes)}</div>` : ''}
         <div style="font-size:11.5px;color:var(--text-light);margin-top:4px;">Posted by ${escHtml(p.author_name)} · ${relativeTime(p.created_at)}${currentUser && (p.author_id === currentUser.id || currentUser.role === 'admin') ? ` · <span style="cursor:pointer" onclick="deleteFare('${p.id}')">🗑 Remove</span>` : ''}</div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function deleteFare(id) {

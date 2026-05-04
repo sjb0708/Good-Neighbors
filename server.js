@@ -3205,17 +3205,23 @@ app.delete('/api/transport/carts/:id', requireAuth(async (req, res) => {
   res.json({ ok: true });
 }));
 
-app.get('/api/transport/fares', async (req, res) => {
+async function ensureTransportFaresTable() {
   await sql`CREATE TABLE IF NOT EXISTS transport_fares (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), author_id UUID REFERENCES users(id) ON DELETE CASCADE, from_place TEXT NOT NULL, to_place TEXT NOT NULL, fare TEXT NOT NULL, transport_type TEXT DEFAULT 'taxi', notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`;
+  await sql`ALTER TABLE transport_fares ADD COLUMN IF NOT EXISTS driver_name TEXT`;
+  await sql`ALTER TABLE transport_fares ADD COLUMN IF NOT EXISTS driver_phone TEXT`;
+}
+
+app.get('/api/transport/fares', async (req, res) => {
+  await ensureTransportFaresTable();
   const rows = await sql`SELECT f.*, u.name AS author_name, u.username, u.avatar_hex, u.initials FROM transport_fares f JOIN users u ON f.author_id=u.id ORDER BY f.created_at DESC LIMIT 50`;
   res.json(rows);
 });
 
 app.post('/api/transport/fares', requireAuth(async (req, res) => {
-  await sql`CREATE TABLE IF NOT EXISTS transport_fares (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), author_id UUID REFERENCES users(id) ON DELETE CASCADE, from_place TEXT NOT NULL, to_place TEXT NOT NULL, fare TEXT NOT NULL, transport_type TEXT DEFAULT 'taxi', notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`;
-  const { fromPlace, toPlace, fare, transportType, notes } = req.body;
+  await ensureTransportFaresTable();
+  const { fromPlace, toPlace, fare, transportType, notes, driverName, driverPhone } = req.body;
   if (!fromPlace || !toPlace || !fare) return res.status(400).json({ error: 'From, to, and fare required' });
-  const [row] = await sql`INSERT INTO transport_fares (author_id, from_place, to_place, fare, transport_type, notes) VALUES (${req.currentUser.id}, ${fromPlace}, ${toPlace}, ${fare}, ${transportType||'taxi'}, ${notes||''}) RETURNING *`;
+  const [row] = await sql`INSERT INTO transport_fares (author_id, from_place, to_place, fare, transport_type, notes, driver_name, driver_phone) VALUES (${req.currentUser.id}, ${fromPlace}, ${toPlace}, ${fare}, ${transportType||'taxi'}, ${notes||''}, ${driverName||null}, ${driverPhone||null}) RETURNING *`;
   res.json(row);
 }));
 
