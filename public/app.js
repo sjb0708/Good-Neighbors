@@ -1522,8 +1522,14 @@ async function renderNotifications(container) {
 // ─── Profile ────────────────────────────────────────────────────
 async function renderProfile(container) {
   container.innerHTML = '';
+  if (!currentUser) return;
+
+  // Refresh from server so admin-side changes (verification, role) reflect immediately
+  try {
+    const fresh = await fetchJSON('/api/auth/me');
+    if (fresh) Object.assign(currentUser, fresh);
+  } catch (_) {}
   const user = currentUser;
-  if (!user) return;
 
   let verifyStatus = null;
   if (!user.verified) {
