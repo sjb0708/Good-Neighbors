@@ -3840,7 +3840,7 @@ function buildGroupCard(group) {
   card.innerHTML = `
     <div class="group-card-banner" style="${bannerStyle}">
       <div class="group-card-icon" style="overflow:hidden;">${(group.iconUrl||/^(data:|https?:)/.test(group.icon)) ? `<img src="${group.iconUrl||group.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">` : group.icon}</div>
-      ${group.joined ? `<div style="position:absolute;top:10px;right:10px;background:#16a34a;color:white;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">✓ Member</div>` : ''}
+      ${group.joined ? `<div class="group-member-badge" style="position:absolute;top:10px;right:10px;background:#16a34a;color:white;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">✓ Member</div>` : ''}
     </div>
     <div class="group-card-body">
       <div class="group-card-name">${escHtml(group.name)}</div>
@@ -3883,7 +3883,9 @@ async function toggleGroup(groupId, btn) {
     });
     if (!res.ok) throw new Error();
     const data = await res.json();
-    const actions = btn?.closest('.group-card-actions');
+    const card = btn?.closest('.group-card');
+    const actions = card?.querySelector('.group-card-actions');
+    const banner = card?.querySelector('.group-card-banner');
     if (data.requested) {
       showToast('Request sent — the group owner will review it.');
       if (btn) { btn.textContent = 'Requested'; btn.disabled = true; btn.style.cssText += ';background:#f0f3f7;color:var(--text-mid);'; }
@@ -3894,11 +3896,15 @@ async function toggleGroup(groupId, btn) {
           <button class="btn-group-open" onclick="openGroupPage('${groupId}')" style="flex:1;">View Group →</button>
           <button class="btn-join-group" id="group-btn-${groupId}" onclick="toggleGroup('${groupId}',this)" style="flex:0 0 auto;padding:8px 16px;background:#fee2e2;color:#dc2626;border-color:#fca5a5;">Leave</button>`;
       }
+      if (banner && !banner.querySelector('.group-member-badge')) {
+        banner.insertAdjacentHTML('beforeend', `<div class="group-member-badge" style="position:absolute;top:10px;right:10px;background:#16a34a;color:white;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">✓ Member</div>`);
+      }
     } else {
       showToast('You left the group.');
       if (actions) {
         actions.innerHTML = `<button class="btn-join-group" id="group-btn-${groupId}" onclick="toggleGroup('${groupId}',this)">Join Group</button>`;
       }
+      banner?.querySelector('.group-member-badge')?.remove();
     }
   } catch {
     showToast('Could not update group membership.');
