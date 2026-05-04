@@ -6051,14 +6051,15 @@ function editCart(id) {
   openCartListingForm(cart);
 }
 
-function openTransportPost() {
+function openTransportPost(existing) {
+  const isEdit = !!existing;
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;';
   overlay.innerHTML = `
     <div style="background:white;border-radius:20px;width:min(460px,100%);padding:28px;box-shadow:0 24px 60px rgba(0,0,0,0.3);">
-      <div style="font-size:24px;margin-bottom:6px;">🚕</div>
-      <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;color:#0d1b2a;">Post a Fare</h3>
-      <p style="font-size:13px;color:#4a6378;margin-bottom:18px;">Share what you paid so neighbors know what to expect.</p>
+      <div style="font-size:24px;margin-bottom:6px;">${isEdit ? '✏️' : '🚕'}</div>
+      <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;color:#0d1b2a;">${isEdit ? 'Edit Fare' : 'Post a Fare'}</h3>
+      <p style="font-size:13px;color:#4a6378;margin-bottom:18px;">${isEdit ? 'Update fare details below.' : 'Share what you paid so neighbors know what to expect.'}</p>
       <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
         <div><label style="font-size:12.5px;font-weight:600;color:#2d3748;display:block;margin-bottom:5px;">Transport type</label>
           <select id="tpType" style="width:100%;padding:10px 12px;border:1.5px solid #dde4ed;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;box-sizing:border-box;">
@@ -6083,13 +6084,28 @@ function openTransportPost() {
       </div>
       <div style="display:flex;gap:10px;">
         <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:11px;background:#f0f3f7;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">Cancel</button>
-        <button onclick="submitTransportPost(this)" style="flex:1;padding:11px;background:#f57c00;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">Post Fare</button>
+        <button onclick="submitTransportPost(this${isEdit ? `,'${existing.id}'` : ''})" style="flex:1;padding:11px;background:#f57c00;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">${isEdit ? 'Save Changes' : 'Post Fare'}</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
+  if (isEdit) {
+    document.getElementById('tpType').value      = existing.transport_type || 'Taxi';
+    document.getElementById('tpFrom').value      = existing.from_place || '';
+    document.getElementById('tpTo').value        = existing.to_place || '';
+    document.getElementById('tpCost').value      = existing.fare || '';
+    document.getElementById('tpDriverName').value  = existing.driver_name || '';
+    document.getElementById('tpDriverPhone').value = existing.driver_phone || '';
+    document.getElementById('tpNotes').value     = existing.notes || '';
+  }
 }
 
-async function submitTransportPost(btn) {
+function editFare(id) {
+  const fare = (window.__transportFaresCache || []).find(f => f.id === id);
+  if (!fare) { showToast('Fare not found.'); return; }
+  openTransportPost(fare);
+}
+
+async function submitTransportPost(btn, editId) {
   const fromPlace = document.getElementById('tpFrom')?.value.trim();
   const toPlace = document.getElementById('tpTo')?.value.trim();
   const fare = document.getElementById('tpCost')?.value.trim();
@@ -6099,10 +6115,12 @@ async function submitTransportPost(btn) {
   const driverPhone = document.getElementById('tpDriverPhone')?.value.trim();
   if (!fromPlace || !toPlace || !fare) { showToast('From, to, and cost are required'); return; }
   btn.disabled = true;
-  const res = await fetch('/api/transport/fares', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ fromPlace, toPlace, fare, transportType, notes, driverName, driverPhone }) });
+  const url = editId ? `/api/transport/fares/${editId}` : '/api/transport/fares';
+  const method = editId ? 'PATCH' : 'POST';
+  const res = await fetch(url, { method, credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ fromPlace, toPlace, fare, transportType, notes, driverName, driverPhone }) });
   btn.closest('[style*=fixed]').remove();
-  if (res.ok) { await renderTransportFares(); showToast('Fare posted — thanks!'); }
-  else showToast('Could not post fare.');
+  if (res.ok) { await renderTransportFares(); showToast(editId ? 'Fare updated.' : 'Fare posted — thanks!'); }
+  else showToast(editId ? 'Could not update fare.' : 'Could not post fare.');
 }
 
 const typeEmoji = { 'Taxi': '🚕', 'Bus': '🚌', 'Private Driver': '🚗' };
@@ -6111,6 +6129,7 @@ async function renderTransportFares() {
   const el = document.getElementById('transportPosts');
   if (!el) return;
   const fares = await fetchJSON('/api/transport/fares') || [];
+  window.__transportFaresCache = fares;
   if (!fares.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:13.5px;">No fares posted yet — share what you paid!</div>'; return; }
   el.innerHTML = fares.map(p => {
     const phoneClean = (p.driver_phone || '').replace(/[^\d+]/g, '');
@@ -6128,7 +6147,7 @@ async function renderTransportFares() {
           </div>
         ` : ''}
         ${p.notes ? `<div style="font-size:12.5px;color:var(--text-mid);margin-top:3px;">💬 ${escHtml(p.notes)}</div>` : ''}
-        <div style="font-size:11.5px;color:var(--text-light);margin-top:4px;">Posted by ${escHtml(p.author_name)} · ${relativeTime(p.created_at)}${currentUser && (p.author_id === currentUser.id || currentUser.role === 'admin') ? ` · <span style="cursor:pointer" onclick="deleteFare('${p.id}')">🗑 Remove</span>` : ''}</div>
+        <div style="font-size:11.5px;color:var(--text-light);margin-top:4px;">Posted by ${escHtml(p.author_name)} · ${relativeTime(p.created_at)}${currentUser && (p.author_id === currentUser.id || currentUser.role === 'admin') ? ` · <span style="cursor:pointer;color:var(--ocean);" onclick="editFare('${p.id}')">✏️ Edit</span> · <span style="cursor:pointer" onclick="deleteFare('${p.id}')">🗑 Remove</span>` : ''}</div>
       </div>
     </div>`;
   }).join('');

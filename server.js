@@ -3233,6 +3233,17 @@ app.delete('/api/transport/fares/:id', requireAuth(async (req, res) => {
   res.json({ ok: true });
 }));
 
+app.patch('/api/transport/fares/:id', requireAuth(async (req, res) => {
+  await ensureTransportFaresTable();
+  const [fare] = await sql`SELECT author_id FROM transport_fares WHERE id=${req.params.id}`;
+  if (!fare) return res.status(404).json({ error: 'Not found' });
+  if (fare.author_id !== req.currentUser.id && req.currentUser.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+  const { fromPlace, toPlace, fare: fareAmount, transportType, notes, driverName, driverPhone } = req.body;
+  if (!fromPlace || !toPlace || !fareAmount) return res.status(400).json({ error: 'From, to, and fare required' });
+  const [row] = await sql`UPDATE transport_fares SET from_place=${fromPlace}, to_place=${toPlace}, fare=${fareAmount}, transport_type=${transportType||'taxi'}, notes=${notes||''}, driver_name=${driverName||null}, driver_phone=${driverPhone||null} WHERE id=${req.params.id} RETURNING *`;
+  res.json(row);
+}));
+
 app.post('/api/profile/avatar', requireAuth(async (req, res) => {
   const { dataUrl } = req.body;
   if (!dataUrl) return res.status(400).json({ error: 'No image data' });
