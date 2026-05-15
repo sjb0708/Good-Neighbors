@@ -3966,11 +3966,12 @@ async function renderGroupPage(groupId, container) {
             <span>${group.privacy === 'private' ? '🔒 Private' : '🌐 Public'}</span>
           </div>
           <div class="group-page-desc">${escHtml(group.description)}</div>
-          ${(group.instagramUrl || group.tiktokUrl || group.facebookUrl) ? `
+          ${(group.instagramUrl || group.tiktokUrl || group.facebookUrl || group.websiteUrl) ? `
           <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
             ${group.instagramUrl ? `<a href="${escHtml(group.instagramUrl)}" target="_blank" rel="noopener noreferrer" title="Instagram" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:white;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">📸 Instagram</a>` : ''}
             ${group.tiktokUrl ? `<a href="${escHtml(group.tiktokUrl)}" target="_blank" rel="noopener noreferrer" title="TikTok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#000;color:white;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">🎵 TikTok</a>` : ''}
             ${group.facebookUrl ? `<a href="${escHtml(group.facebookUrl)}" target="_blank" rel="noopener noreferrer" title="Facebook" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#1877F2;color:white;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">📘 Facebook</a>` : ''}
+            ${group.websiteUrl ? `<a href="${escHtml(group.websiteUrl)}" target="_blank" rel="noopener noreferrer" title="Website" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--ocean);color:white;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">🌐 Website</a>` : ''}
           </div>` : ''}
         </div>
       </div>
@@ -4434,7 +4435,8 @@ function openEditGroupModal(groupId) {
       <div style="margin-bottom:6px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;">SOCIAL LINKS <span style="font-weight:400;color:var(--text-light);text-transform:none;letter-spacing:0;">(optional)</span></label></div>
       <div style="margin-bottom:8px;"><input id="egInstagram" type="url" placeholder="📸 Instagram URL — https://instagram.com/yourhandle" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;" /></div>
       <div style="margin-bottom:8px;"><input id="egTiktok" type="url" placeholder="🎵 TikTok URL — https://tiktok.com/@yourhandle" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;" /></div>
-      <div style="margin-bottom:18px;"><input id="egFacebook" type="url" placeholder="📘 Facebook URL — https://facebook.com/yourpage" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;" /></div>
+      <div style="margin-bottom:8px;"><input id="egFacebook" type="url" placeholder="📘 Facebook URL — https://facebook.com/yourpage" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;" /></div>
+      <div style="margin-bottom:18px;"><input id="egWebsite" type="url" placeholder="🌐 Website URL — https://example.com" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;" /></div>
       <button onclick="saveEditGroup('${groupId}')" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Save Changes</button>
     </div>`;
   document.body.appendChild(modal);
@@ -4448,6 +4450,7 @@ function openEditGroupModal(groupId) {
     document.getElementById('egInstagram').value = g.instagramUrl || '';
     document.getElementById('egTiktok').value = g.tiktokUrl || '';
     document.getElementById('egFacebook').value = g.facebookUrl || '';
+    document.getElementById('egWebsite').value = g.websiteUrl || '';
     const cat = (g.category || 'general').toLowerCase();
     const sel = document.getElementById('egCategory');
     if (sel) sel.value = GROUP_CATEGORIES.find(c => c.key === cat) ? cat : 'general';
@@ -4462,11 +4465,12 @@ async function saveEditGroup(groupId) {
   const instagramUrl = document.getElementById('egInstagram')?.value.trim();
   const tiktokUrl = document.getElementById('egTiktok')?.value.trim();
   const facebookUrl = document.getElementById('egFacebook')?.value.trim();
+  const websiteUrl = document.getElementById('egWebsite')?.value.trim();
   if (!name) { showToast('Group name is required'); return; }
   const res = await fetch(`/api/groups/${groupId}`, {
     method: 'PATCH', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, description, privacy, category, instagramUrl, tiktokUrl, facebookUrl })
+    body: JSON.stringify({ name, description, privacy, category, instagramUrl, tiktokUrl, facebookUrl, websiteUrl })
   });
   if (res.ok) {
     document.getElementById('editGroupModal')?.remove();
@@ -4751,7 +4755,8 @@ function openCreateGroupModal() {
       <div style="margin-bottom:6px;"><label style="display:block;font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Social Links <span style="font-weight:400;color:var(--text-light);text-transform:none;letter-spacing:0;">(optional)</span></label></div>
       <div style="margin-bottom:8px;"><input id="cgInstagram" type="url" placeholder="📸 Instagram URL" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;" /></div>
       <div style="margin-bottom:8px;"><input id="cgTiktok" type="url" placeholder="🎵 TikTok URL" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;" /></div>
-      <div style="margin-bottom:14px;"><input id="cgFacebook" type="url" placeholder="📘 Facebook URL" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;" /></div>
+      <div style="margin-bottom:8px;"><input id="cgFacebook" type="url" placeholder="📘 Facebook URL" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;" /></div>
+      <div style="margin-bottom:14px;"><input id="cgWebsite" type="url" placeholder="🌐 Website URL" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;" /></div>
       <button onclick="submitCreateGroup()" style="width:100%;padding:12px;background:var(--ocean);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Create Group</button>
     </div>
   `;
@@ -4787,7 +4792,8 @@ async function submitCreateGroup() {
     coverPhoto: cgCoverDataUrl || '',
     instagramUrl: document.getElementById('cgInstagram')?.value.trim() || null,
     tiktokUrl: document.getElementById('cgTiktok')?.value.trim() || null,
-    facebookUrl: document.getElementById('cgFacebook')?.value.trim() || null
+    facebookUrl: document.getElementById('cgFacebook')?.value.trim() || null,
+    websiteUrl: document.getElementById('cgWebsite')?.value.trim() || null
   };
   cgPhotoDataUrl = null;
   cgCoverDataUrl = null;

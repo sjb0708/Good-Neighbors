@@ -2524,6 +2524,7 @@ async function formatGroupRow(g, userId, isAdminUser) {
     instagramUrl: g.instagram_url || null,
     tiktokUrl: g.tiktok_url || null,
     facebookUrl: g.facebook_url || null,
+    websiteUrl: g.website_url || null,
     members: parseInt(g.member_count||0, 10),
     joined: g.user_joined || false,
     pendingRequest: g.user_pending || false,
@@ -2538,6 +2539,7 @@ async function ensureGroupSocialColumns() {
   await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS instagram_url TEXT`;
   await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS tiktok_url TEXT`;
   await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS facebook_url TEXT`;
+  await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS website_url TEXT`;
 }
 
 app.get('/api/groups', async (req, res) => {
@@ -2676,13 +2678,13 @@ app.get('/api/groups/:id', async (req, res) => {
 });
 
 app.post('/api/groups', requireAuth(async (req, res) => {
-  const { name, description, icon, category, privacy, coverPhoto, instagramUrl, tiktokUrl, facebookUrl } = req.body;
+  const { name, description, icon, category, privacy, coverPhoto, instagramUrl, tiktokUrl, facebookUrl, websiteUrl } = req.body;
   if (!name) return res.status(400).json({ error: 'Name required' });
   const u = req.currentUser;
   await ensureGroupSocialColumns();
   const [g] = await sql`
-    INSERT INTO groups (name, description, icon, category, privacy, cover_photo, created_by_user_id, instagram_url, tiktok_url, facebook_url)
-    VALUES (${name}, ${description||''}, ${icon||'👥'}, ${category||'Community'}, ${privacy||'public'}, ${coverPhoto||null}, ${u.id}, ${instagramUrl||null}, ${tiktokUrl||null}, ${facebookUrl||null})
+    INSERT INTO groups (name, description, icon, category, privacy, cover_photo, created_by_user_id, instagram_url, tiktok_url, facebook_url, website_url)
+    VALUES (${name}, ${description||''}, ${icon||'👥'}, ${category||'Community'}, ${privacy||'public'}, ${coverPhoto||null}, ${u.id}, ${instagramUrl||null}, ${tiktokUrl||null}, ${facebookUrl||null}, ${websiteUrl||null})
     RETURNING *
   `;
   await sql`INSERT INTO group_members (group_id, user_id, is_admin) VALUES (${g.id}, ${u.id}, true)`;
@@ -2720,7 +2722,7 @@ app.patch('/api/groups/:id', requireAuth(async (req, res) => {
     const isCreator = g.created_by_user_id === u.id;
     const [mem] = await sql`SELECT is_admin FROM group_members WHERE group_id=${g.id} AND user_id=${u.id}`;
     if (!isCreator && !mem?.is_admin && u.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
-    const { name, description, privacy, icon, iconUrl, coverPhoto, category, instagramUrl, tiktokUrl, facebookUrl } = req.body;
+    const { name, description, privacy, icon, iconUrl, coverPhoto, category, instagramUrl, tiktokUrl, facebookUrl, websiteUrl } = req.body;
     await ensureGroupSocialColumns();
     const newIconUrl = iconUrl || g.icon_url;
     const emojiIcon = (icon && !icon.startsWith('data:')) ? icon : (g.icon && !g.icon.startsWith('data:') ? g.icon : '👥');
@@ -2732,7 +2734,8 @@ app.patch('/api/groups/:id', requireAuth(async (req, res) => {
       category=${category||g.category||'general'},
       instagram_url=${instagramUrl !== undefined ? (instagramUrl || null) : g.instagram_url},
       tiktok_url=${tiktokUrl !== undefined ? (tiktokUrl || null) : g.tiktok_url},
-      facebook_url=${facebookUrl !== undefined ? (facebookUrl || null) : g.facebook_url}
+      facebook_url=${facebookUrl !== undefined ? (facebookUrl || null) : g.facebook_url},
+      website_url=${websiteUrl !== undefined ? (websiteUrl || null) : g.website_url}
       WHERE id=${g.id} RETURNING *`;
     res.json({ ok: true, group: updated });
   } catch(e) {
