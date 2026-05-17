@@ -5,7 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS users (
   id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  username             VARCHAR(20)  UNIQUE NOT NULL,
+  username             VARCHAR(255) UNIQUE NOT NULL,
   email                VARCHAR(255) UNIQUE,
   password_hash        TEXT         NOT NULL,
   role                 VARCHAR(20)  NOT NULL DEFAULT 'neighbor'
@@ -315,7 +315,7 @@ CREATE TABLE IF NOT EXISTS reports (
 CREATE TABLE IF NOT EXISTS banned_users (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id           UUID        REFERENCES users(id) ON DELETE SET NULL,
-  username          VARCHAR(20),
+  username          VARCHAR(255),
   email             VARCHAR(255),
   name              VARCHAR(255),
   address           VARCHAR(500),
@@ -354,7 +354,7 @@ CREATE TABLE IF NOT EXISTS access_requests (
 
 CREATE TABLE IF NOT EXISTS pending_registrations (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  username            VARCHAR(20) UNIQUE NOT NULL,
+  username            VARCHAR(255) UNIQUE NOT NULL,
   email               VARCHAR(255),
   password_hash       TEXT        NOT NULL,
   role                VARCHAR(20) NOT NULL,
@@ -386,7 +386,7 @@ CREATE TABLE IF NOT EXISTS business_claims (
   submitted_at        TIMESTAMPTZ  DEFAULT NOW(),
   reviewed_by_user_id UUID         REFERENCES users(id),
   reviewed_at         TIMESTAMPTZ,
-  generated_username  VARCHAR(20)
+  generated_username  VARCHAR(255)
 );
 
 CREATE TABLE IF NOT EXISTS verification_requests (
