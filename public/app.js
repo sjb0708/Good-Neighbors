@@ -1827,7 +1827,7 @@ function renderSettings(container) {
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Password</div><div class="settings-row-sub">••••••••</div></div>
-        <button class="settings-btn" onclick="window.location.href='/reset-password'">Change</button>
+        <button class="settings-btn" onclick="openChangePassword()">Change</button>
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Address</div><div class="settings-row-sub">${u.address || 'Costa Blanca Villas'}</div></div>
