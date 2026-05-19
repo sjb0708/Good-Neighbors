@@ -1893,9 +1893,57 @@ function renderSettings(container) {
         <div class="settings-row-info"><div class="settings-row-label" style="color:var(--coral)">Sign Out</div><div class="settings-row-sub">Log out of Costa Blanca Connect</div></div>
         <button class="settings-btn danger" onclick="logout()">Sign Out</button>
       </div>
+      <div class="settings-row">
+        <div class="settings-row-info"><div class="settings-row-label" style="color:var(--coral)">Delete Account</div><div class="settings-row-sub">Permanently remove your account and personal data</div></div>
+        <button class="settings-btn danger" onclick="openDeleteAccount()">Delete</button>
+      </div>
     </div>
   `;
   lucide.createIcons();
+}
+
+function openDeleteAccount() {
+  const existing = document.getElementById('deleteAcctModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'deleteAcctModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:18px;padding:24px;width:100%;max-width:420px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-size:17px;font-weight:700;color:var(--coral);">Delete Account</div>
+        <button onclick="document.getElementById('deleteAcctModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-mid);">✕</button>
+      </div>
+      <p style="font-size:14px;line-height:1.5;color:var(--text-mid);margin-bottom:14px;">This permanently deletes your account, profile, posts, comments, listings, and messages. <b>This cannot be undone.</b></p>
+      <p style="font-size:13px;line-height:1.5;color:var(--text-mid);margin-bottom:14px;">Type <b>DELETE</b> below and enter your password to confirm.</p>
+      <input type="text" id="daConfirm" placeholder="Type DELETE" autocapitalize="characters" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;margin-bottom:10px;box-sizing:border-box;" />
+      <input type="password" id="daPassword" placeholder="Your password" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;margin-bottom:10px;box-sizing:border-box;" />
+      <div id="daErr" style="color:var(--coral);font-size:13px;margin-bottom:10px;display:none;"></div>
+      <button id="daSubmit" onclick="submitDeleteAccount()" style="width:100%;padding:12px;background:var(--coral);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Permanently Delete My Account</button>
+      <button onclick="document.getElementById('deleteAcctModal').remove()" style="width:100%;padding:10px;background:none;color:var(--text-mid);border:none;font-size:14px;cursor:pointer;font-family:inherit;margin-top:8px;">Cancel</button>
+    </div>
+  `;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+async function submitDeleteAccount() {
+  const confirm = document.getElementById('daConfirm')?.value?.trim();
+  const password = document.getElementById('daPassword')?.value;
+  const errEl = document.getElementById('daErr');
+  const btn = document.getElementById('daSubmit');
+  errEl.style.display = 'none';
+  if (confirm !== 'DELETE') { errEl.textContent = 'Please type DELETE exactly to confirm.'; errEl.style.display = 'block'; return; }
+  if (!password) { errEl.textContent = 'Please enter your password.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  const res = await fetch('/api/account/me', {
+    method: 'DELETE', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ confirm, password })
+  });
+  const d = await res.json().catch(() => ({}));
+  if (!res.ok) { errEl.textContent = d.error || 'Failed. Try again.'; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Permanently Delete My Account'; return; }
+  window.location.href = '/login?deleted=1';
 }
 
 async function toggleAllowMessages(allow) {
