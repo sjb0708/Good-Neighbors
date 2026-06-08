@@ -2194,11 +2194,31 @@ function focusPost(postId) {
   setTimeout(() => focusSharedPostFromUrl(), 200);
 }
 
+function linkifyEscape(raw) {
+  if (!raw) return '';
+  const urlRe = /\bhttps?:\/\/[^\s<]+/g;
+  let out = '';
+  let last = 0;
+  let m;
+  while ((m = urlRe.exec(raw)) !== null) {
+    out += escHtml(raw.slice(last, m.index));
+    let url = m[0];
+    let trailing = '';
+    const trailMatch = url.match(/[.,!?;:)\]]+$/);
+    if (trailMatch) { trailing = trailMatch[0]; url = url.slice(0, -trailing.length); }
+    const safe = escHtml(url);
+    out += `<a href="${safe}" target="_blank" rel="noopener noreferrer" style="color:var(--ocean);text-decoration:underline;word-break:break-all;">${safe}</a>${escHtml(trailing)}`;
+    last = m.index + m[0].length;
+  }
+  out += escHtml(raw.slice(last));
+  return out;
+}
+
 function buildPostContent(post) {
   const maxLen = 280;
-  const text = escHtml(post.content);
+  const text = linkifyEscape(post.content);
   if (post.content.length <= maxLen) return text;
-  const truncated = escHtml(post.content.substring(0, maxLen));
+  const truncated = linkifyEscape(post.content.substring(0, maxLen));
   return `
     <span id="text-short-${post.id}">${truncated}... <button class="read-more-btn" onclick="expandPost('${post.id}')">Read more</button></span>
     <span id="text-full-${post.id}" style="display:none">${text} <button class="read-more-btn" onclick="collapsePost('${post.id}')">Show less</button></span>
@@ -4692,7 +4712,7 @@ async function adminDeletePost(postId) {
   if (!confirm('Delete this post? This cannot be undone.')) return;
   const res = await fetch(`/api/posts/${postId}`, { method: 'DELETE', credentials: 'include' });
   if (res.ok) {
-    document.getElementById('post-card-' + postId)?.remove();
+    document.getElementById('post-' + postId)?.remove();
     showToast('Post deleted.');
   } else {
     showToast('Could not delete post.');
