@@ -2211,7 +2211,7 @@ function linkifyEscape(raw) {
     last = m.index + m[0].length;
   }
   out += escHtml(raw.slice(last));
-  return out;
+  return out.replace(/\n/g, '<br>');
 }
 
 function buildPostContent(post) {
