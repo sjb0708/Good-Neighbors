@@ -3092,6 +3092,23 @@ app.post('/api/profile/change-password', requireAuth(async (req, res) => {
   res.json({ ok: true });
 }));
 
+app.delete('/api/account/me', requireAuth(async (req, res) => {
+  try {
+    const { password, confirm } = req.body || {};
+    if (confirm !== 'DELETE') return res.status(400).json({ error: 'Please type DELETE to confirm.' });
+    if (!password) return res.status(400).json({ error: 'Password is required.' });
+    const [u] = await sql`SELECT password_hash, is_owner FROM users WHERE id=${req.currentUser.id}`;
+    if (!u) return res.status(404).json({ error: 'Account not found.' });
+    if (u.is_owner) return res.status(400).json({ error: 'The platform owner account cannot be deleted from the app. Contact support.' });
+    const valid = await bcrypt.compare(password, u.password_hash);
+    if (!valid) return res.status(400).json({ error: 'Password is incorrect.' });
+    await sql`DELETE FROM sessions WHERE user_id=${req.currentUser.id}`;
+    await sql`DELETE FROM users WHERE id=${req.currentUser.id}`;
+    res.clearCookie('user', { httpOnly: true, signed: true, sameSite: 'lax', path: '/' });
+    res.json({ ok: true });
+  } catch (err) { console.error('account delete failed', err); res.status(500).json({ error: 'Server error' }); }
+}));
+
 // ─── Direct Messages ──────────────────────────────────────────────────────────
 
 async function ensureMessagingTables() {

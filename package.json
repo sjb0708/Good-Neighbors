@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node -r dotenv/config server.js",
-    "seed": "node -r dotenv/config db/seed-admin.js"
+    "seed": "node -r dotenv/config db/seed-admin.js",
+    "seed:apple": "node -r dotenv/config db/seed-apple-review.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
