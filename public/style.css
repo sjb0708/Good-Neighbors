@@ -3789,3 +3789,36 @@ body {
   margin-top: 4px;
 }
 .re-btn-submit-listing:hover { background: var(--ocean-dark); }
+
+/* @mention pill rendered inside comments + posts */
+.mention-tag {
+  color: var(--ocean);
+  background: rgba(0, 119, 182, 0.08);
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 5px;
+  display: inline;
+}
+
+/* Live preview shown under a comment input as the user types @mentions */
+.mention-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0 40px;
+  font-size: 12px;
+}
+.mention-preview-chip {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.mention-preview-chip.ok {
+  color: #0a7d3e;
+  background: rgba(42, 157, 143, 0.12);
+}
+.mention-preview-chip.miss {
+  color: #b15454;
+  background: rgba(231, 111, 81, 0.12);
+}

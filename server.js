@@ -75,7 +75,265 @@ async function sendEmail({ to, subject, html }) {
   } catch (err) { console.error('sendEmail failed:', err.message); return false; }
 }
 
+// ─── Push notifications (APNs HTTP/2 + JWT) ──────────────────────────────────
+const jwt = require('jsonwebtoken');
+const http2 = require('http2');
+const APNS_KEY_ID     = process.env.APNS_KEY_ID;
+const APNS_TEAM_ID    = process.env.APNS_TEAM_ID;
+const APNS_BUNDLE_ID  = process.env.APNS_BUNDLE_ID || 'app.Costa-Blanca-Connect';
+// .p8 contents. In Vercel paste the whole file (BEGIN/END lines included). Newlines may be \n.
+const APNS_PRIVATE_KEY = (process.env.APNS_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+const APNS_HOST = process.env.APNS_HOST || 'https://api.push.apple.com';
+const apnsConfigured = APNS_KEY_ID && APNS_TEAM_ID && APNS_PRIVATE_KEY;
+if (!apnsConfigured) console.warn('[push] APNs not fully configured — pushes disabled.');
+
+let _apnsJwt = null;
+let _apnsJwtIssuedAt = 0;
+function apnsJwt() {
+  // APNs allows JWTs up to 60 min; refresh at ~50 min to be safe.
+  const now = Math.floor(Date.now() / 1000);
+  if (_apnsJwt && now - _apnsJwtIssuedAt < 50 * 60) return _apnsJwt;
+  _apnsJwt = jwt.sign({ iss: APNS_TEAM_ID, iat: now }, APNS_PRIVATE_KEY, {
+    algorithm: 'ES256',
+    header: { alg: 'ES256', kid: APNS_KEY_ID }
+  });
+  _apnsJwtIssuedAt = now;
+  return _apnsJwt;
+}
+
+function apnsSendOne(token, payload) {
+  return new Promise((resolve) => {
+    const client = http2.connect(APNS_HOST);
+    let settled = false;
+    const done = (result) => { if (!settled) { settled = true; client.close(); resolve(result); } };
+    client.on('error', (err) => done({ ok: false, error: err.message }));
+    const req = client.request({
+      ':method': 'POST',
+      ':path': `/3/device/${token}`,
+      'authorization': `bearer ${apnsJwt()}`,
+      'apns-topic': APNS_BUNDLE_ID,
+      'apns-push-type': 'alert',
+      'apns-priority': '10',
+      'content-type': 'application/json'
+    });
+    let status = 0, body = '';
+    req.on('response', (h) => { status = h[':status']; });
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => done({ ok: status === 200, status, body }));
+    req.on('error', (err) => done({ ok: false, error: err.message }));
+    req.setEncoding('utf8');
+    req.write(JSON.stringify(payload));
+    req.end();
+  });
+}
+
+const PUSH_CATEGORIES = ['feed','safety','events','comments','groups','lost_found','marketplace','neighbors','messages'];
+const PUSH_DEFAULTS = { feed: true, safety: true, events: true, comments: true, groups: true, lost_found: true, marketplace: true, neighbors: true, messages: true };
+
+// sendPush wrapper that checks the recipient's per-category toggle first.
+async function pushIfEnabled(userId, category, payload) {
+  if (!userId || !category) return { ok: false };
+  if (!PUSH_CATEGORIES.includes(category)) {
+    console.warn('[push] unknown category:', category);
+    return { ok: false };
+  }
+  let enabled = PUSH_DEFAULTS[category] !== false;
+  try {
+    const [prefs] = await sql`SELECT * FROM notification_prefs WHERE user_id = ${userId}`;
+    if (prefs && prefs[category] === false) enabled = false;
+    if (prefs && prefs[category] === true) enabled = true;
+  } catch (e) { /* table may not exist yet, fall back to default */ }
+  if (!enabled) return { ok: true, skipped: true };
+  return sendPush(userId, payload);
+}
+
+// ─── Push notifications (Android FCM HTTP v1 + service-account OAuth) ────────
+const FCM_PROJECT_ID = process.env.FCM_PROJECT_ID;
+let _fcmServiceAccount = null;
+try {
+  if (process.env.FCM_SERVICE_ACCOUNT_JSON) {
+    _fcmServiceAccount = JSON.parse(process.env.FCM_SERVICE_ACCOUNT_JSON);
+    if (_fcmServiceAccount.private_key) {
+      _fcmServiceAccount.private_key = _fcmServiceAccount.private_key.replace(/\\n/g, '\n');
+    }
+  }
+} catch (e) { console.error('[fcm] FCM_SERVICE_ACCOUNT_JSON parse failed:', e.message); }
+const fcmConfigured = !!(FCM_PROJECT_ID && _fcmServiceAccount?.private_key && _fcmServiceAccount?.client_email);
+if (!fcmConfigured) console.warn('[push] FCM not fully configured — Android pushes disabled.');
+
+let _fcmAccessToken = null;
+let _fcmAccessTokenExpiresAt = 0;
+async function fcmAccessToken() {
+  const now = Math.floor(Date.now() / 1000);
+  if (_fcmAccessToken && _fcmAccessTokenExpiresAt - now > 60) return _fcmAccessToken;
+  try {
+    const assertion = jwt.sign(
+      {
+        iss: _fcmServiceAccount.client_email,
+        scope: 'https://www.googleapis.com/auth/firebase.messaging',
+        aud: 'https://oauth2.googleapis.com/token',
+        iat: now,
+        exp: now + 3600
+      },
+      _fcmServiceAccount.private_key,
+      { algorithm: 'RS256' }
+    );
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=' + encodeURIComponent(assertion)
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('[fcm] OAuth exchange failed:', res.status, text);
+      return null;
+    }
+    const data = await res.json();
+    _fcmAccessToken = data.access_token;
+    _fcmAccessTokenExpiresAt = now + (data.expires_in || 3600);
+    return _fcmAccessToken;
+  } catch (e) {
+    console.error('[fcm] access-token error:', e.message);
+    return null;
+  }
+}
+
+async function fcmSendOne(token, { title, body, data }) {
+  if (!fcmConfigured) return { ok: false, skipped: true };
+  const access = await fcmAccessToken();
+  if (!access) return { ok: false, status: 0, error: 'no-access-token' };
+  // FCM v1 requires all data values to be strings.
+  const dataStr = {};
+  for (const [k, v] of Object.entries(data || {})) dataStr[k] = String(v ?? '');
+  const message = {
+    message: {
+      token,
+      notification: { title, body },
+      data: dataStr,
+      android: {
+        priority: 'HIGH',
+        notification: { channel_id: 'costa_blanca_general', sound: 'default' }
+      }
+    }
+  };
+  try {
+    const res = await fetch(`https://fcm.googleapis.com/v1/projects/${FCM_PROJECT_ID}/messages:send`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${access}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(message)
+    });
+    const text = await res.text();
+    return { ok: res.ok, status: res.status, body: text };
+  } catch (e) {
+    return { ok: false, status: 0, error: e.message };
+  }
+}
+
+async function sendPush(userId, { title, body, data, sound } = {}) {
+  if (!apnsConfigured && !fcmConfigured) return { ok: false, sent: 0, skipped: true };
+  if (!userId || !title || !body) return { ok: false, sent: 0 };
+  let rows;
+  try {
+    rows = await sql`SELECT id, token, platform FROM device_tokens WHERE user_id = ${userId}`;
+  } catch (err) { console.error('[push] token fetch failed:', err.message); return { ok: false, sent: 0 }; }
+  if (!rows.length) return { ok: true, sent: 0 };
+  const apnsPayload = { aps: { alert: { title, body }, sound: sound || 'default' }, ...(data || {}) };
+  let sent = 0;
+  for (const row of rows) {
+    let r;
+    if (row.platform === 'android') {
+      if (!fcmConfigured) continue;
+      r = await fcmSendOne(row.token, { title, body, data });
+      if (r.ok) { sent++; continue; }
+      // FCM dead-token signals → delete so we stop retrying.
+      const bodyTxt = r.body || '';
+      if (r.status === 404 || bodyTxt.includes('UNREGISTERED') || bodyTxt.includes('NOT_FOUND') || bodyTxt.includes('INVALID_ARGUMENT')) {
+        try { await sql`DELETE FROM device_tokens WHERE id = ${row.id}`; } catch {}
+      } else {
+        console.error('[push] FCM error:', r.status, bodyTxt || r.error);
+      }
+    } else {
+      if (!apnsConfigured) continue;
+      r = await apnsSendOne(row.token, apnsPayload);
+      if (r.ok) { sent++; continue; }
+      if (r.status === 410 || (r.body || '').includes('BadDeviceToken') || (r.body || '').includes('Unregistered')) {
+        try { await sql`DELETE FROM device_tokens WHERE id = ${row.id}`; } catch {}
+      } else {
+        console.error('[push] APNs error:', r.status, r.body || r.error);
+      }
+    }
+  }
+  return { ok: true, sent };
+}
+
+// Parse @username mentions out of a body of text and notify each mentioned user
+// (in-app notification + push). Skips the actor and any already-notified user
+// id passed in via `excludeIds` (typically the post author, who already gets
+// their own comment notification).
+//
+// Matches @token against either the username OR the first word of the display
+// name (case-insensitive), so @Steve works the same as @sjb0708.
+async function notifyMentions({ text, actor, postId, excludeIds = [] }) {
+  if (!text || !actor) return;
+  const tokens = Array.from(new Set(
+    (text.match(/@([A-Za-z0-9._-]{2,32})/g) || []).map(m => m.slice(1).toLowerCase())
+  ));
+  if (!tokens.length) return;
+  const excludeSet = new Set([actor.id, ...excludeIds].filter(Boolean));
+  try {
+    const users = await sql`
+      SELECT DISTINCT id, username FROM users
+      WHERE LOWER(username) = ANY(${tokens})
+         OR LOWER(SPLIT_PART(name, ' ', 1)) = ANY(${tokens})
+    `;
+    for (const u of users) {
+      if (excludeSet.has(u.id)) continue;
+      excludeSet.add(u.id); // avoid duplicate if mentioned twice
+      const msg = `${actor.name} mentioned you: "${(text || '').slice(0, 80).trim()}${text.length > 80 ? '…' : ''}"`;
+      await sql`
+        INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
+        VALUES (${u.id}, 'mention', ${msg}, ${actor.avatar_hex}, ${actor.initials}, ${postId || null})
+      `;
+      pushIfEnabled(u.id, 'comments', {
+        title: `${actor.name} mentioned you`,
+        body: (text || '').trim().slice(0, 180),
+        data: { type: 'mention', postId: postId || null }
+      }).catch(() => {});
+    }
+  } catch (e) {
+    console.error('[mentions] failed:', e.message);
+  }
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+// ─── Blocked users (UGC safety per App Store guideline 1.2) ──────────────────
+async function ensureBlockedUsersTable() {
+  await sql`CREATE TABLE IF NOT EXISTS blocked_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    blocked_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, blocked_user_id)
+  )`;
+}
+
+async function getBlockedAuthorIds(userId) {
+  if (!userId) return [];
+  try {
+    const rows = await sql`SELECT blocked_user_id FROM blocked_users WHERE user_id = ${userId}`;
+    return rows.map(r => r.blocked_user_id);
+  } catch { return []; }
+}
+
+// Build a safe ` AND <col> NOT IN ('uuid1','uuid2', ...)` fragment for raw-string SQL.
+// UUIDs are validated against a strict regex; if any fail validation we return ''.
+function notInUuidClause(uuidArr, columnExpr) {
+  if (!uuidArr || !uuidArr.length) return '';
+  const safe = uuidArr.filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+  if (!safe.length) return '';
+  return ` AND ${columnExpr} NOT IN (${safe.map(id => `'${id}'`).join(',')})`;
+}
 
 function timeAgo(date) {
   if (!date) return 'recently';
@@ -183,6 +441,8 @@ function formatPost(row, reactionRows, commentCountMap, userReactionMap, pollVot
 
 async function fetchPostsWithMeta(whereSql, userId) {
   await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS shared_post_id UUID`;
+  const blocked = await getBlockedAuthorIds(userId);
+  const blockClause = notInUuidClause(blocked, 'p.author_id');
   const rows = await sql(`
     SELECT p.*,
       u.username  AS author_username,
@@ -211,7 +471,7 @@ async function fetchPostsWithMeta(whereSql, userId) {
     LEFT JOIN businesses b ON p.business_id = b.id
     LEFT JOIN posts sp ON p.shared_post_id = sp.id
     LEFT JOIN users su ON sp.author_id = su.id
-    ${whereSql}
+    ${whereSql}${blockClause}
     ORDER BY p.created_at DESC
   `);
   if (!rows.length) return [];
@@ -387,9 +647,97 @@ app.get('/api/auth/me', requireAuth(async (req, res) => {
   res.json({ ...formatUser(req.currentUser), posts: pc?.c || 0 });
 }));
 
+// Diagnostic: unauthenticated ping so we can see whether the iOS JS bridge
+// is firing at all. Logs prefix-only so we don't dump full tokens to logs.
+app.post('/api/_diag/push-ping', async (req, res) => {
+  const body = req.body || {};
+  const tokenPrefix = typeof body.token === 'string' ? body.token.slice(0, 16) : null;
+  console.log('[push-ping] received from iOS bridge', {
+    hasToken: !!body.token,
+    tokenPrefix,
+    platform: body.platform,
+    bundleId: body.bundleId,
+    ua: (req.headers['user-agent'] || '').slice(0, 120)
+  });
+  // Also write to a small diagnostic table so we can read it from anywhere.
+  try {
+    await sql`CREATE TABLE IF NOT EXISTS push_diag (
+      id SERIAL PRIMARY KEY,
+      token_prefix TEXT,
+      platform TEXT,
+      bundle_id TEXT,
+      ua TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`;
+    await sql`INSERT INTO push_diag (token_prefix, platform, bundle_id, ua)
+              VALUES (${tokenPrefix}, ${body.platform || null}, ${body.bundleId || null}, ${(req.headers['user-agent'] || '').slice(0, 200)})`;
+  } catch (e) { console.error('[push-ping] db write failed:', e.message); }
+  res.json({ ok: true });
+});
+
+// Notification preferences — drives which iOS push events are sent to this user.
+app.get('/api/notification-prefs', requireAuth(async (req, res) => {
+  try {
+    await migrationsReady;
+    const [row] = await sql`SELECT * FROM notification_prefs WHERE user_id = ${req.currentUser.id}`;
+    res.json(row || PUSH_DEFAULTS);
+  } catch (err) {
+    console.error('[notification-prefs GET] failed:', err);
+    res.json(PUSH_DEFAULTS);
+  }
+}));
+
+app.post('/api/notification-prefs', requireAuth(async (req, res) => {
+  try {
+    await migrationsReady;
+    const body = req.body || {};
+    const v = (k) => body[k] === true || body[k] === false ? body[k] : PUSH_DEFAULTS[k];
+    await sql`
+      INSERT INTO notification_prefs
+        (user_id, feed, safety, events, comments, groups, lost_found, marketplace, neighbors, messages, updated_at)
+      VALUES
+        (${req.currentUser.id}, ${v('feed')}, ${v('safety')}, ${v('events')}, ${v('comments')},
+         ${v('groups')}, ${v('lost_found')}, ${v('marketplace')}, ${v('neighbors')}, ${v('messages')}, NOW())
+      ON CONFLICT (user_id) DO UPDATE SET
+        feed=EXCLUDED.feed, safety=EXCLUDED.safety, events=EXCLUDED.events, comments=EXCLUDED.comments,
+        groups=EXCLUDED.groups, lost_found=EXCLUDED.lost_found, marketplace=EXCLUDED.marketplace,
+        neighbors=EXCLUDED.neighbors, messages=EXCLUDED.messages, updated_at=NOW()
+    `;
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[notification-prefs POST] failed:', err);
+    res.status(500).json({ error: 'Could not save preferences.' });
+  }
+}));
+
+// Register an APNs device token captured by the iOS wrapper.
+app.post('/api/devices/register', requireAuth(async (req, res) => {
+  console.log('[devices/register] hit by user', req.currentUser?.id, 'body keys:', Object.keys(req.body || {}));
+  try {
+    await migrationsReady;
+    const { token, platform, bundleId } = req.body || {};
+    if (!token || typeof token !== 'string' || token.length < 32) {
+      console.warn('[devices/register] rejected: invalid token, length =', (token || '').length);
+      return res.status(400).json({ error: 'Invalid device token.' });
+    }
+    await sql`
+      INSERT INTO device_tokens (user_id, token, platform, bundle_id, last_seen_at)
+      VALUES (${req.currentUser.id}, ${token}, ${platform || 'ios'}, ${bundleId || null}, NOW())
+      ON CONFLICT (user_id, token)
+      DO UPDATE SET last_seen_at = NOW(), bundle_id = EXCLUDED.bundle_id
+    `;
+    console.log('[devices/register] stored token for user', req.currentUser.id, 'prefix:', token.slice(0, 16));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[devices/register] failed:', err);
+    res.status(500).json({ error: 'Could not register device.' });
+  }
+}));
+
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { fullName, email, password, role, businessName, businessCategory, claimBusinessId } = req.body;
+    await migrationsReady;
+    const { fullName, email, password, role, businessName, businessCategory, claimBusinessId, agreedToTerms } = req.body;
 
     if (!fullName || !email || !password || !role)
       return res.status(400).json({ error: 'Missing required fields.' });
@@ -399,6 +747,9 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters.' });
     if (!['neighbor','business'].includes(role))
       return res.status(400).json({ error: 'Invalid account type.' });
+    // App Store guideline 1.2: users must explicitly accept the EULA before registration.
+    if (agreedToTerms !== true)
+      return res.status(400).json({ error: 'You must agree to the Terms of Use and Privacy Policy to create an account.' });
 
     const username = email.toLowerCase();
 
@@ -418,8 +769,8 @@ app.post('/api/auth/register', async (req, res) => {
 
     if (role === 'neighbor') {
       const [newUser] = await sql`
-        INSERT INTO users (username, email, password_hash, role, name, full_name, avatar_hex, initials, email_verified)
-        VALUES (${username}, ${email}, ${passwordHash}, ${role}, ${displayName}, ${fullName}, ${avatarHex}, ${initials}, false)
+        INSERT INTO users (username, email, password_hash, role, name, full_name, avatar_hex, initials, email_verified, terms_accepted_at)
+        VALUES (${username}, ${email}, ${passwordHash}, ${role}, ${displayName}, ${fullName}, ${avatarHex}, ${initials}, false, NOW())
         RETURNING *
       `;
       const verifyToken = crypto.randomBytes(32).toString('hex');
@@ -464,8 +815,8 @@ app.post('/api/auth/register', async (req, res) => {
 
     // Create the business user
     const [newBiz] = await sql`
-      INSERT INTO users (username, email, password_hash, role, name, full_name, avatar_hex, initials, email_verified, pending_claim_business_id)
-      VALUES (${username}, ${email}, ${passwordHash}, ${role}, ${displayName}, ${fullName}, ${avatarHex}, ${initials}, false, ${pendingClaimId})
+      INSERT INTO users (username, email, password_hash, role, name, full_name, avatar_hex, initials, email_verified, pending_claim_business_id, terms_accepted_at)
+      VALUES (${username}, ${email}, ${passwordHash}, ${role}, ${displayName}, ${fullName}, ${avatarHex}, ${initials}, false, ${pendingClaimId}, NOW())
       RETURNING *
     `;
 
@@ -508,7 +859,10 @@ app.post('/api/auth/register', async (req, res) => {
       `
     });
     res.json({ ok: true, role: 'business', message: 'Check your email to confirm your account.' });
-  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  } catch (err) {
+    console.error('[register] failed:', err);
+    res.status(500).json({ error: 'Server error', detail: err.message, code: err.code });
+  }
 });
 
 // Forgot username
@@ -660,6 +1014,13 @@ app.get('/api/auth/verify-email', async (req, res) => {
           sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
               VALUES (${n.id}, 'new_neighbor', ${`${row.name} just joined Costa Blanca Connect — say hello! 👋`}, ${row.avatar_hex}, ${row.initials})`
         ));
+        for (const n of allNeighbors) {
+          pushIfEnabled(n.id, 'neighbors', {
+            title: 'New Neighbor 👋',
+            body: `${row.name} just joined Costa Blanca Connect`,
+            data: { type: 'new_neighbor', userId: row.uid }
+          }).catch(() => {});
+        }
       }
     }
     res.json({ ok: true, message: 'Email verified! You can now log in.' });
@@ -718,6 +1079,78 @@ app.post('/api/reports', requireAuth(async (req, res) => {
     RETURNING *
   `;
   res.json({ ok: true, report });
+}));
+
+// Per-post report (UGC safety — App Store guideline 1.2)
+app.post('/api/posts/:id/report', requireAuth(async (req, res) => {
+  const { reason, note } = req.body || {};
+  const [post] = await sql`SELECT id, content, author_id FROM posts WHERE id=${req.params.id}`;
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+  const label = (post.content || '').slice(0, 80) || `Post ${post.id}`;
+  await sql`
+    INSERT INTO reports (target_type, target_id, target_label, reason, note, reported_by_user_id)
+    VALUES ('post', ${post.id}, ${label}, ${reason || 'Inappropriate content'}, ${note || ''}, ${req.currentUser.id})
+  `;
+  res.json({ ok: true });
+}));
+
+// Per-comment report — uses 'post' target_type with the parent post id so the
+// existing reports CHECK constraint accepts it without migration.
+app.post('/api/comments/:id/report', requireAuth(async (req, res) => {
+  const { reason, note } = req.body || {};
+  const [c] = await sql`SELECT id, post_id, content, author_id FROM comments WHERE id=${req.params.id}`;
+  if (!c) return res.status(404).json({ error: 'Comment not found' });
+  const label = `Comment: ${(c.content || '').slice(0, 80)}`;
+  const fullNote = `[comment ${c.id}] ${note || ''}`.trim();
+  await sql`
+    INSERT INTO reports (target_type, target_id, target_label, reason, note, reported_by_user_id)
+    VALUES ('post', ${c.post_id}, ${label}, ${reason || 'Inappropriate comment'}, ${fullNote}, ${req.currentUser.id})
+  `;
+  res.json({ ok: true });
+}));
+
+// ─── Blocking (UGC safety — App Store guideline 1.2) ────────────────────────
+// When a user blocks someone, their content is immediately filtered out of every
+// UGC feed (posts, comments, group posts, marketplace, events, reviews, neighbors,
+// search). The block is also auto-filed as a report so admins are notified.
+
+app.post('/api/users/:username/block', requireAuth(async (req, res) => {
+  await ensureBlockedUsersTable();
+  const u = req.currentUser;
+  const [target] = await sql`SELECT id, username, name FROM users WHERE username=${req.params.username}`;
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  if (target.id === u.id) return res.status(400).json({ error: 'You cannot block yourself.' });
+  await sql`INSERT INTO blocked_users (user_id, blocked_user_id) VALUES (${u.id}, ${target.id}) ON CONFLICT DO NOTHING`;
+  // Notify the developer/admin team (Apple requirement: blocking notifies the developer).
+  const { reason, note } = req.body || {};
+  await sql`
+    INSERT INTO reports (target_type, target_id, target_label, reason, note, reported_by_user_id)
+    VALUES ('member', ${target.username}, ${target.name}, ${reason || 'Blocked by user'}, ${note || 'Auto-filed from block action'}, ${u.id})
+  `;
+  res.json({ ok: true });
+}));
+
+app.post('/api/users/:username/unblock', requireAuth(async (req, res) => {
+  await ensureBlockedUsersTable();
+  const [target] = await sql`SELECT id FROM users WHERE username=${req.params.username}`;
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  await sql`DELETE FROM blocked_users WHERE user_id=${req.currentUser.id} AND blocked_user_id=${target.id}`;
+  res.json({ ok: true });
+}));
+
+app.get('/api/users/blocked', requireAuth(async (req, res) => {
+  await ensureBlockedUsersTable();
+  const rows = await sql`
+    SELECT u.id, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials, b.created_at
+    FROM blocked_users b JOIN users u ON b.blocked_user_id = u.id
+    WHERE b.user_id = ${req.currentUser.id}
+    ORDER BY b.created_at DESC
+  `;
+  res.json(rows.map(r => ({
+    id: r.id, username: r.username, name: r.name,
+    avatar: r.avatar_hex, avatarUrl: r.avatar_url, initials: r.initials,
+    blockedAt: r.created_at,
+  })));
 }));
 
 app.get('/api/admin/reports', requireAdmin(async (req, res) => {
@@ -1439,6 +1872,51 @@ app.post('/api/posts', requireAuth(async (req, res) => {
         sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
             VALUES (${m.id}, 'lost_found', ${msg}, ${u.avatar_hex}, ${u.initials})`
       ));
+      for (const m of allMembers) {
+        pushIfEnabled(m.id, 'lost_found', { title: 'Lost & Found', body: msg, data: { type: 'lost_found', postId: post.id } }).catch(() => {});
+      }
+    }
+  }
+
+  // Push every safety alert (regardless of severity) to every neighbor; users
+  // can mute via the Safety Alerts toggle in Settings. Urgent categories play
+  // a distinctive iOS tone (safety-alert.caf bundled in the app); others use
+  // the system default so the alarm sound isn't worn out by routine notices.
+  if (type === 'safety') {
+    const recipients = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${u.id}`;
+    const sevLabel = resolvedSeverity === 'high' ? '🚨 Urgent Safety Alert' : resolvedSeverity === 'low' ? 'Safety Notice' : 'Safety Alert';
+    const body = (content || '').slice(0, 180);
+    const URGENT_SAFETY_CATEGORIES = new Set(['Suspicious Activity','Security','Medical Emergency','Fire']);
+    const sound = URGENT_SAFETY_CATEGORIES.has(alertType) ? 'safety-alert.caf' : undefined;
+    for (const m of recipients) {
+      pushIfEnabled(m.id, 'safety', { title: sevLabel, body, sound, data: { type: 'safety', postId: post.id } }).catch(() => {});
+    }
+  }
+
+  // Regular feed posts → push to all neighbors with the "New Posts in Feed" toggle on.
+  if (type !== 'safety' && type !== 'lost_found' && section === 'feed') {
+    const recipients = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${u.id}`;
+    const body = (content || '').slice(0, 180) || 'Tap to see the new post';
+    for (const m of recipients) {
+      pushIfEnabled(m.id, 'feed', { title: `${u.name} posted`, body, data: { type: 'feed', postId: post.id } }).catch(() => {});
+    }
+  }
+
+  // Marketplace listings → push to all neighbors with the "Marketplace" toggle on.
+  if (section === 'marketplace') {
+    const recipients = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${u.id}`;
+    const body = (content || '').slice(0, 180) || 'New item listed';
+    for (const m of recipients) {
+      pushIfEnabled(m.id, 'marketplace', { title: `${u.name} listed an item`, body, data: { type: 'marketplace', postId: post.id } }).catch(() => {});
+    }
+  }
+
+  // Event posts → push as event reminders to all neighbors with the "Event Reminders" toggle on.
+  if (type === 'event' || section === 'events') {
+    const recipients = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${u.id}`;
+    const body = (content || '').slice(0, 180) || 'New community event';
+    for (const m of recipients) {
+      pushIfEnabled(m.id, 'events', { title: 'New Event', body, data: { type: 'event', postId: post.id } }).catch(() => {});
     }
   }
 
@@ -1536,6 +2014,11 @@ app.post('/api/posts/:id/react', requireAuth(async (req, res) => {
       const msg = `${u.name} reacted ${emojiMap[reaction]||''} to your post`;
       await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
         VALUES (${post.author_id}, 'reaction', ${msg}, ${u.avatar_hex}, ${u.initials}, ${post.id})`;
+      pushIfEnabled(post.author_id, 'comments', {
+        title: `${u.name} reacted ${emojiMap[reaction]||''}`,
+        body: 'Tap to see your post',
+        data: { type: 'reaction', postId: post.id }
+      }).catch(() => {});
     }
   }
 
@@ -1577,13 +2060,22 @@ app.get('/api/posts/:id/comments', async (req, res) => {
     await ensureCommentLikesTable();
     const me = await getUser(req);
     const meId = me?.id || null;
-    const rows = await sql`
-      SELECT c.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials,
-        (SELECT COUNT(*)::int FROM comment_likes WHERE comment_id = c.id) AS like_count,
-        EXISTS(SELECT 1 FROM comment_likes WHERE comment_id = c.id AND user_id = ${meId}) AS you_liked
-      FROM comments c JOIN users u ON c.author_id = u.id
-      WHERE c.post_id=${req.params.id} ORDER BY c.created_at ASC
-    `;
+    const blocked = await getBlockedAuthorIds(meId);
+    const rows = blocked.length
+      ? await sql`
+          SELECT c.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials,
+            (SELECT COUNT(*)::int FROM comment_likes WHERE comment_id = c.id) AS like_count,
+            EXISTS(SELECT 1 FROM comment_likes WHERE comment_id = c.id AND user_id = ${meId}) AS you_liked
+          FROM comments c JOIN users u ON c.author_id = u.id
+          WHERE c.post_id=${req.params.id} AND c.author_id <> ALL(${blocked}::uuid[]) ORDER BY c.created_at ASC
+        `
+      : await sql`
+          SELECT c.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials,
+            (SELECT COUNT(*)::int FROM comment_likes WHERE comment_id = c.id) AS like_count,
+            EXISTS(SELECT 1 FROM comment_likes WHERE comment_id = c.id AND user_id = ${meId}) AS you_liked
+          FROM comments c JOIN users u ON c.author_id = u.id
+          WHERE c.post_id=${req.params.id} ORDER BY c.created_at ASC
+        `;
     res.json(rows.map(r => ({
       id: r.id, content: r.content, createdAt: r.created_at,
       likeCount: r.like_count || 0, youLiked: !!r.you_liked,
@@ -1604,6 +2096,11 @@ app.post('/api/comments/:commentId/like', requireAuth(async (req, res) => {
     await sql`INSERT INTO comment_likes (comment_id, user_id) VALUES (${req.params.commentId}, ${userId})`;
     if (c.author_id !== userId) {
       await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id) VALUES (${c.author_id}, 'comment_like', ${`${req.currentUser.name} liked your comment`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials}, ${req.params.commentId})`;
+      pushIfEnabled(c.author_id, 'comments', {
+        title: `${req.currentUser.name} liked your comment 👍`,
+        body: 'Tap to view the conversation',
+        data: { type: 'comment_like', commentId: req.params.commentId }
+      }).catch(() => {});
     }
   }
   const [{ n }] = await sql`SELECT COUNT(*)::int AS n FROM comment_likes WHERE comment_id=${req.params.commentId}`;
@@ -1635,7 +2132,19 @@ app.post('/api/posts/:id/comments', requireAuth(async (req, res) => {
     const msg = `${u.name} commented on your post${snippet ? ` "${snippet}${post.post_content.length > 40 ? '…' : ''}"` : ''}`;
     await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
       VALUES (${post.author_id}, 'comment', ${msg}, ${u.avatar_hex}, ${u.initials}, ${req.params.id})`;
+    pushIfEnabled(post.author_id, 'comments', {
+      title: `${u.name} commented`,
+      body: content.trim().slice(0, 180),
+      data: { type: 'comment', postId: req.params.id }
+    }).catch(() => {});
   }
+  // @-mentions in the comment body → notify each tagged user (skip author + post owner).
+  await notifyMentions({
+    text: content,
+    actor: u,
+    postId: req.params.id,
+    excludeIds: post?.author_id ? [post.author_id] : []
+  });
   await awardPoints(u.id, 'comment', POINTS.comment);
 
   res.json({
@@ -1652,16 +2161,29 @@ app.get('/api/events', async (req, res) => {
     const userId = user?.id || null;
     await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS group_id UUID`;
     await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled BOOLEAN DEFAULT FALSE`;
-    const rows   = await sql`
-      SELECT e.*, u.username AS host_username, u.name AS host_name, u.avatar_hex AS host_avatar, u.initials AS host_initials, u.verified AS host_verified,
-        g.name AS group_name, g.icon AS group_icon,
-        COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='going'),0)    AS going_count,
-        COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='maybe'),0)   AS maybe_count,
-        COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='cant_go'),0) AS cant_go_count
-      FROM events e JOIN users u ON e.host_id = u.id
-      LEFT JOIN groups g ON e.group_id = g.id
-      ORDER BY e.event_date ASC
-    `;
+    const blocked = await getBlockedAuthorIds(userId);
+    const rows   = blocked.length
+      ? await sql`
+          SELECT e.*, u.username AS host_username, u.name AS host_name, u.avatar_hex AS host_avatar, u.initials AS host_initials, u.verified AS host_verified,
+            g.name AS group_name, g.icon AS group_icon,
+            COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='going'),0)    AS going_count,
+            COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='maybe'),0)   AS maybe_count,
+            COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='cant_go'),0) AS cant_go_count
+          FROM events e JOIN users u ON e.host_id = u.id
+          LEFT JOIN groups g ON e.group_id = g.id
+          WHERE e.host_id <> ALL(${blocked}::uuid[])
+          ORDER BY e.event_date ASC
+        `
+      : await sql`
+          SELECT e.*, u.username AS host_username, u.name AS host_name, u.avatar_hex AS host_avatar, u.initials AS host_initials, u.verified AS host_verified,
+            g.name AS group_name, g.icon AS group_icon,
+            COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='going'),0)    AS going_count,
+            COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='maybe'),0)   AS maybe_count,
+            COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='cant_go'),0) AS cant_go_count
+          FROM events e JOIN users u ON e.host_id = u.id
+          LEFT JOIN groups g ON e.group_id = g.id
+          ORDER BY e.event_date ASC
+        `;
     let userRsvps = {};
     if (userId) {
       const urs = await sql`SELECT event_id, status FROM event_rsvps WHERE user_id=${userId}`;
@@ -1946,11 +2468,18 @@ app.get('/api/businesses/:id', async (req, res) => {
     const user   = await getUser(req);
     const [biz]  = await sql`SELECT b.*, u.name AS added_by_name, u.username AS added_by_username FROM businesses b LEFT JOIN users u ON b.added_by_user_id = u.id WHERE b.id=${req.params.id}`;
     if (!biz) return res.status(404).json({ error: 'Not found' });
-    const reviews = await sql`
-      SELECT r.*, u.name AS author_name, u.avatar_hex, u.avatar_url, u.initials
-      FROM business_reviews r JOIN users u ON r.author_id = u.id
-      WHERE r.business_id=${biz.id} ORDER BY r.created_at DESC
-    `;
+    const blocked = await getBlockedAuthorIds(user?.id);
+    const reviews = blocked.length
+      ? await sql`
+          SELECT r.*, u.name AS author_name, u.avatar_hex, u.avatar_url, u.initials
+          FROM business_reviews r JOIN users u ON r.author_id = u.id
+          WHERE r.business_id=${biz.id} AND r.author_id <> ALL(${blocked}::uuid[]) ORDER BY r.created_at DESC
+        `
+      : await sql`
+          SELECT r.*, u.name AS author_name, u.avatar_hex, u.avatar_url, u.initials
+          FROM business_reviews r JOIN users u ON r.author_id = u.id
+          WHERE r.business_id=${biz.id} ORDER BY r.created_at DESC
+        `;
     const fd = await getBizFaveData(biz.id, user?.id);
     res.json({
       ...formatBusiness(biz), ...fd,
@@ -2372,11 +2901,20 @@ app.post('/api/admin/claims/:id/deny', requireAdmin(async (req, res) => {
 
 app.get('/api/marketplace', async (req, res) => {
   try {
-    const rows = await sql`
-      SELECT m.*, u.username, u.name AS seller_name, u.avatar_hex, u.initials, u.verified, u.address
-      FROM marketplace_items m JOIN users u ON m.seller_id = u.id
-      ORDER BY m.created_at DESC
-    `;
+    const me = await getUser(req);
+    const blocked = await getBlockedAuthorIds(me?.id);
+    const rows = blocked.length
+      ? await sql`
+          SELECT m.*, u.username, u.name AS seller_name, u.avatar_hex, u.initials, u.verified, u.address
+          FROM marketplace_items m JOIN users u ON m.seller_id = u.id
+          WHERE m.seller_id <> ALL(${blocked}::uuid[])
+          ORDER BY m.created_at DESC
+        `
+      : await sql`
+          SELECT m.*, u.username, u.name AS seller_name, u.avatar_hex, u.initials, u.verified, u.address
+          FROM marketplace_items m JOIN users u ON m.seller_id = u.id
+          ORDER BY m.created_at DESC
+        `;
     res.json(rows.map(r => ({
       id: r.id, title: r.title, price: parseFloat(r.price)||0, free: r.is_free,
       condition: r.condition, category: r.category, sold: r.sold || false,
@@ -2500,10 +3038,19 @@ app.get('/api/search', async (req, res) => {
   if (!q || q.length < 2) return res.json({ safety: [], events: [], marketplace: [], groups: [] });
   const like = `%${q}%`;
   try {
+    const me = await getUser(req);
+    const blocked = await getBlockedAuthorIds(me?.id);
+    const noBlock = !blocked.length;
     const [safety, events, marketplace, groups] = await Promise.all([
-      sql`SELECT id, content FROM posts WHERE section='safety' AND content ILIKE ${like} ORDER BY created_at DESC LIMIT 5`,
-      sql`SELECT id, title FROM events WHERE title ILIKE ${like} OR description ILIKE ${like} ORDER BY event_date DESC LIMIT 5`,
-      sql`SELECT id, title, price, category FROM marketplace_items WHERE (title ILIKE ${like} OR description ILIKE ${like} OR category ILIKE ${like}) AND sold=FALSE ORDER BY created_at DESC LIMIT 5`,
+      noBlock
+        ? sql`SELECT id, content FROM posts WHERE section='safety' AND content ILIKE ${like} ORDER BY created_at DESC LIMIT 5`
+        : sql`SELECT id, content FROM posts WHERE section='safety' AND content ILIKE ${like} AND author_id <> ALL(${blocked}::uuid[]) ORDER BY created_at DESC LIMIT 5`,
+      noBlock
+        ? sql`SELECT id, title FROM events WHERE title ILIKE ${like} OR description ILIKE ${like} ORDER BY event_date DESC LIMIT 5`
+        : sql`SELECT id, title FROM events WHERE (title ILIKE ${like} OR description ILIKE ${like}) AND host_id <> ALL(${blocked}::uuid[]) ORDER BY event_date DESC LIMIT 5`,
+      noBlock
+        ? sql`SELECT id, title, price, category FROM marketplace_items WHERE (title ILIKE ${like} OR description ILIKE ${like} OR category ILIKE ${like}) AND sold=FALSE ORDER BY created_at DESC LIMIT 5`
+        : sql`SELECT id, title, price, category FROM marketplace_items WHERE (title ILIKE ${like} OR description ILIKE ${like} OR category ILIKE ${like}) AND sold=FALSE AND seller_id <> ALL(${blocked}::uuid[]) ORDER BY created_at DESC LIMIT 5`,
       sql`SELECT id, name FROM groups WHERE name ILIKE ${like} OR description ILIKE ${like} ORDER BY name LIMIT 5`,
     ]);
     res.json({
@@ -2608,21 +3155,38 @@ app.get('/api/groups/:id', async (req, res) => {
     await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled BOOLEAN DEFAULT FALSE`;
     await sql`ALTER TABLE group_posts ADD COLUMN IF NOT EXISTS event_id UUID`;
     await ensureGroupPostInteractionTables();
-    const posts = await sql`
-      SELECT gp.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials,
-        e.title AS event_title, e.description AS event_description, e.location AS event_location,
-        e.event_date, e.event_time, e.end_time, e.category AS event_category, e.image_url AS event_image_url, e.cancelled AS event_cancelled,
-        COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='going'),0)   AS event_going,
-        COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='maybe'),0)  AS event_maybe,
-        COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='cant_go'),0) AS event_cantgo,
-        (SELECT status FROM event_rsvps WHERE event_id=e.id AND user_id=${userId||null}) AS event_user_rsvp,
-        (SELECT COUNT(*)::int FROM group_post_likes WHERE post_id=gp.id) AS like_count,
-        EXISTS(SELECT 1 FROM group_post_likes WHERE post_id=gp.id AND user_id=${userId}) AS you_liked,
-        (SELECT COUNT(*)::int FROM group_post_comments WHERE post_id=gp.id) AS comment_count
-      FROM group_posts gp JOIN users u ON gp.author_id = u.id
-      LEFT JOIN events e ON gp.event_id = e.id
-      WHERE gp.group_id=${g.id} ORDER BY gp.pinned DESC, gp.created_at DESC LIMIT 50
-    `;
+    const blockedGP = await getBlockedAuthorIds(userId);
+    const posts = blockedGP.length
+      ? await sql`
+          SELECT gp.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials,
+            e.title AS event_title, e.description AS event_description, e.location AS event_location,
+            e.event_date, e.event_time, e.end_time, e.category AS event_category, e.image_url AS event_image_url, e.cancelled AS event_cancelled,
+            COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='going'),0)   AS event_going,
+            COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='maybe'),0)  AS event_maybe,
+            COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='cant_go'),0) AS event_cantgo,
+            (SELECT status FROM event_rsvps WHERE event_id=e.id AND user_id=${userId||null}) AS event_user_rsvp,
+            (SELECT COUNT(*)::int FROM group_post_likes WHERE post_id=gp.id) AS like_count,
+            EXISTS(SELECT 1 FROM group_post_likes WHERE post_id=gp.id AND user_id=${userId}) AS you_liked,
+            (SELECT COUNT(*)::int FROM group_post_comments WHERE post_id=gp.id) AS comment_count
+          FROM group_posts gp JOIN users u ON gp.author_id = u.id
+          LEFT JOIN events e ON gp.event_id = e.id
+          WHERE gp.group_id=${g.id} AND gp.author_id <> ALL(${blockedGP}::uuid[]) ORDER BY gp.pinned DESC, gp.created_at DESC LIMIT 50
+        `
+      : await sql`
+          SELECT gp.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials,
+            e.title AS event_title, e.description AS event_description, e.location AS event_location,
+            e.event_date, e.event_time, e.end_time, e.category AS event_category, e.image_url AS event_image_url, e.cancelled AS event_cancelled,
+            COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='going'),0)   AS event_going,
+            COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='maybe'),0)  AS event_maybe,
+            COALESCE((SELECT COUNT(*)::int FROM event_rsvps WHERE event_id=e.id AND status='cant_go'),0) AS event_cantgo,
+            (SELECT status FROM event_rsvps WHERE event_id=e.id AND user_id=${userId||null}) AS event_user_rsvp,
+            (SELECT COUNT(*)::int FROM group_post_likes WHERE post_id=gp.id) AS like_count,
+            EXISTS(SELECT 1 FROM group_post_likes WHERE post_id=gp.id AND user_id=${userId}) AS you_liked,
+            (SELECT COUNT(*)::int FROM group_post_comments WHERE post_id=gp.id) AS comment_count
+          FROM group_posts gp JOIN users u ON gp.author_id = u.id
+          LEFT JOIN events e ON gp.event_id = e.id
+          WHERE gp.group_id=${g.id} ORDER BY gp.pinned DESC, gp.created_at DESC LIMIT 50
+        `;
 
     const isCreator = userId && g.created_by_user_id === userId;
     let joinRequests = undefined;
@@ -2906,6 +3470,15 @@ app.post('/api/groups/:id/posts', requireAuth(async (req, res) => {
       sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
           VALUES (${m.user_id}, ${isEvent ? 'group_event' : 'group_post'}, ${msg}, ${u.avatar_hex}, ${u.initials}, ${post.id})`
     ));
+    const pushCategory = isEvent ? 'events' : 'groups';
+    const pushTitle = isEvent ? `New event in ${g.name}` : `New post in ${g.name}`;
+    for (const m of members) {
+      pushIfEnabled(m.user_id, pushCategory, {
+        title: pushTitle,
+        body: isEvent ? eventTitle.slice(0, 180) : (content || pollQuestion || '').slice(0, 180),
+        data: { type: isEvent ? 'group_event' : 'group_post', groupId: g.id, postId: post.id }
+      }).catch(() => {});
+    }
   }
 
   res.json({
@@ -2953,9 +3526,9 @@ app.post('/api/groups/:id/posts/:postId/poll-vote', requireAuth(async (req, res)
 
 app.delete('/api/groups/:id/posts/:postId', requireAuth(async (req, res) => {
   const [g] = await sql`SELECT id, created_by_user_id FROM groups WHERE id=${req.params.id}`;
-  const [post] = await sql`SELECT user_id FROM group_posts WHERE id=${req.params.postId}`;
+  const [post] = await sql`SELECT author_id FROM group_posts WHERE id=${req.params.postId}`;
   const u = req.currentUser;
-  const isPostAuthor = post?.user_id === u.id;
+  const isPostAuthor = post?.author_id === u.id;
   const isGroupAdmin = g?.created_by_user_id === u.id || u.role === 'admin';
   if (!isPostAuthor && !isGroupAdmin) return res.status(403).json({ error: 'Not authorized' });
   await sql`DELETE FROM group_posts WHERE id=${req.params.postId} AND group_id=${req.params.id}`;
@@ -2989,11 +3562,18 @@ app.post('/api/group-posts/:postId/like', requireAuth(async (req, res) => {
 
 app.get('/api/group-posts/:postId/comments', requireAuth(async (req, res) => {
   await ensureGroupPostInteractionTables();
-  const rows = await sql`
-    SELECT c.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials
-    FROM group_post_comments c JOIN users u ON c.author_id = u.id
-    WHERE c.post_id=${req.params.postId} ORDER BY c.created_at ASC
-  `;
+  const blocked = await getBlockedAuthorIds(req.currentUser.id);
+  const rows = blocked.length
+    ? await sql`
+        SELECT c.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials
+        FROM group_post_comments c JOIN users u ON c.author_id = u.id
+        WHERE c.post_id=${req.params.postId} AND c.author_id <> ALL(${blocked}::uuid[]) ORDER BY c.created_at ASC
+      `
+    : await sql`
+        SELECT c.*, u.username, u.name, u.avatar_hex, u.avatar_url, u.initials
+        FROM group_post_comments c JOIN users u ON c.author_id = u.id
+        WHERE c.post_id=${req.params.postId} ORDER BY c.created_at ASC
+      `;
   res.json(rows.map(r => ({
     id: r.id, content: r.content, createdAt: r.created_at,
     author: { id: r.author_id, username: r.username, name: r.name, avatar: r.avatar_hex, avatarUrl: r.avatar_url, initials: r.initials },
@@ -3013,6 +3593,12 @@ app.post('/api/group-posts/:postId/comments', requireAuth(async (req, res) => {
   if (p.author_id !== userId) {
     await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id) VALUES (${p.author_id}, 'group_comment', ${`${req.currentUser.name} commented on your post`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials}, ${req.params.postId})`;
   }
+  await notifyMentions({
+    text: content,
+    actor: req.currentUser,
+    postId: req.params.postId,
+    excludeIds: [p.author_id]
+  });
   res.json({
     id: c.id, content: c.content, createdAt: c.created_at,
     author: { id: userId, username: req.currentUser.username, name: req.currentUser.name, avatar: req.currentUser.avatar_hex, avatarUrl: req.currentUser.avatar_url, initials: req.currentUser.initials },
@@ -3045,9 +3631,15 @@ app.post('/api/notifications/read', requireAuth(async (req, res) => {
 app.get('/api/neighbors', async (req, res) => {
   try {
     const me = await getUser(req);
-    const rows = me
-      ? await sql`SELECT id, username, name, email, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, email_verified FROM users WHERE role IN ('neighbor','realtor') AND id != ${me.id} ORDER BY created_at DESC`
-      : await sql`SELECT id, username, name, email, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, email_verified FROM users WHERE role IN ('neighbor','realtor') ORDER BY created_at DESC`;
+    const blocked = await getBlockedAuthorIds(me?.id);
+    let rows;
+    if (me && blocked.length) {
+      rows = await sql`SELECT id, username, name, email, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, email_verified FROM users WHERE role IN ('neighbor','realtor') AND id != ${me.id} AND id <> ALL(${blocked}::uuid[]) ORDER BY created_at DESC`;
+    } else if (me) {
+      rows = await sql`SELECT id, username, name, email, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, email_verified FROM users WHERE role IN ('neighbor','realtor') AND id != ${me.id} ORDER BY created_at DESC`;
+    } else {
+      rows = await sql`SELECT id, username, name, email, avatar_hex, avatar_url, initials, verified, years_in_neighborhood, address, email_verified FROM users WHERE role IN ('neighbor','realtor') ORDER BY created_at DESC`;
+    }
     res.json(rows.map(u => ({ id: u.id, username: u.username, name: u.name, email: u.email, avatar: u.avatar_hex, avatarUrl: u.avatar_url, initials: u.initials, verified: u.verified, yearsInNeighborhood: u.years_in_neighborhood, address: u.address, emailVerified: u.email_verified })));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
@@ -3173,6 +3765,11 @@ app.post('/api/conversations/:id/messages', requireAuth(async (req, res) => {
   const [msg] = await sql`INSERT INTO direct_messages (conversation_id, sender_id, content) VALUES (${req.params.id}, ${userId}, ${content.trim()}) RETURNING *`;
   await sql`UPDATE conversations SET last_message_at = NOW(), hidden_for_user1 = FALSE, hidden_for_user2 = FALSE WHERE id=${req.params.id}`;
   await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id) VALUES (${partnerId}, 'message', ${`${req.currentUser.name} sent you a message`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials}, ${req.params.id})`;
+  pushIfEnabled(partnerId, 'messages', {
+    title: req.currentUser.name,
+    body: content.trim().slice(0, 180),
+    data: { type: 'message', conversationId: req.params.id }
+  }).catch(() => {});
   res.json({ id: msg.id, senderId: msg.sender_id, content: msg.content, read: msg.read, createdAt: msg.created_at });
 }));
 
@@ -3413,6 +4010,7 @@ app.get('/api/community-stats', async (req, res) => {
 // Accurate to ~15-20 min for Playa Farallón (same Pacific coast, ~100km west)
 
 app.get('/api/tides', (req, res) => {
+  res.set('Cache-Control', 'no-store, max-age=0');
   // Balboa harmonic constituents: speed (°/hr), amplitude (m), phase lag g (°)
   const C = [
     { spd: 28.9841042, amp: 1.855, g: 188.0, V0: 136.48 }, // M2 principal lunar
@@ -3461,11 +4059,23 @@ app.get('/api/tides', (req, res) => {
     return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ap}`;
   };
 
-  const todayExtremes = extremes
-    .filter(e => e.ts >= start && e.ts < start + 24 * 3_600_000)
-    .map(e => ({ type: e.type, time: fmt(e.ts), height: Math.max(0, e.ht).toFixed(1) + 'm' }));
+  // Return the upcoming + most-recent-past extremes around "now" so the widget
+  // always shows ~4 events even when the day's 4th tide spills into the next
+  // calendar day (a common occurrence on the Pacific coast).
+  const windowStart = now - 4 * 3_600_000;
+  const windowEnd   = now + 22 * 3_600_000;
+  const nextExtremes = extremes
+    .filter(e => e.ts >= windowStart && e.ts < windowEnd)
+    .slice(0, 5)
+    .map(e => ({
+      type: e.type,
+      time: fmt(e.ts),
+      height: Math.max(0, e.ht).toFixed(1) + 'm',
+      ts: e.ts,            // epoch ms; newer clients use this for past/future styling
+      upcoming: e.ts > now
+    }));
 
-  res.json(todayExtremes);
+  res.json(nextExtremes);
 });
 
 app.get('/api/version', (req, res) => res.json({ v: assetVersion('app.js') }));
@@ -3486,6 +4096,15 @@ app.get('/app.html',        serveWithCacheBust('app.html'));
 app.get('/business',        serveWithCacheBust('business.html'));
 app.get('/reset-password',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
 app.get('/verify-email',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'verify-email.html')));
+app.get('/support',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'support.html')));
+app.get('/support.html',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'support.html')));
+app.get('/privacy',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'privacy.html')));
+app.get('/privacy.html',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'privacy.html')));
+app.get('/terms',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'terms.html')));
+app.get('/child-safety',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'child-safety.html')));
+app.get('/child-safety.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'child-safety.html')));
+app.get('/terms.html',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'terms.html')));
+app.get('/delete-account',  (req, res) => res.redirect('/app?delete-account=1'));
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
@@ -3518,6 +4137,9 @@ async function runMigrations() {
     )`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_claim_business_id UUID`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS allow_messages BOOLEAN DEFAULT TRUE`;
+    // UGC safety (App Store guideline 1.2) — EULA acceptance + blocked_users table.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ`;
+    await ensureBlockedUsersTable();
     await sql`CREATE TABLE IF NOT EXISTS business_claim_codes (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
@@ -3526,6 +4148,30 @@ async function runMigrations() {
       expires_at TIMESTAMPTZ NOT NULL,
       used BOOLEAN DEFAULT false,
       created_at TIMESTAMPTZ DEFAULT NOW()
+    )`;
+    await sql`CREATE TABLE IF NOT EXISTS device_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token TEXT NOT NULL,
+      platform VARCHAR(10) NOT NULL DEFAULT 'ios',
+      bundle_id VARCHAR(255),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      last_seen_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE (user_id, token)
+    )`;
+    await sql`CREATE INDEX IF NOT EXISTS device_tokens_user_idx ON device_tokens(user_id)`;
+    await sql`CREATE TABLE IF NOT EXISTS notification_prefs (
+      user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      feed BOOLEAN DEFAULT TRUE,
+      safety BOOLEAN DEFAULT TRUE,
+      events BOOLEAN DEFAULT TRUE,
+      comments BOOLEAN DEFAULT FALSE,
+      groups BOOLEAN DEFAULT TRUE,
+      lost_found BOOLEAN DEFAULT TRUE,
+      marketplace BOOLEAN DEFAULT TRUE,
+      neighbors BOOLEAN DEFAULT TRUE,
+      messages BOOLEAN DEFAULT TRUE,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
     )`;
   } catch (e) { console.error('Migration error:', e.message); }
 }
@@ -3562,11 +4208,18 @@ app.post('/api/sections/:section/read', requireAuth(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// Kick off migrations at module init so they run under Vercel's serverless
+// invocation model (which never calls app.listen). Other code awaits
+// `migrationsReady` before issuing writes that depend on newly added columns.
+const migrationsReady = runMigrations();
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-  console.log(`Costa Blanca Connect running on http://localhost:${PORT}`);
-  await runMigrations();
-});
+if (require.main === module) {
+  app.listen(PORT, async () => {
+    console.log(`Costa Blanca Connect running on http://localhost:${PORT}`);
+    await migrationsReady;
+  });
+}
 
 app.get('/api/admin/run-migrations', requireAdmin(async (req, res) => {
   await runMigrations();
@@ -3574,3 +4227,4 @@ app.get('/api/admin/run-migrations', requireAdmin(async (req, res) => {
 }));
 
 module.exports = app;
+module.exports.migrationsReady = migrationsReady;

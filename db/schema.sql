@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
   business_id          UUID,
   contact_email        VARCHAR(255),
   contact_phone        VARCHAR(50),
+  terms_accepted_at    TIMESTAMPTZ,
   created_at           TIMESTAMPTZ  DEFAULT NOW(),
   updated_at           TIMESTAMPTZ  DEFAULT NOW()
 );
@@ -311,6 +312,15 @@ CREATE TABLE IF NOT EXISTS reports (
 );
 
 -- ─── Moderation ───────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS blocked_users (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  blocked_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at      TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, blocked_user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_blocked_users_user ON blocked_users(user_id);
 
 CREATE TABLE IF NOT EXISTS banned_users (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),

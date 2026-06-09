@@ -748,7 +748,13 @@
               <input id="suConfirmPw" type="password" placeholder="Repeat password" />
             </div>
           </div>
-          <div style="font-size:11px;color:#a0aec0;margin-top:12px;line-height:1.5;">By signing up you agree to our <a href="#" onclick="closeLegal();openLegal('tos');return false;" style="color:#0077B6;">Member Agreement</a> and <a href="#" onclick="closeLegal();openLegal('privacy');return false;" style="color:#0077B6;">Privacy Policy</a>.</div>
+          <label style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;cursor:pointer;font-size:12.5px;color:#334155;line-height:1.5;">
+            <input id="suAgree" type="checkbox" style="margin-top:3px;width:16px;height:16px;flex-shrink:0;cursor:pointer;" />
+            <span>I am at least 18 years old and I agree to the
+              <a href="/terms" target="_blank" style="color:#0077B6;font-weight:600;">Terms of Use</a> and
+              <a href="/privacy" target="_blank" style="color:#0077B6;font-weight:600;">Privacy Policy</a>,
+              including the zero-tolerance policy for objectionable content and abusive behavior.</span>
+          </label>
         `;
       } else if (suStep === 3) {
         // Success
@@ -950,6 +956,8 @@
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showSuErr('Please enter a valid email address.'); return; }
         if (!password || password.length < 6) { showSuErr('Password must be at least 6 characters.'); return; }
         if (password !== confirm) { showSuErr('Passwords do not match.'); return; }
+        const agreed = document.getElementById('suAgree')?.checked;
+        if (!agreed) { showSuErr('You must agree to the Terms of Use and Privacy Policy to continue.'); return; }
 
         if (isBiz && !suClaimBizId) {
           const biz = document.getElementById('bizName')?.value.trim();
@@ -967,6 +975,7 @@
             businessName: document.getElementById('bizName')?.value.trim() || null,
             businessCategory: document.getElementById('bizCat')?.value || null,
             claimBusinessId: suClaimBizId || null,
+            agreedToTerms: true,
           };
           const res = await fetch('/api/auth/register', {
             method: 'POST',

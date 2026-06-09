@@ -67,8 +67,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     navigate('feed');
     showWelcomeIfNew();
   }
+  handlePushDeepLink();
   focusSharedPostFromUrl();
+  if (currentUser && new URLSearchParams(location.search).get('delete-account') === '1') {
+    navigate('settings');
+    setTimeout(openDeleteAccount, 350);
+  }
 });
+
+// Honor ?section=<name> and ?conversation=<id> on cold-start AND when the iOS
+// wrapper rewrites the URL after a push tap. focusSharedPostFromUrl() handles
+// ?post=<id> separately and runs after this so the post scroll fires once the
+// target section is mounted.
+function handlePushDeepLink() {
+  const params = new URLSearchParams(location.search);
+  const section = params.get('section');
+  const conversation = params.get('conversation');
+  if (conversation) {
+    activeConversationId = conversation;
+    navigate('messages');
+  } else if (section) {
+    navigate(section);
+  }
+  if (section || conversation) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('section');
+    url.searchParams.delete('conversation');
+    window.history.replaceState({}, '', url.toString());
+  }
+}
+
+// Called from the iOS wrapper when a notification tap arrives while the
+// WebView is already running (warm tap). Mirrors handlePushDeepLink so we
+// can route without a full page reload.
+window.handlePushRoute = function(section, postId, conversationId) {
+  if (conversationId) {
+    activeConversationId = conversationId;
+    navigate('messages');
+    return;
+  }
+  if (section) navigate(section);
+  if (postId) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('post', postId);
+    window.history.replaceState({}, '', url.toString());
+    setTimeout(() => focusSharedPostFromUrl(), 250);
+  }
+};
 
 function showWelcomeIfNew() {
   if (!currentUser) return;
@@ -302,11 +347,12 @@ async function loadTides() {
   if (!el) return;
   const tides = await fetchJSON('/api/tides');
   if (!tides) { el.innerHTML = '<div class="tide-loading">Unavailable</div>'; return; }
-  const now = new Date();
+  const nowMs = Date.now();
   const toMins = t => { const [time, ap] = t.split(' '); const [h, m] = time.split(':').map(Number); return ((h % 12) + (ap === 'PM' ? 12 : 0)) * 60 + m; };
-  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
   el.innerHTML = tides.map(t => {
-    const past = toMins(t.time) < nowMins;
+    // Prefer server-provided ts (handles tides crossing midnight); fall back to clock time.
+    const past = typeof t.ts === 'number' ? t.ts < nowMs : toMins(t.time) < nowMins;
     return `<div class="tide-row ${past ? 'tide-past' : ''}">
       <span class="tide-type">${t.type === 'High' ? '▲' : '▼'} ${t.type}</span>
       <span class="tide-time">${t.time}</span>
@@ -321,10 +367,88 @@ async function checkAuth() {
     if (!res.ok) { window.location.href = '/login'; return; }
     currentUser = await res.json();
     renderUserUI();
+    registerIosDeviceToken();
   } catch {
     window.location.href = '/login';
   }
 }
+
+// Send the APNs device token (injected by the iOS WebView wrapper) to the server
+// so we can push notifications to this user's phone.
+async function registerIosDeviceToken() {
+  const token = window.iosDeviceToken;
+  // Fire-and-forget diagnostic ping (no auth) so we can see in server logs
+  // whether the iOS bridge is reaching us, regardless of login state.
+  if (token) {
+    try {
+      fetch('/api/_diag/push-ping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, platform: 'ios', bundleId: window.iosBundleId || null })
+      });
+    } catch {}
+  }
+  if (!token || !currentUser) return;
+  const sent = sessionStorage.getItem('iosTokenSent');
+  if (sent === token) return; // already registered this session
+  try {
+    const res = await fetch('/api/devices/register', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, platform: 'ios', bundleId: window.iosBundleId || null })
+    });
+    if (res.ok) sessionStorage.setItem('iosTokenSent', token);
+  } catch {}
+}
+
+// If the native side injects the token after the page has loaded, catch it then too.
+window.addEventListener('iosDeviceTokenReady', () => { registerIosDeviceToken(); });
+window.onIosDeviceToken = () => { registerIosDeviceToken(); };
+
+// Notification preferences — load on Settings render, save on toggle change.
+let _notifPrefsCache = null;
+async function loadNotifPrefs() {
+  try {
+    const res = await fetch('/api/notification-prefs', { credentials: 'include' });
+    if (!res.ok) return;
+    _notifPrefsCache = await res.json();
+    document.querySelectorAll('input[data-pref]').forEach(el => {
+      const key = el.dataset.pref;
+      el.checked = _notifPrefsCache[key] !== false;
+    });
+  } catch {}
+}
+async function saveNotifPref(input) {
+  if (!_notifPrefsCache) _notifPrefsCache = {};
+  _notifPrefsCache[input.dataset.pref] = !!input.checked;
+  try {
+    await fetch('/api/notification-prefs', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(_notifPrefsCache)
+    });
+    if (typeof showToast === 'function') showToast('Saved');
+  } catch {
+    if (typeof showToast === 'function') showToast('Could not save');
+  }
+}
+
+// Defensive: poll briefly for the token in case the inject fires before this
+// script is attached or before currentUser is set after login.
+(function pollForIosToken() {
+  let tries = 0;
+  const id = setInterval(() => {
+    tries++;
+    if (window.iosDeviceToken && currentUser) {
+      registerIosDeviceToken();
+      clearInterval(id);
+    } else if (tries > 20) {
+      clearInterval(id); // 20 × 500ms = 10s ceiling
+    }
+  }, 500);
+})();
 
 async function refreshPoints() {
   try {
@@ -951,6 +1075,7 @@ function openSafetyReportModal() {
         <div style="font-size:11.5px;color:#7F1D1D;line-height:1.45;">This reaches neighbors only — not police/fire/medical. For true emergencies, call emergency officials.</div>
       </div>
       <p style="font-size:13px;color:var(--text-mid);margin:0 0 14px;">Select a category to report:</p>
+
       <div style="display:flex;align-items:baseline;gap:8px;margin:0 0 8px;">
         <span style="font-size:11px;font-weight:800;color:#DC2626;letter-spacing:0.5px;">🚨 SECURITY ALERT</span>
         <span style="font-size:10.5px;color:var(--text-light);">— urgent alert tone</span>
@@ -1859,35 +1984,39 @@ function renderSettings(container) {
       <div class="settings-group-title">Notifications</div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">New Posts in Feed</div><div class="settings-row-sub">Get notified of new neighborhood posts</div></div>
-        <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
+        <label class="toggle-switch"><input type="checkbox" data-pref="feed" onchange="saveNotifPref(this)"><span class="toggle-slider"></span></label>
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Safety Alerts</div><div class="settings-row-sub">Urgent alerts near Costa Blanca Villas</div></div>
-        <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
+        <label class="toggle-switch"><input type="checkbox" data-pref="safety" onchange="saveNotifPref(this)"><span class="toggle-slider"></span></label>
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Event Reminders</div><div class="settings-row-sub">Reminders before events you're attending</div></div>
-        <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
+        <label class="toggle-switch"><input type="checkbox" data-pref="events" onchange="saveNotifPref(this)"><span class="toggle-slider"></span></label>
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Comments & Reactions</div><div class="settings-row-sub">When someone reacts to your posts</div></div>
-        <label class="toggle-switch"><input type="checkbox" onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
+        <label class="toggle-switch"><input type="checkbox" data-pref="comments" onchange="saveNotifPref(this)"><span class="toggle-slider"></span></label>
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Group Activity</div><div class="settings-row-sub">New posts in groups you've joined</div></div>
-        <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
+        <label class="toggle-switch"><input type="checkbox" data-pref="groups" onchange="saveNotifPref(this)"><span class="toggle-slider"></span></label>
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Lost & Found</div><div class="settings-row-sub">New lost & found posts in the community</div></div>
-        <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
+        <label class="toggle-switch"><input type="checkbox" data-pref="lost_found" onchange="saveNotifPref(this)"><span class="toggle-slider"></span></label>
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Marketplace</div><div class="settings-row-sub">New items listed in the marketplace</div></div>
-        <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
+        <label class="toggle-switch"><input type="checkbox" data-pref="marketplace" onchange="saveNotifPref(this)"><span class="toggle-slider"></span></label>
       </div>
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">New Neighbors</div><div class="settings-row-sub">When someone new joins the community</div></div>
-        <label class="toggle-switch"><input type="checkbox" checked onchange="showToast('Saved')"><span class="toggle-slider"></span></label>
+        <label class="toggle-switch"><input type="checkbox" data-pref="neighbors" onchange="saveNotifPref(this)"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info"><div class="settings-row-label">Direct Messages</div><div class="settings-row-sub">When someone sends you a private message</div></div>
+        <label class="toggle-switch"><input type="checkbox" data-pref="messages" onchange="saveNotifPref(this)"><span class="toggle-slider"></span></label>
       </div>
     </div>
 
@@ -1900,6 +2029,22 @@ function renderSettings(container) {
       <div class="settings-row">
         <div class="settings-row-info"><div class="settings-row-label">Receive Direct Messages</div><div class="settings-row-sub">Allow neighbors to send you private messages</div></div>
         <label class="toggle-switch"><input type="checkbox" id="allowMessagesToggle" ${u.allowMessages !== false ? 'checked' : ''} onchange="toggleAllowMessages(this.checked)"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info"><div class="settings-row-label">Blocked Users</div><div class="settings-row-sub">People you've blocked — they can't see your posts, comments, or messages, and their content is hidden from your feed.</div></div>
+        <button class="settings-btn" onclick="openBlockedList()">Manage</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Legal</div>
+      <div class="settings-row">
+        <div class="settings-row-info"><div class="settings-row-label">Terms of Use (EULA)</div><div class="settings-row-sub">The agreement you accepted when you signed up</div></div>
+        <button class="settings-btn" onclick="window.open('/terms','_blank')">View</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info"><div class="settings-row-label">Privacy Policy</div><div class="settings-row-sub">How we collect, use, and protect your data</div></div>
+        <button class="settings-btn" onclick="window.open('/privacy','_blank')">View</button>
       </div>
     </div>
 
@@ -1920,6 +2065,7 @@ function renderSettings(container) {
     </div>
   `;
   lucide.createIcons();
+  loadNotifPrefs();
 }
 
 function openDeleteAccount() {
@@ -2148,6 +2294,7 @@ function buildPostCard(post) {
           Share
         </button>
         ${(currentUser && (post.author?.id === currentUser.id || currentUser.role === 'admin')) ? `<button onclick="deletePost('${post.id}')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-light);font-size:12px;padding:4px 8px;border-radius:6px;" title="Delete post">🗑</button>` : ''}
+        ${(currentUser && post.author?.id && post.author.id !== currentUser.id) ? `<button onclick="openModerationMenu('post','${post.id}','${(post.author.username||'').replace(/'/g,"\\'")}','${(post.author.name||'').replace(/'/g,"\\'")}')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-light);font-size:18px;line-height:1;padding:4px 10px;border-radius:6px;" title="Report or block">⋯</button>` : ''}
       </div>
     </div>
 
@@ -2400,12 +2547,17 @@ async function toggleComments(postId, triggerEl) {
       <div class="avatar-comment" style="background:${currentUser?.avatar || '#0077B6'};width:30px;height:30px;flex-shrink:0;overflow:hidden;">
         ${currentUser?.avatarUrl ? `<img src="${currentUser.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (currentUser?.initials || 'ME')}
       </div>
-      <input type="text" class="comment-input" placeholder="Add a comment..." id="comment-input-${postId}" onkeydown="commentKeydown(event,'${postId}')" />
+      <input type="text" class="comment-input" placeholder="Add a comment..." id="comment-input-${postId}" oninput="updateMentionPreview(this,'mp-${postId}')" onkeydown="commentKeydown(event,'${postId}')" />
       <button class="comment-submit" onclick="submitComment('${postId}')">
         <i data-lucide="send" style="width:14px;height:14px"></i>
       </button>
     `;
     inner.appendChild(inputRow);
+    const mp = document.createElement('div');
+    mp.id = `mp-${postId}`;
+    mp.className = 'mention-preview';
+    mp.style.display = 'none';
+    inner.appendChild(mp);
     lucide.createIcons();
   } catch {
     const inner = document.getElementById(`comments-inner-${postId}`);
@@ -2469,13 +2621,14 @@ function buildCommentEl(c, postId) {
           ${isPostAuthor ? '<span class="comment-author-badge">Author</span>' : ''}
           ${isMine && !isPostAuthor ? '<span class="comment-author-badge" style="background:#64748b;">You</span>' : ''}
         </div>
-        <div class="comment-text">${escHtml(c.content)}</div>
+        <div class="comment-text">${escWithMentions(c.content)}</div>
       </div>
       <div class="comment-meta-row">
         <span class="comment-meta-time">${relativeTime(c.createdAt)}</span>
         ${currentUser ? `<button class="comment-meta-action comment-like-btn${c.youLiked ? ' liked' : ''}" data-comment-id="${c.id}" onclick="toggleCommentLike('${c.id}', this)" style="${c.youLiked ? 'color:var(--ocean);font-weight:700;' : ''}">👍 <span class="comment-like-count">${c.likeCount || 0}</span></button>` : `<span class="comment-meta-action">👍 ${c.likeCount || 0}</span>`}
         ${currentUser ? `<button class="comment-meta-action" onclick="replyToComment('${postId}','${username}')">Reply</button>` : ''}
         ${canDelete ? `<button class="comment-meta-action danger" onclick="deleteComment('${postId}','${c.id}')">Delete</button>` : ''}
+        ${currentUser && !isMine ? `<button class="comment-meta-action" onclick="openModerationMenu('comment','${c.id}','${username}','${(c.author?.name||'').replace(/'/g,"\\'")}')">Report</button>` : ''}
       </div>
     </div>
   `;
@@ -2519,7 +2672,7 @@ function renderGroupPostComments(postId, comments) {
             <span style="font-size:10.5px;color:var(--text-light);">${relativeTime(c.createdAt)}</span>
             ${canDel ? `<button onclick="deleteGroupPostComment('${postId}','${c.id}')" style="margin-left:auto;background:none;border:none;color:var(--coral);font-size:11px;cursor:pointer;font-family:inherit;">Delete</button>` : ''}
           </div>
-          <div style="font-size:13px;color:var(--text-mid);line-height:1.5;">${escHtml(c.content)}</div>
+          <div style="font-size:13px;color:var(--text-mid);line-height:1.5;">${escWithMentions(c.content)}</div>
         </div>
       </div>`;
   }).join('');
@@ -2527,7 +2680,7 @@ function renderGroupPostComments(postId, comments) {
     ${list}
     ${currentUser ? `
       <div style="display:flex;gap:8px;margin-top:8px;">
-        <input id="gpc-input-${postId}" type="text" placeholder="Write a comment…" onkeydown="if(event.key==='Enter')postGroupPostComment('${postId}')" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:20px;font-size:13px;font-family:inherit;outline:none;" />
+        <input id="gpc-input-${postId}" type="text" placeholder="Write a comment…" oninput="updateMentionPreview(this,'gpc-mp-${postId}')" onkeydown="if(event.key==='Enter')postGroupPostComment('${postId}')" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:20px;font-size:13px;font-family:inherit;outline:none;" /><div id="gpc-mp-${postId}" class="mention-preview" style="display:none;flex-basis:100%;"></div>
         <button onclick="postGroupPostComment('${postId}')" style="padding:8px 14px;background:var(--ocean);color:white;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Send</button>
       </div>
     ` : ''}
@@ -2556,7 +2709,7 @@ async function postGroupPostComment(postId) {
 }
 
 async function deleteGroupPostComment(postId, commentId) {
-  if (!confirm('Delete this comment?')) return;
+  if (!(await appConfirm('Delete this comment?'))) return;
   const res = await fetch(`/api/group-posts/${postId}/comments/${commentId}`, { method: 'DELETE', credentials: 'include' });
   if (!res.ok) { showToast('Could not delete'); return; }
   document.getElementById(`gpc-${commentId}`)?.remove();
@@ -2588,7 +2741,7 @@ function replyToComment(postId, username) {
 }
 
 async function deletePost(postId) {
-  if (!confirm('Delete this post?')) return;
+  if (!(await appConfirm('Delete this post?'))) return;
   const res = await fetch(`/api/posts/${postId}`, { method: 'DELETE', credentials: 'include' });
   if (res.ok) {
     document.getElementById(`post-${postId}`)?.remove();
@@ -2597,10 +2750,120 @@ async function deletePost(postId) {
 }
 
 async function deleteComment(postId, commentId) {
-  if (!confirm('Delete this comment?')) return;
+  if (!(await appConfirm('Delete this comment?'))) return;
   const res = await fetch(`/api/posts/${postId}/comments/${commentId}`, { method: 'DELETE', credentials: 'include' });
   if (res.ok) { document.getElementById(`comment-${commentId}`)?.remove(); showToast('Comment deleted.'); }
   else showToast('Could not delete comment.');
+}
+
+// ─── Moderation: Report / Block (UGC safety, Apple guideline 1.2) ─────────────
+function openModerationMenu(kind, targetId, authorUsername, authorName) {
+  if (!currentUser) { showToast('Please sign in.'); return; }
+  const safeName = (authorName || authorUsername || 'this user').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
+  const sheet = document.createElement('div');
+  sheet.id = 'mod-sheet';
+  sheet.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+  sheet.onclick = e => { if (e.target === sheet) sheet.remove(); };
+  const headerByKind = { post: `Post by ${safeName}`, comment: `Comment by ${safeName}`, member: safeName };
+  const showReportContent = kind === 'post' || kind === 'comment';
+  sheet.innerHTML = `
+    <div style="background:#fff;width:100%;max-width:480px;border-radius:16px 16px 0 0;padding:16px 18px 28px;box-shadow:0 -8px 32px rgba(0,0,0,0.18);">
+      <div style="width:42px;height:4px;background:#cbd5e1;border-radius:2px;margin:0 auto 14px;"></div>
+      <div style="font-weight:700;font-size:15px;color:#0f172a;margin-bottom:4px;">${headerByKind[kind] || safeName}</div>
+      <div style="font-size:13px;color:#64748b;margin-bottom:18px;">Help keep the community safe. Reports are reviewed by our moderation team within 24 hours.</div>
+      ${showReportContent ? `
+      <button onclick="submitReport('${kind}','${targetId}')" style="display:block;width:100%;padding:14px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;font-size:14.5px;font-weight:600;color:#92400e;cursor:pointer;margin-bottom:10px;text-align:left;">
+        🚩 Report this ${kind}
+        <div style="font-size:12px;font-weight:500;color:#92400e;opacity:0.85;margin-top:2px;">Flag as inappropriate, abusive, spam, or harmful.</div>
+      </button>` : ''}
+      ${authorUsername ? `
+      <button onclick="submitBlock('${authorUsername}','${safeName.replace(/'/g,"\\'")}')" style="display:block;width:100%;padding:14px;background:#FEE2E2;border:1px solid #EF4444;border-radius:10px;font-size:14.5px;font-weight:600;color:#991B1B;cursor:pointer;margin-bottom:10px;text-align:left;">
+        🚫 Block ${safeName}
+        <div style="font-size:12px;font-weight:500;color:#991B1B;opacity:0.85;margin-top:2px;">Removes their posts, comments, listings, and messages from your feed instantly.</div>
+      </button>` : ''}
+      <button onclick="document.getElementById('mod-sheet').remove()" style="display:block;width:100%;padding:12px;background:transparent;border:none;font-size:14px;color:#64748b;cursor:pointer;margin-top:6px;">Cancel</button>
+    </div>
+  `;
+  document.body.appendChild(sheet);
+}
+
+async function submitReport(kind, targetId) {
+  document.getElementById('mod-sheet')?.remove();
+  const reason = prompt('Why are you reporting this? (e.g. harassment, spam, sexual content, hate speech)');
+  if (!reason || !reason.trim()) return;
+  const url = kind === 'comment' ? `/api/comments/${targetId}/report` : `/api/posts/${targetId}/report`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: reason.trim() }),
+    });
+    if (res.ok) showToast('Thanks — our team will review this within 24 hours.');
+    else showToast('Could not submit report. Please try again.');
+  } catch { showToast('Could not submit report. Please try again.'); }
+}
+
+async function submitBlock(username, displayName) {
+  document.getElementById('mod-sheet')?.remove();
+  if (!(await appConfirm(`Block ${displayName}? You won't see their posts, comments, or messages anywhere in the app, and they can't message you. You can unblock them in Settings.`))) return;
+  try {
+    const res = await fetch(`/api/users/${encodeURIComponent(username)}/block`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Blocked from in-app moderation menu' }),
+    });
+    if (res.ok) {
+      showToast(`${displayName} has been blocked.`);
+      if (typeof loadFeed === 'function') setTimeout(() => loadFeed(), 250);
+      else setTimeout(() => location.reload(), 600);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      showToast(data.error || 'Could not block. Please try again.');
+    }
+  } catch { showToast('Could not block. Please try again.'); }
+}
+
+async function openBlockedList() {
+  try {
+    const res = await fetch('/api/users/blocked', { credentials: 'include' });
+    const list = await res.json();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+    const rowsHtml = list.length
+      ? list.map(b => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #e5e7eb;">
+          <div style="width:38px;height:38px;border-radius:50%;background:${b.avatar || '#0077B6'};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0;">${b.initials || '??'}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:14px;color:#0f172a;">${(b.name||b.username||'').replace(/[<>&]/g,'')}</div>
+            <div style="font-size:12px;color:#64748b;">@${(b.username||'').replace(/[<>&]/g,'')}</div>
+          </div>
+          <button onclick="unblockUser('${b.username}',this)" style="background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;color:#334155;cursor:pointer;">Unblock</button>
+        </div>`).join('')
+      : '<div style="text-align:center;color:#64748b;padding:24px 0;font-size:14px;">You haven\'t blocked anyone.</div>';
+    overlay.innerHTML = `
+      <div style="background:#fff;width:100%;max-width:480px;border-radius:14px;padding:20px 22px;max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <h3 style="font-size:18px;font-weight:800;color:#0f172a;">Blocked users</h3>
+          <button onclick="this.closest('div[style*=\\'inset\\']').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#64748b;">✕</button>
+        </div>
+        <p style="font-size:13px;color:#64748b;margin-bottom:12px;">Blocked users can't see your posts, can't message you, and don't appear anywhere in your app.</p>
+        ${rowsHtml}
+      </div>`;
+    document.body.appendChild(overlay);
+  } catch { showToast('Could not load your block list.'); }
+}
+
+async function unblockUser(username, btn) {
+  if (!(await appConfirm(`Unblock @${username}?`))) return;
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const res = await fetch(`/api/users/${encodeURIComponent(username)}/unblock`, { method: 'POST', credentials: 'include' });
+    if (res.ok) {
+      btn.closest('div[style*="display:flex"]')?.remove();
+      showToast('Unblocked.');
+    } else showToast('Could not unblock.');
+  } catch { showToast('Could not unblock.'); btn.disabled = false; btn.textContent = 'Unblock'; }
 }
 
 // ─── Marketplace Card ────────────────────────────────────────────
@@ -2711,7 +2974,7 @@ function contactSeller(encodedData) {
 }
 
 async function deleteMarketItem(id) {
-  if (!confirm('Delete this listing? This cannot be undone.')) return;
+  if (!(await appConfirm('Delete this listing? This cannot be undone.'))) return;
   const res = await fetch(`/api/marketplace/${id}`, { method: 'DELETE', credentials: 'include' });
   if (res.ok) {
     _marketFilter = 'All';
@@ -2798,14 +3061,14 @@ async function markMarketSold(id) {
 }
 
 async function cancelEvent(id) {
-  if (!confirm('Mark this event as CANCELLED?')) return;
+  if (!(await appConfirm('Mark this event as CANCELLED?'))) return;
   const res = await fetch(`/api/events/${id}/cancel`, { method: 'PATCH', credentials: 'include' });
   if (res.ok) { showToast('Event marked as cancelled.'); navigate('events'); loadSidebarWidgets(); }
   else showToast('Could not cancel event.');
 }
 
 async function deleteEvent(id) {
-  if (!confirm('Permanently delete this event?')) return;
+  if (!(await appConfirm('Permanently delete this event?'))) return;
   const res = await fetch(`/api/events/${id}`, { method: 'DELETE', credentials: 'include' });
   if (res.ok) { showToast('Event deleted.'); navigate('events'); loadSidebarWidgets(); }
   else { const d = await res.json().catch(() => ({})); showToast('Error: ' + (d.error || res.status)); }
@@ -3690,7 +3953,10 @@ function buildNeighborCard(neighbor) {
     <div class="neighbor-years">
       ${yearsText} in Costa Blanca Villas
     </div>
-    <button class="btn-wave-neighbor" onclick="startConversation('${neighbor.username}')">💬 Message</button>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="btn-wave-neighbor" style="flex:1" onclick="startConversation('${neighbor.username}')">💬 Message</button>
+      <button onclick="openModerationMenu('member','${neighbor.id||''}','${(neighbor.username||'').replace(/'/g,"\\'")}','${(neighbor.name||'').replace(/'/g,"\\'")}')" title="Report or block" style="background:#f1f5f9;border:none;border-radius:50%;width:34px;height:34px;font-size:18px;line-height:1;color:#64748b;cursor:pointer;">⋯</button>
+    </div>
   `;
   return card;
 }
@@ -3745,7 +4011,10 @@ async function renderMessages(container) {
   if (activeConversationId) {
     const conv = conversations.find(c => c.id === activeConversationId);
     if (conv) openConversationPanel(conv.id, conv.partner, layout, conv.youBlockedThem);
-  } else if (conversations.length) {
+  } else if (conversations.length && window.innerWidth >= 900) {
+    // Only auto-open on desktop where list + chat are side-by-side. On mobile
+    // the stacked layout would hide the list and drop the user into the first
+    // (often empty) conversation, which feels broken.
     openConversationPanel(conversations[0].id, conversations[0].partner, layout, conversations[0].youBlockedThem);
   }
 }
@@ -3805,7 +4074,7 @@ async function openConversationPanel(convId, partner, layout, youBlockedThem) {
 }
 
 async function blockAndReport(convId, partnerName, btn) {
-  if (!confirm(`Block ${partnerName}? They won't be able to message you and a report will be filed automatically.`)) return;
+  if (!(await appConfirm(`Block ${partnerName}? They won't be able to message you and a report will be filed automatically.`))) return;
   btn.disabled = true; btn.textContent = 'Blocking…';
   const res = await fetch(`/api/conversations/${convId}/block`, { method: 'POST', credentials: 'include' });
   if (res.ok) {
@@ -3821,7 +4090,7 @@ async function removeConversation(convId, partnerName, hasMessages) {
   const msg = hasMessages
     ? `Remove conversation with ${partnerName}? It will be hidden from your inbox. ${partnerName} keeps their copy. If either of you sends a new message, it reappears.`
     : `Remove this empty conversation with ${partnerName}?`;
-  if (!confirm(msg)) return;
+  if (!(await appConfirm(msg))) return;
   const res = await fetch(`/api/conversations/${convId}`, { method: 'DELETE', credentials: 'include' });
   if (res.ok) {
     if (activeConversationId === convId) activeConversationId = null;
@@ -4186,7 +4455,7 @@ async function renderGroupPage(groupId, container) {
               </div>
               <div style="display:flex;gap:6px;">
                 ${group.isAdmin || group.isCreator || group.isCoAdmin ? `<button onclick="${p.pinned ? `unpinGroupPost('${group.id}','${p.id}')` : `pinGroupPost('${group.id}','${p.id}')`}" title="${p.pinned ? 'Unpin' : 'Pin to top'}" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;">${p.pinned ? '📌 Unpin' : '📌 Pin'}</button>` : ''}
-                ${(group.isAdmin || group.isCreator || group.isCoAdmin || p.author?.username === currentUser?.username) ? `<button onclick="deleteGroupPost('${group.id}','${p.id}')" title="Delete" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--coral);">🗑️</button>` : ''}
+                ${(group.isAdmin || group.isCreator || group.isCoAdmin || (p.author?.id && p.author.id === currentUser?.id)) ? `<button onclick="deleteGroupPost('${group.id}','${p.id}')" title="Delete" style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--coral);">🗑️</button>` : ''}
               </div>
             </div>
             ${p.event ? buildGroupEventCard(p.event) : ''}
@@ -4436,13 +4705,13 @@ function toggleGroupMembers(groupId) {
 }
 
 async function removeGroupMember(groupId, username) {
-  if (!confirm(`Remove ${username} from this group?`)) return;
+  if (!(await appConfirm(`Remove ${username} from this group?`))) return;
   const res = await fetch(`/api/groups/${groupId}/members/${username}`, { method: 'DELETE', credentials: 'include' });
   if (res.ok) { await renderGroupPage(groupId, document.getElementById('sectionContent')); showToast('Member removed.'); }
 }
 
 async function promoteGroupCoAdmin(groupId, username) {
-  if (!confirm(`Make ${username} a co-admin? They'll be able to manage posts, members, and group settings — but not delete the group.`)) return;
+  if (!(await appConfirm(`Make ${username} a co-admin? They'll be able to manage posts, members, and group settings — but not delete the group.`))) return;
   const res = await fetch(`/api/groups/${groupId}/members/${username}/promote`, { method: 'POST', credentials: 'include' });
   if (res.ok) {
     await renderGroupPage(groupId, document.getElementById('sectionContent'));
@@ -4454,7 +4723,7 @@ async function promoteGroupCoAdmin(groupId, username) {
 }
 
 async function demoteGroupCoAdmin(groupId, username) {
-  if (!confirm(`Remove co-admin status from ${username}?`)) return;
+  if (!(await appConfirm(`Remove co-admin status from ${username}?`))) return;
   const res = await fetch(`/api/groups/${groupId}/members/${username}/demote`, { method: 'POST', credentials: 'include' });
   if (res.ok) {
     await renderGroupPage(groupId, document.getElementById('sectionContent'));
@@ -4637,16 +4906,20 @@ async function voteGroupPoll(groupId, postId, option) {
 }
 
 async function deleteGroupPost(groupId, postId) {
-  if (!confirm('Delete this post?')) return;
+  if (!(await appConfirm('Delete this post?'))) return;
   const res = await fetch(`/api/groups/${groupId}/posts/${postId}`, { method: 'DELETE', credentials: 'include' });
   if (res.ok) {
     await renderGroupPage(groupId, document.getElementById('sectionContent'));
     showToast('Post deleted.');
+  } else {
+    let msg = 'Could not delete post.';
+    try { const j = await res.json(); if (j?.error) msg = j.error; } catch {}
+    showToast(`${msg} (HTTP ${res.status})`);
   }
 }
 
 async function deleteGroup(groupId, cardEl, fromPage) {
-  if (!confirm('Delete this group? This cannot be undone.')) return;
+  if (!(await appConfirm('Delete this group? This cannot be undone.'))) return;
   const res = await fetch(`/api/groups/${groupId}`, { method: 'DELETE', credentials: 'include' });
   if (res.ok) {
     showToast('Group deleted.');
@@ -4729,7 +5002,7 @@ async function submitReport(targetType, targetId, targetLabel) {
 }
 
 async function adminDeletePost(postId) {
-  if (!confirm('Delete this post? This cannot be undone.')) return;
+  if (!(await appConfirm('Delete this post? This cannot be undone.'))) return;
   const res = await fetch(`/api/posts/${postId}`, { method: 'DELETE', credentials: 'include' });
   if (res.ok) {
     document.getElementById('post-' + postId)?.remove();
@@ -5523,12 +5796,12 @@ async function renderFirstResponders(container) {
             <div style="background:rgba(250,204,21,0.2);border:1px solid rgba(250,204,21,0.5);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
               <div style="font-size:13px;font-weight:800;margin-bottom:5px;">📋 Have a Game Plan Before You Need One</div>
               <p style="font-size:12px;line-height:1.6;opacity:.9;margin:0 0 10px;">Don't wait for an emergency to figure out your options. Call EMTS Panama today to discuss a personalized plan for you and your family — before a crisis happens.</p>
-              <a href="tel:+5076790-4807" style="display:block;text-align:center;padding:10px;background:white;color:#1d4ed8;border-radius:9px;font-size:13px;font-weight:800;text-decoration:none;">📞 Call Now to Make a Plan</a>
+              <a href="tel:+5076832-0241" style="display:block;text-align:center;padding:10px;background:white;color:#1d4ed8;border-radius:9px;font-size:13px;font-weight:800;text-decoration:none;">📞 Call Now to Make a Plan</a>
             </div>
 
             <!-- Call buttons -->
             <div style="display:flex;gap:8px;">
-              <a href="tel:+5076790-4807" style="flex:1;text-align:center;padding:12px;background:white;color:#1d4ed8;border-radius:11px;font-size:13.5px;font-weight:800;text-decoration:none;">📞 507 6790-4807</a>
+              <a href="tel:+5076832-0241" style="flex:1;text-align:center;padding:12px;background:white;color:#1d4ed8;border-radius:11px;font-size:13.5px;font-weight:800;text-decoration:none;">📞 507 6832-0241</a>
               <a href="https://www.instagram.com/emtspanama" target="_blank" style="flex:1;text-align:center;padding:12px;background:rgba(255,255,255,0.15);color:white;border-radius:11px;font-size:13.5px;font-weight:700;text-decoration:none;border:1.5px solid rgba(255,255,255,0.35);">📸 @emtspanama</a>
             </div>
           </div>
@@ -6140,7 +6413,7 @@ async function renderCartListings() {
 }
 
 async function deleteCart(id) {
-  if (!confirm('Remove this listing?')) return;
+  if (!(await appConfirm('Remove this listing?'))) return;
   const res = await fetch(`/api/transport/carts/${id}`, { method:'DELETE', credentials:'include' });
   if (res.ok) { await renderCartListings(); showToast('Listing removed.'); }
 }
@@ -6254,7 +6527,7 @@ async function renderTransportFares() {
 }
 
 async function deleteFare(id) {
-  if (!confirm('Remove this fare?')) return;
+  if (!(await appConfirm('Remove this fare?'))) return;
   const res = await fetch(`/api/transport/fares/${id}`, { method:'DELETE', credentials:'include' });
   if (res.ok) { await renderTransportFares(); showToast('Removed.'); }
 }
@@ -6342,10 +6615,13 @@ async function toggleMobileMenu() {
   if (tideEl && tideEl.textContent === 'Loading…') {
     const tides = await fetchJSON('/api/tides');
     if (tides) {
-      const now = new Date();
-      const nowMins = now.getHours() * 60 + now.getMinutes();
+      const nowMs = Date.now();
+      const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
       const toMins = t => { const [time, ap] = t.split(' '); const [h, m] = time.split(':').map(Number); return ((h % 12) + (ap === 'PM' ? 12 : 0)) * 60 + m; };
-      tideEl.innerHTML = tides.map(t => `<div style="display:flex;justify-content:space-between;padding:2px 0;opacity:${toMins(t.time) < nowMins ? 0.4 : 1}"><span>${t.type === 'High' ? '▲' : '▼'} ${t.type}</span><span>${t.time}</span><span>${t.height}</span></div>`).join('');
+      tideEl.innerHTML = tides.map(t => {
+        const past = typeof t.ts === 'number' ? t.ts < nowMs : toMins(t.time) < nowMins;
+        return `<div style="display:flex;justify-content:space-between;padding:2px 0;opacity:${past ? 0.4 : 1}"><span>${t.type === 'High' ? '▲' : '▼'} ${t.type}</span><span>${t.time}</span><span>${t.height}</span></div>`;
+      }).join('');
     } else { tideEl.textContent = 'Unavailable'; }
   }
 }
@@ -6711,6 +6987,61 @@ function relativeTime(isoString) {
   return new Date(isoString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+// Render @username / @FirstName tokens as a styled blue chip after escaping.
+// Use this only on already-escaped text (i.e., wrap escHtml output, or call
+// escWithMentions(raw) which escapes first then highlights).
+function highlightMentions(escapedText) {
+  if (!escapedText) return '';
+  return String(escapedText).replace(
+    /@([A-Za-z0-9._-]{2,32})/g,
+    '<span class="mention-tag">@$1</span>'
+  );
+}
+function escWithMentions(str) {
+  return highlightMentions(escHtml(str));
+}
+
+// ─── @-mention live preview ──────────────────────────────────────────────────
+// Caches the neighbors list once, then matches @tokens client-side so the user
+// sees a "Tagging: Maryam Saeedi" pill update as they type.
+let _mentionDirectory = null;
+async function getMentionDirectory() {
+  if (_mentionDirectory) return _mentionDirectory;
+  try {
+    const list = await fetchJSON('/api/neighbors') || [];
+    _mentionDirectory = list.map(n => ({
+      id: n.id,
+      username: (n.username || '').toLowerCase(),
+      name: n.name || '',
+      firstWord: ((n.name || '').split(/\s+/)[0] || '').toLowerCase()
+    }));
+  } catch { _mentionDirectory = []; }
+  return _mentionDirectory;
+}
+async function updateMentionPreview(inputEl, previewElId) {
+  const previewEl = document.getElementById(previewElId);
+  if (!previewEl) return;
+  const text = inputEl.value || '';
+  const tokens = Array.from(new Set(
+    (text.match(/@([A-Za-z0-9._-]{2,32})/g) || []).map(m => m.slice(1).toLowerCase())
+  ));
+  if (!tokens.length) { previewEl.style.display = 'none'; previewEl.innerHTML = ''; return; }
+  const dir = await getMentionDirectory();
+  const myUsername = (currentUser?.username || '').toLowerCase();
+  const myFirst = ((currentUser?.name || '').split(/\s+/)[0] || '').toLowerCase();
+  const chips = tokens.map(tok => {
+    if (tok === myUsername || tok === myFirst) {
+      return `<span class="mention-preview-chip miss">@${escHtml(tok)} (that's you)</span>`;
+    }
+    const matches = dir.filter(n => n.username === tok || n.firstWord === tok);
+    if (!matches.length) return `<span class="mention-preview-chip miss">@${escHtml(tok)} — no match</span>`;
+    if (matches.length === 1) return `<span class="mention-preview-chip ok">✓ Tagging ${escHtml(matches[0].name)}</span>`;
+    return `<span class="mention-preview-chip ok">✓ Tagging ${matches.length} people named ${escHtml(matches[0].name.split(' ')[0])}</span>`;
+  });
+  previewEl.innerHTML = chips.join(' ');
+  previewEl.style.display = 'flex';
+}
+
 function escHtml(str) {
   if (!str) return '';
   return String(str)
@@ -6719,6 +7050,38 @@ function escHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// HTML-based confirm modal. The iOS WKWebView wrapper does not implement
+// WKUIDelegate, so window.confirm() is silently suppressed (returns false
+// for every prompt). All destructive actions go through this helper instead.
+function appConfirm(message) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:100000;display:flex;align-items:center;justify-content:center;padding:24px;font-family:inherit;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#fff;border-radius:14px;max-width:340px;width:100%;padding:22px 22px 16px;box-shadow:0 12px 40px rgba(0,0,0,0.25);';
+    const msg = document.createElement('div');
+    msg.style.cssText = 'font-size:15px;line-height:1.4;color:var(--text-dark,#111);margin-bottom:18px;white-space:pre-wrap;';
+    msg.textContent = message || 'Are you sure?';
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;';
+    const cancel = document.createElement('button');
+    cancel.textContent = 'Cancel';
+    cancel.style.cssText = 'padding:9px 16px;background:#f1f5f9;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text-dark,#111);';
+    const ok = document.createElement('button');
+    ok.textContent = 'OK';
+    ok.style.cssText = 'padding:9px 18px;background:var(--coral,#dc2626);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;';
+    const close = (value) => { document.body.removeChild(overlay); resolve(value); };
+    cancel.onclick = () => close(false);
+    ok.onclick = () => close(true);
+    overlay.onclick = (e) => { if (e.target === overlay) close(false); };
+    btnRow.appendChild(cancel); btnRow.appendChild(ok);
+    box.appendChild(msg); box.appendChild(btnRow);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    setTimeout(() => ok.focus(), 0);
+  });
 }
 
 function capitalize(str) {
