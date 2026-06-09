@@ -35,12 +35,22 @@
     }
     function toggleLanguage() {
       const sel = document.querySelector('.goog-te-combo');
-      if (!sel) return;
+      if (!sel) {
+        alert('Translation widget is still loading — please try again in a few seconds.');
+        return;
+      }
       sel.value = sel.value === 'es' ? 'en' : 'es';
       sel.dispatchEvent(new Event('change'));
       try { localStorage.setItem('lang', sel.value); } catch(e){}
       const btn = document.getElementById('langToggleBtn');
       if (btn) btn.textContent = sel.value === 'es' ? '🌐 EN' : '🌐 ES';
+      updateMobileLangLabel();
+    }
+    function updateMobileLangLabel() {
+      const sel = document.querySelector('.goog-te-combo');
+      const label = document.getElementById('mmdLangLabel');
+      if (!label) return;
+      label.textContent = sel && sel.value === 'es' ? 'English' : 'Español';
     }
   </script>
   <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
@@ -50,6 +60,16 @@
       .mobile-bottom-nav { display: flex !important; }
       .app-body { padding-bottom: 70px !important; }
     }
+    /* Hide Google Translate's "Translated to:" banner and keep the page flush to the top. */
+    .goog-te-banner-frame.skiptranslate,
+    .goog-te-banner-frame,
+    .goog-te-gadget-icon,
+    .goog-tooltip,
+    .goog-tooltip:hover,
+    .goog-text-highlight,
+    iframe.skiptranslate { display: none !important; visibility: hidden !important; }
+    body { top: 0 !important; position: static !important; }
+    html { margin-top: 0 !important; }
   </style>
 </head>
 <body>
@@ -236,14 +256,22 @@
             <div class="ec-num">103</div>
           </div>
         </a>
-        <a href="tel:+5076790-4807" class="ec-row ec-private">
+        <div style="font-size:10px;color:#9AA5B4;padding:2px 4px 6px;font-style:italic;">ℹ️ 911 · 104 · 103 may require a local SIM</div>
+        <a href="https://wa.me/50768320241" target="_blank" rel="noopener" class="ec-row ec-private">
           <span class="ec-icon">🏥</span>
           <div class="ec-info">
-            <div class="ec-name">Buenaventura EMTS</div>
-            <div class="ec-num">507 6790-4807</div>
+            <div class="ec-name">Buenaventura EMTS <span style="display:inline-flex;align-items:center;gap:3px;background:#25D366;color:white;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;margin-left:4px;vertical-align:middle;">💬 WhatsApp</span></div>
+            <div class="ec-num">507 6832-0241</div>
           </div>
         </a>
         <div class="ec-divider">Local Emergency Contacts</div>
+        <a href="tel:+5076590-4374" class="ec-row ec-local">
+          <span class="ec-icon">🚔</span>
+          <div class="ec-info">
+            <div class="ec-name">Santa Clara Tourism Police</div>
+            <div class="ec-num">507 6590-4374</div>
+          </div>
+        </a>
         <a href="tel:+507993-3233" class="ec-row ec-local">
           <span class="ec-icon">🚔</span>
           <div class="ec-info">
@@ -251,18 +279,18 @@
             <div class="ec-num">507 993-3233</div>
           </div>
         </a>
-        <a href="tel:+5076590-4374" class="ec-row ec-local">
-          <span class="ec-icon">🚔</span>
-          <div class="ec-info">
-            <div class="ec-name">Farallón Station</div>
-            <div class="ec-num">507 6590-4374</div>
-          </div>
-        </a>
         <a href="tel:+507906-1125" class="ec-row ec-local">
           <span class="ec-icon">🚒</span>
           <div class="ec-info">
             <div class="ec-name">Antón Fire Station</div>
             <div class="ec-num">507 906-1125</div>
+          </div>
+        </a>
+        <a href="tel:+507993-225,,8047" class="ec-row ec-local">
+          <span class="ec-icon">🏨</span>
+          <div class="ec-info">
+            <div class="ec-name">Decameron Hotel Main Gate</div>
+            <div class="ec-num">507 993-225 · ext 8047</div>
           </div>
         </a>
       </div>
@@ -583,6 +611,7 @@
       <button class="mmd-item" onclick="navigate('notifications');closeMobileMenu()"><i data-lucide="bell"></i> Notifications</button>
       <button class="mmd-item" onclick="navigate('profile');closeMobileMenu()"><i data-lucide="user"></i> My Profile</button>
       <button class="mmd-item" onclick="navigate('settings');closeMobileMenu()"><i data-lucide="settings"></i> Settings</button>
+      <button class="mmd-item" id="mmdLangToggle" onclick="toggleLanguage();updateMobileLangLabel();"><i data-lucide="languages"></i> <span id="mmdLangLabel">Español</span></button>
       <button class="mmd-item danger" onclick="logout()"><i data-lucide="log-out"></i> Sign Out</button>
     </div>
 
@@ -615,15 +644,22 @@
         <a href="tel:103" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#FFF4EC;border-radius:10px;text-decoration:none;">
           <span>🚒</span><div><div style="font-size:13px;font-weight:700;color:#E07850">Bomberos — Fire</div><div style="font-size:12px;color:#9AA5B4">103</div></div>
         </a>
-        <a href="tel:+5076790-4807" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F0FFF4;border-radius:10px;text-decoration:none;">
-          <span>🏥</span><div><div style="font-size:13px;font-weight:700;color:var(--seafoam)">Buenaventura EMTS</div><div style="font-size:12px;color:#9AA5B4">507 6790-4807</div></div>
+        <div style="font-size:10px;color:#9AA5B4;padding:2px 4px;font-style:italic;">ℹ️ 911 · 104 · 103 may require a local SIM</div>
+        <a href="https://wa.me/50768320241" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F0FFF4;border-radius:10px;text-decoration:none;">
+          <span>🏥</span><div><div style="font-size:13px;font-weight:700;color:var(--seafoam)">Buenaventura EMTS <span style="display:inline-flex;align-items:center;gap:3px;background:#25D366;color:white;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;margin-left:4px;vertical-align:middle;">💬 WhatsApp</span></div><div style="font-size:12px;color:#9AA5B4">507 6832-0241</div></div>
         </a>
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#9AA5B4;margin:4px 0 2px 4px;">Local</div>
+        <a href="tel:+5076590-4374" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F8F8F8;border-radius:10px;text-decoration:none;">
+          <span>🚔</span><div><div style="font-size:13px;font-weight:700;color:var(--text-dark)">Santa Clara Tourism Police</div><div style="font-size:12px;color:#9AA5B4">507 6590-4374</div></div>
+        </a>
         <a href="tel:+507993-3233" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F8F8F8;border-radius:10px;text-decoration:none;">
           <span>🚔</span><div><div style="font-size:13px;font-weight:700;color:var(--text-dark)">Río Hato Station</div><div style="font-size:12px;color:#9AA5B4">507 993-3233</div></div>
         </a>
-        <a href="tel:+5076590-4374" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F8F8F8;border-radius:10px;text-decoration:none;">
-          <span>🚔</span><div><div style="font-size:13px;font-weight:700;color:var(--text-dark)">Farallón Station</div><div style="font-size:12px;color:#9AA5B4">507 6590-4374</div></div>
+        <a href="tel:+507906-1125" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#FFF4EC;border-radius:10px;text-decoration:none;">
+          <span>🚒</span><div><div style="font-size:13px;font-weight:700;color:#E07850">Antón Fire Station</div><div style="font-size:12px;color:#9AA5B4">507 906-1125</div></div>
+        </a>
+        <a href="tel:+507993-225,,8047" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F8F8F8;border-radius:10px;text-decoration:none;">
+          <span>🏨</span><div><div style="font-size:13px;font-weight:700;color:var(--text-dark)">Decameron Hotel Main Gate</div><div style="font-size:12px;color:#9AA5B4">507 993-225 · ext 8047</div></div>
         </a>
       </div>
     </div>
