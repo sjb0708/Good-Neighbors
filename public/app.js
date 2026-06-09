@@ -951,6 +951,10 @@ function openSafetyReportModal() {
         <div style="font-size:11.5px;color:#7F1D1D;line-height:1.45;">This reaches neighbors only — not police/fire/medical. For true emergencies, call emergency officials.</div>
       </div>
       <p style="font-size:13px;color:var(--text-mid);margin:0 0 14px;">Select a category to report:</p>
+      <div style="display:flex;align-items:baseline;gap:8px;margin:0 0 8px;">
+        <span style="font-size:11px;font-weight:800;color:#DC2626;letter-spacing:0.5px;">🚨 SECURITY ALERT</span>
+        <span style="font-size:10.5px;color:var(--text-light);">— urgent alert tone</span>
+      </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
         ${SAFETY_CATEGORIES_URGENT.map(c => `
           <button id="safetycat-${c.id.replace(/\s/g,'_')}" onclick="selectSafetyCategory('${c.id}')"
