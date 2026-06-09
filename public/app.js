@@ -910,21 +910,23 @@ async function renderSafety(container) {
   unique.forEach(post => container.appendChild(buildPostCard(post)));
 }
 
-const SAFETY_CATEGORIES = [
+const SAFETY_CATEGORIES_URGENT = [
   { id: 'Suspicious Activity', icon: '👁️', label: 'Suspicious Activity', color: '#E76F51' },
   { id: 'Security',            icon: '🔒', label: 'Security',            color: '#E63946' },
+  { id: 'Medical Emergency',   icon: '🚑', label: 'Medical Emergency',   color: '#E63946' },
+  { id: 'Fire',                icon: '🔥', label: 'Fire',                color: '#E63946' },
+];
+const SAFETY_CATEGORIES_NOTICE = [
   { id: 'Lost Pet',            icon: '🐾', label: 'Lost Pet',            color: '#F4A261' },
   { id: 'Lost Pet Found',      icon: '🐶', label: 'Pet Found',           color: '#2A9D8F' },
   { id: 'Property Damage',     icon: '🏚️', label: 'Property Damage',     color: '#E76F51' },
-  { id: 'Facilities',          icon: '🔧', label: 'Facilities Issue',     color: '#457B9D' },
-  { id: 'Medical Emergency',   icon: '🚑', label: 'Medical Emergency',   color: '#E63946' },
-  { id: 'Fire',                icon: '🔥', label: 'Fire',                color: '#E63946' },
-  { id: 'Flooding',            icon: '🌊', label: 'Flooding',            color: '#0077B6' },
+  { id: 'Facilities',          icon: '🔧', label: 'Facilities Issue',    color: '#457B9D' },
   { id: 'Road Works',          icon: '🚧', label: 'Road Works',          color: '#F4A261' },
   { id: 'Power Outage',        icon: '⚡', label: 'Power Outage',        color: '#E9C46A' },
   { id: 'Water Outage',        icon: '💧', label: 'Water Outage',        color: '#48CAE4' },
   { id: 'General Warning',     icon: '⚠️', label: 'General Warning',     color: '#F4A261' },
 ];
+const SAFETY_CATEGORIES = [...SAFETY_CATEGORIES_URGENT, ...SAFETY_CATEGORIES_NOTICE];
 
 let safetySelectedCategory = null;
 let safetyPhotoDataUrl = null;
@@ -948,9 +950,23 @@ function openSafetyReportModal() {
         <div style="font-size:12px;font-weight:800;color:#991B1B;margin-bottom:2px;">⚠️ Not an emergency service</div>
         <div style="font-size:11.5px;color:#7F1D1D;line-height:1.45;">This reaches neighbors only — not police/fire/medical. For true emergencies, call emergency officials.</div>
       </div>
-      <p style="font-size:13px;color:var(--text-mid);margin:0 0 16px;">Select a category to report:</p>
+      <p style="font-size:13px;color:var(--text-mid);margin:0 0 14px;">Select a category to report:</p>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+        ${SAFETY_CATEGORIES_URGENT.map(c => `
+          <button id="safetycat-${c.id.replace(/\s/g,'_')}" onclick="selectSafetyCategory('${c.id}')"
+            style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border:2px solid var(--border);border-radius:12px;background:white;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            <span style="font-size:24px;">${c.icon}</span>
+            <span style="font-size:11px;font-weight:700;color:var(--text-dark);text-align:center;line-height:1.2;">${c.label}</span>
+          </button>
+        `).join('')}
+      </div>
+
+      <div style="display:flex;align-items:baseline;gap:8px;margin:0 0 8px;">
+        <span style="font-size:11px;font-weight:800;color:var(--text-mid);letter-spacing:0.5px;">📋 NON-EMERGENCY NOTICE</span>
+        <span style="font-size:10.5px;color:var(--text-light);">— standard notification</span>
+      </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;">
-        ${SAFETY_CATEGORIES.map(c => `
+        ${SAFETY_CATEGORIES_NOTICE.map(c => `
           <button id="safetycat-${c.id.replace(/\s/g,'_')}" onclick="selectSafetyCategory('${c.id}')"
             style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border:2px solid var(--border);border-radius:12px;background:white;cursor:pointer;font-family:inherit;transition:all 0.15s;">
             <span style="font-size:24px;">${c.icon}</span>
