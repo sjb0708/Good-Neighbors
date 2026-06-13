@@ -187,12 +187,21 @@ async function loadWhatsHappening() {
   const el = document.getElementById('happeningList');
   if (!el) return;
 
-  // Pull recent posts from feed + safety section
-  const [feedPosts, safetyPosts] = await Promise.all([
+  // Pull recent items from posts (feed + safety) and marketplace.
+  const [feedPosts, safetyPosts, marketplace] = await Promise.all([
     fetchJSON('/api/posts?section=feed'),
-    fetchJSON('/api/posts?section=safety')
+    fetchJSON('/api/posts?section=safety'),
+    fetchJSON('/api/marketplace')
   ]);
-  const all = [...(safetyPosts || []), ...(feedPosts || [])];
+  const marketplaceItems = (marketplace || []).slice(0, 10).map(m => ({
+    id: 'mkt-' + m.id,
+    type: 'marketplace',
+    content: m.title + (m.free ? ' — Free' : m.price ? ` — $${m.price.toFixed(2)}` : ''),
+    author: m.seller,
+    createdAt: m.createdAt,
+  }));
+  const all = [...(safetyPosts || []), ...(feedPosts || []), ...marketplaceItems]
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
   // Deduplicate + pick the most relevant recent items (max 5)
   const seen = new Set();
@@ -207,8 +216,8 @@ async function loadWhatsHappening() {
   if (!picks.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-light);">Nothing new right now.</div>'; return; }
 
   el.innerHTML = picks.map(p => {
-    const dotClass = p.type === 'safety' ? 'safety' : p.type === 'events' ? 'event' : p.type === 'lost_found' ? 'lost' : 'recommend';
-    const section = p.type === 'safety' ? 'safety' : p.type === 'events' ? 'events' : p.type === 'lost_found' ? 'feed' : 'feed';
+    const dotClass = p.type === 'safety' ? 'safety' : p.type === 'events' ? 'event' : p.type === 'lost_found' ? 'lost' : p.type === 'marketplace' ? 'marketplace' : 'recommend';
+    const section = p.type === 'safety' ? 'safety' : p.type === 'events' ? 'events' : p.type === 'marketplace' ? 'marketplace' : 'feed';
     const preview = (p.alertType ? `<strong>${p.alertType}</strong>` : `<strong>${escHtml(p.author?.name || '')}</strong>`) +
       ' — ' + escHtml((p.content || '').slice(0, 52)) + ((p.content || '').length > 52 ? '…' : '');
     const timeStr = p.createdAt ? groupTimeAgo(p.createdAt) : '';

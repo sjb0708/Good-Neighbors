@@ -2867,6 +2867,7 @@ body {
 .happening-dot.event { background: var(--purple); }
 .happening-dot.lost { background: #F4A261; }
 .happening-dot.recommend { background: var(--seafoam); }
+.happening-dot.marketplace { background: var(--ocean, #0077B6); }
 
 .happening-text { font-size: 12px; color: var(--text-mid); line-height: 1.4; }
 .happening-text strong { color: var(--text-dark); font-weight: 600; }
