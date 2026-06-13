@@ -318,7 +318,7 @@ async function notifyMentions({ text, actor, postId, excludeIds = [] }) {
         INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
         VALUES (${u.id}, 'mention', ${msg}, ${actor.avatar_hex}, ${actor.initials}, ${postId || null})
       `;
-      pushIfEnabled(u.id, 'comments', {
+      await pushIfEnabled(u.id, 'comments', {
         title: `${actor.name} mentioned you`,
         body: (text || '').trim().slice(0, 180),
         data: { type: 'mention', postId: postId || null }
@@ -1038,13 +1038,15 @@ app.get('/api/auth/verify-email', async (req, res) => {
           sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
               VALUES (${n.id}, 'new_neighbor', ${`${row.name} just joined Costa Blanca Connect — say hello! 👋`}, ${row.avatar_hex}, ${row.initials})`
         ));
-        for (const n of allNeighbors) {
+        const pushResults = await Promise.allSettled(allNeighbors.map(n =>
           pushIfEnabled(n.id, 'neighbors', {
             title: 'New Neighbor 👋',
             body: `${row.name} just joined Costa Blanca Connect`,
             data: { type: 'new_neighbor', userId: row.uid }
-          }).catch(() => {});
-        }
+          })
+        ));
+        const pushSent = pushResults.reduce((c, r) => c + (r.status === 'fulfilled' ? (r.value?.sent || 0) : 0), 0);
+        console.log(`[push:new_neighbor] user=${row.uid} recipients=${allNeighbors.length} sent=${pushSent}`);
       }
     }
     res.json({ ok: true, message: 'Email verified! You can now log in.' });
@@ -2050,7 +2052,7 @@ app.post('/api/posts/:id/react', requireAuth(async (req, res) => {
       const msg = `${u.name} reacted ${emojiMap[reaction]||''} to your post`;
       await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
         VALUES (${post.author_id}, 'reaction', ${msg}, ${u.avatar_hex}, ${u.initials}, ${post.id})`;
-      pushIfEnabled(post.author_id, 'comments', {
+      await pushIfEnabled(post.author_id, 'comments', {
         title: `${u.name} reacted ${emojiMap[reaction]||''}`,
         body: 'Tap to see your post',
         data: { type: 'reaction', postId: post.id }
@@ -2132,7 +2134,7 @@ app.post('/api/comments/:commentId/like', requireAuth(async (req, res) => {
     await sql`INSERT INTO comment_likes (comment_id, user_id) VALUES (${req.params.commentId}, ${userId})`;
     if (c.author_id !== userId) {
       await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id) VALUES (${c.author_id}, 'comment_like', ${`${req.currentUser.name} liked your comment`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials}, ${req.params.commentId})`;
-      pushIfEnabled(c.author_id, 'comments', {
+      await pushIfEnabled(c.author_id, 'comments', {
         title: `${req.currentUser.name} liked your comment 👍`,
         body: 'Tap to view the conversation',
         data: { type: 'comment_like', commentId: req.params.commentId }
@@ -2168,7 +2170,7 @@ app.post('/api/posts/:id/comments', requireAuth(async (req, res) => {
     const msg = `${u.name} commented on your post${snippet ? ` "${snippet}${post.post_content.length > 40 ? '…' : ''}"` : ''}`;
     await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
       VALUES (${post.author_id}, 'comment', ${msg}, ${u.avatar_hex}, ${u.initials}, ${req.params.id})`;
-    pushIfEnabled(post.author_id, 'comments', {
+    await pushIfEnabled(post.author_id, 'comments', {
       title: `${u.name} commented`,
       body: content.trim().slice(0, 180),
       data: { type: 'comment', postId: req.params.id }
@@ -3519,13 +3521,15 @@ app.post('/api/groups/:id/posts', requireAuth(async (req, res) => {
     ));
     const pushCategory = isEvent ? 'events' : 'groups';
     const pushTitle = isEvent ? `New event in ${g.name}` : `New post in ${g.name}`;
-    for (const m of members) {
+    const pushResults = await Promise.allSettled(members.map(m =>
       pushIfEnabled(m.user_id, pushCategory, {
         title: pushTitle,
         body: isEvent ? eventTitle.slice(0, 180) : (content || pollQuestion || '').slice(0, 180),
         data: { type: isEvent ? 'group_event' : 'group_post', groupId: g.id, postId: post.id }
-      }).catch(() => {});
-    }
+      })
+    ));
+    const pushSent = pushResults.reduce((c, r) => c + (r.status === 'fulfilled' ? (r.value?.sent || 0) : 0), 0);
+    console.log(`[push:${isEvent ? 'group_event' : 'group_post'}] post=${post.id} recipients=${members.length} sent=${pushSent}`);
   }
 
   res.json({
@@ -3814,7 +3818,7 @@ app.post('/api/conversations/:id/messages', requireAuth(async (req, res) => {
   const [msg] = await sql`INSERT INTO direct_messages (conversation_id, sender_id, content) VALUES (${req.params.id}, ${userId}, ${content.trim()}) RETURNING *`;
   await sql`UPDATE conversations SET last_message_at = NOW(), hidden_for_user1 = FALSE, hidden_for_user2 = FALSE WHERE id=${req.params.id}`;
   await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id) VALUES (${partnerId}, 'message', ${`${req.currentUser.name} sent you a message`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials}, ${req.params.id})`;
-  pushIfEnabled(partnerId, 'messages', {
+  await pushIfEnabled(partnerId, 'messages', {
     title: req.currentUser.name,
     body: content.trim().slice(0, 180),
     data: { type: 'message', conversationId: req.params.id }
