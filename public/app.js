@@ -2003,7 +2003,7 @@ function renderSettings(container) {
         <label class="toggle-switch"><input type="checkbox" data-pref="groups" onchange="saveNotifPref(this)"><span class="toggle-slider"></span></label>
       </div>
       <div class="settings-row">
-        <div class="settings-row-info"><div class="settings-row-label">Lost & Found</div><div class="settings-row-sub">New lost & found posts in the community</div></div>
+        <div class="settings-row-info"><div class="settings-row-label">In Search of</div><div class="settings-row-sub">New "In Search of" posts in the community</div></div>
         <label class="toggle-switch"><input type="checkbox" data-pref="lost_found" onchange="saveNotifPref(this)"><span class="toggle-slider"></span></label>
       </div>
       <div class="settings-row">
@@ -7091,7 +7091,7 @@ function capitalize(str) {
 
 function postTypeLabel(type) {
   const labels = {
-    general: 'General', safety: '⚠ Safety', lost_found: 'Lost & Found',
+    general: 'General', safety: '⚠ Safety', lost_found: 'In Search of',
     for_sale: 'For Sale', free: 'Free', events: 'Event',
     recommendation: 'Recommendation', poll: 'Poll'
   };

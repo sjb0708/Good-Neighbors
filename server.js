@@ -1867,13 +1867,13 @@ app.post('/api/posts', requireAuth(async (req, res) => {
   if (type === 'lost_found') {
     const allMembers = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${u.id}`;
     if (allMembers.length) {
-      const msg = `${u.name} posted a Lost & Found: "${(content||'').slice(0,80)}${(content||'').length>80?'…':''}"`;
+      const msg = `${u.name} posted an "In Search of": "${(content||'').slice(0,80)}${(content||'').length>80?'…':''}"`;
       await Promise.all(allMembers.map(m =>
         sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
             VALUES (${m.id}, 'lost_found', ${msg}, ${u.avatar_hex}, ${u.initials})`
       ));
       const results = await Promise.allSettled(allMembers.map(m =>
-        pushIfEnabled(m.id, 'lost_found', { title: 'Lost & Found', body: msg, data: { type: 'lost_found', postId: post.id } })
+        pushIfEnabled(m.id, 'lost_found', { title: 'In Search of', body: msg, data: { type: 'lost_found', postId: post.id } })
       ));
       const sent = results.reduce((n, r) => n + (r.status === 'fulfilled' ? (r.value?.sent || 0) : 0), 0);
       console.log(`[push:lost_found] post=${post.id} recipients=${allMembers.length} sent=${sent}`);
