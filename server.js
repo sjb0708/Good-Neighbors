@@ -229,6 +229,29 @@ async function fcmSendOne(token, { title, body, data }) {
   }
 }
 
+// Total unread across the app for a single user — used as the iOS home-screen
+// badge number so the icon shows "3" or "4" like Mail does. Falls back to a
+// sane 0 if any sub-query fails; we never want a bad count to block a push.
+async function computeUnreadBadge(userId) {
+  try {
+    await sql`CREATE TABLE IF NOT EXISTS user_section_reads (user_id UUID REFERENCES users(id) ON DELETE CASCADE, section VARCHAR(50) NOT NULL, last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (user_id, section))`;
+    const reads = await sql`SELECT section, last_seen_at FROM user_section_reads WHERE user_id = ${userId}`;
+    const readMap = Object.fromEntries(reads.map(r => [r.section, r.last_seen_at]));
+    const epoch = new Date(0);
+    const [feed, safety, mkt, ev, msg] = await Promise.all([
+      sql`SELECT COUNT(*)::int AS c FROM posts WHERE section='feed' AND (type IS NULL OR type != 'safety') AND created_at > ${readMap.feed || epoch} AND author_id != ${userId}`,
+      sql`SELECT COUNT(*)::int AS c FROM posts WHERE (section='safety' OR type='safety') AND COALESCE(severity,'medium') != 'resolved' AND created_at > ${readMap.safety || epoch} AND author_id != ${userId}`,
+      sql`SELECT COUNT(*)::int AS c FROM marketplace_items WHERE created_at > ${readMap.marketplace || epoch} AND seller_id != ${userId}`,
+      sql`SELECT COUNT(*)::int AS c FROM events WHERE created_at > ${readMap.events || epoch} AND host_id != ${userId} AND event_date >= CURRENT_DATE`,
+      sql`SELECT COALESCE(SUM((SELECT COUNT(*)::int FROM direct_messages WHERE conversation_id=c.id AND sender_id!=${userId} AND read=false)),0)::int AS c FROM conversations c WHERE c.user1_id=${userId} OR c.user2_id=${userId}`.catch(() => [{ c: 0 }]),
+    ]);
+    return (feed[0].c || 0) + (safety[0].c || 0) + (mkt[0].c || 0) + (ev[0].c || 0) + (msg[0]?.c || 0);
+  } catch (e) {
+    console.error('[push] badge compute failed:', e.message);
+    return 0;
+  }
+}
+
 async function sendPush(userId, { title, body, data, sound } = {}) {
   if (!apnsConfigured && !fcmConfigured) return { ok: false, sent: 0, skipped: true };
   if (!userId || !title || !body) return { ok: false, sent: 0 };
@@ -237,7 +260,8 @@ async function sendPush(userId, { title, body, data, sound } = {}) {
     rows = await sql`SELECT id, token, platform FROM device_tokens WHERE user_id = ${userId}`;
   } catch (err) { console.error('[push] token fetch failed:', err.message); return { ok: false, sent: 0 }; }
   if (!rows.length) return { ok: true, sent: 0 };
-  const apnsPayload = { aps: { alert: { title, body }, sound: sound || 'default' }, ...(data || {}) };
+  const badge = await computeUnreadBadge(userId);
+  const apnsPayload = { aps: { alert: { title, body }, sound: sound || 'default', badge }, ...(data || {}) };
   let sent = 0;
   for (const row of rows) {
     let r;
