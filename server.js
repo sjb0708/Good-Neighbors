@@ -1872,9 +1872,11 @@ app.post('/api/posts', requireAuth(async (req, res) => {
         sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
             VALUES (${m.id}, 'lost_found', ${msg}, ${u.avatar_hex}, ${u.initials})`
       ));
-      for (const m of allMembers) {
-        pushIfEnabled(m.id, 'lost_found', { title: 'Lost & Found', body: msg, data: { type: 'lost_found', postId: post.id } }).catch(() => {});
-      }
+      const results = await Promise.allSettled(allMembers.map(m =>
+        pushIfEnabled(m.id, 'lost_found', { title: 'Lost & Found', body: msg, data: { type: 'lost_found', postId: post.id } })
+      ));
+      const sent = results.reduce((n, r) => n + (r.status === 'fulfilled' ? (r.value?.sent || 0) : 0), 0);
+      console.log(`[push:lost_found] post=${post.id} recipients=${allMembers.length} sent=${sent}`);
     }
   }
 
@@ -1888,36 +1890,44 @@ app.post('/api/posts', requireAuth(async (req, res) => {
     const body = (content || '').slice(0, 180);
     const URGENT_SAFETY_CATEGORIES = new Set(['Suspicious Activity','Security','Medical Emergency','Fire']);
     const sound = URGENT_SAFETY_CATEGORIES.has(alertType) ? 'safety-alert.caf' : undefined;
-    for (const m of recipients) {
-      pushIfEnabled(m.id, 'safety', { title: sevLabel, body, sound, data: { type: 'safety', postId: post.id } }).catch(() => {});
-    }
+    const results = await Promise.allSettled(recipients.map(m =>
+      pushIfEnabled(m.id, 'safety', { title: sevLabel, body, sound, data: { type: 'safety', postId: post.id } })
+    ));
+    const sent = results.reduce((n, r) => n + (r.status === 'fulfilled' ? (r.value?.sent || 0) : 0), 0);
+    console.log(`[push:safety] post=${post.id} recipients=${recipients.length} sent=${sent}`);
   }
 
   // Regular feed posts → push to all neighbors with the "New Posts in Feed" toggle on.
   if (type !== 'safety' && type !== 'lost_found' && section === 'feed') {
     const recipients = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${u.id}`;
     const body = (content || '').slice(0, 180) || 'Tap to see the new post';
-    for (const m of recipients) {
-      pushIfEnabled(m.id, 'feed', { title: `${u.name} posted`, body, data: { type: 'feed', postId: post.id } }).catch(() => {});
-    }
+    const results = await Promise.allSettled(recipients.map(m =>
+      pushIfEnabled(m.id, 'feed', { title: `${u.name} posted`, body, data: { type: 'feed', postId: post.id } })
+    ));
+    const sent = results.reduce((n, r) => n + (r.status === 'fulfilled' ? (r.value?.sent || 0) : 0), 0);
+    console.log(`[push:feed] post=${post.id} recipients=${recipients.length} sent=${sent}`);
   }
 
   // Marketplace listings → push to all neighbors with the "Marketplace" toggle on.
   if (section === 'marketplace') {
     const recipients = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${u.id}`;
     const body = (content || '').slice(0, 180) || 'New item listed';
-    for (const m of recipients) {
-      pushIfEnabled(m.id, 'marketplace', { title: `${u.name} listed an item`, body, data: { type: 'marketplace', postId: post.id } }).catch(() => {});
-    }
+    const results = await Promise.allSettled(recipients.map(m =>
+      pushIfEnabled(m.id, 'marketplace', { title: `${u.name} listed an item`, body, data: { type: 'marketplace', postId: post.id } })
+    ));
+    const sent = results.reduce((n, r) => n + (r.status === 'fulfilled' ? (r.value?.sent || 0) : 0), 0);
+    console.log(`[push:marketplace] post=${post.id} recipients=${recipients.length} sent=${sent}`);
   }
 
   // Event posts → push as event reminders to all neighbors with the "Event Reminders" toggle on.
   if (type === 'event' || section === 'events') {
     const recipients = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${u.id}`;
     const body = (content || '').slice(0, 180) || 'New community event';
-    for (const m of recipients) {
-      pushIfEnabled(m.id, 'events', { title: 'New Event', body, data: { type: 'event', postId: post.id } }).catch(() => {});
-    }
+    const results = await Promise.allSettled(recipients.map(m =>
+      pushIfEnabled(m.id, 'events', { title: 'New Event', body, data: { type: 'event', postId: post.id } })
+    ));
+    const sent = results.reduce((n, r) => n + (r.status === 'fulfilled' ? (r.value?.sent || 0) : 0), 0);
+    console.log(`[push:events] post=${post.id} recipients=${recipients.length} sent=${sent}`);
   }
 
   // Auto-cross-post to Safety & Security Watch group if high severity
