@@ -2946,7 +2946,7 @@ app.post('/api/marketplace', requireAuth(async (req, res) => {
   `;
   await awardPoints(req.currentUser.id, 'marketplace_list', POINTS.marketplace_list);
 
-  // Notify all neighbors about the new listing
+  // Notify all neighbors about the new listing — in-app + push.
   const u = req.currentUser;
   const neighbors = await sql`SELECT id FROM users WHERE role IN ('neighbor','admin') AND id != ${u.id}`;
   if (neighbors.length) {
@@ -2955,6 +2955,12 @@ app.post('/api/marketplace', requireAuth(async (req, res) => {
       sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
           VALUES (${n.id}, 'marketplace', ${msg}, ${u.avatar_hex}, ${u.initials})`
     ));
+    const pushBody = isFree ? `${title} — Free` : price ? `${title} — $${parseFloat(price).toFixed(2)}` : title;
+    const results = await Promise.allSettled(neighbors.map(n =>
+      pushIfEnabled(n.id, 'marketplace', { title: `${u.name} listed an item`, body: pushBody, data: { type: 'marketplace', itemId: item.id } })
+    ));
+    const sent = results.reduce((n2, r) => n2 + (r.status === 'fulfilled' ? (r.value?.sent || 0) : 0), 0);
+    console.log(`[push:marketplace] item=${item.id} recipients=${neighbors.length} sent=${sent}`);
   }
 
   res.json({ ok: true, item });
