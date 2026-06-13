@@ -1320,6 +1320,7 @@ app.post('/api/admin/verification-requests/:id/approve', requireAdmin(async (req
   await awardPoints(vr.user_id, 'verified', 20);
   await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
             VALUES (${vr.user_id}, 'verified', 'Congrats! You are now a Verified Neighbor ✓', ${vr.avatar_hex}, ${vr.initials})`;
+  await pushIfEnabled(vr.user_id, 'neighbors', { title: 'You\'re a Verified Neighbor ✓', body: 'Congrats! Your verification was approved.', data: { type: 'verified' } }).catch(() => {});
   res.json({ ok: true });
 }));
 
@@ -1330,6 +1331,7 @@ app.post('/api/admin/verification-requests/:id/deny', requireAdmin(async (req, r
   await sql`UPDATE verification_requests SET status='denied', reviewed_by_user_id=${req.currentUser.id}, reviewed_at=NOW() WHERE id=${vr.id}`;
   await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials)
             VALUES (${vr.user_id}, 'verify_denied', 'Your verification request was not approved. You may submit a new request with a clearer document.', ${vr.avatar_hex}, ${vr.initials})`;
+  await pushIfEnabled(vr.user_id, 'neighbors', { title: 'Verification not approved', body: 'You may submit a new request with a clearer document.', data: { type: 'verify_denied' } }).catch(() => {});
   res.json({ ok: true });
 }));
 
@@ -2240,6 +2242,7 @@ app.post('/api/events/:id/rsvp', requireAuth(async (req, res) => {
       const msg = `${u.name} ${label} your event "${(event.title||'').slice(0,50)}"`;
       await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
         VALUES (${event.host_id}, 'rsvp', ${msg}, ${u.avatar_hex}, ${u.initials}, ${event.id})`;
+      await pushIfEnabled(event.host_id, 'events', { title: 'Event RSVP update', body: msg, data: { type: 'rsvp', eventId: event.id } }).catch(() => {});
     }
   }
 
@@ -2550,6 +2553,7 @@ app.post('/api/businesses/:id/recommend', requireAuth(async (req, res) => {
     const msg = `${u.name} left a ${stars}★ review on ${biz.name}`;
     await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
       VALUES (${biz.claimed_by_user_id}, 'review', ${msg}, ${u.avatar_hex}, ${u.initials}, ${biz.id})`;
+    await pushIfEnabled(biz.claimed_by_user_id, 'comments', { title: `New review on ${biz.name}`, body: msg, data: { type: 'review', businessId: biz.id } }).catch(() => {});
   }
   res.json({ ok: true });
 }));
@@ -2748,6 +2752,7 @@ app.post('/api/business/reviews/:id/reply', requireAuth(async (req, res) => {
     const msg = `${biz?.name || 'A business'} replied to your review`;
     await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
       VALUES (${review.author_id}, 'review_reply', ${msg}, ${u.avatar_hex}, ${u.initials}, ${u.business_id})`;
+    await pushIfEnabled(review.author_id, 'comments', { title: 'Reply to your review', body: msg, data: { type: 'review_reply', businessId: u.business_id } }).catch(() => {});
   }
   res.json({ ok: true });
 }));
@@ -3338,6 +3343,7 @@ app.post('/api/groups/:id/members/:username/promote', requireAuth(async (req, re
   await sql`UPDATE group_members SET is_admin=true WHERE group_id=${g.id} AND user_id=${target.id}`;
   await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
     VALUES (${target.id}, 'group_promote', ${`You're now a co-admin of ${g.name}`}, ${u.avatar_hex}, ${u.initials}, ${g.id})`;
+  await pushIfEnabled(target.id, 'groups', { title: `Promoted in ${g.name}`, body: `You're now a co-admin of ${g.name}`, data: { type: 'group_promote', groupId: g.id } }).catch(() => {});
   res.json({ ok: true });
 }));
 
@@ -3387,6 +3393,7 @@ app.post('/api/groups/:id/join', requireAuth(async (req, res) => {
     if (g.created_by_user_id && g.created_by_user_id !== u.id) {
       await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
                 VALUES (${g.created_by_user_id}, 'group_join_request', ${`${u.name} requested to join ${g.name}`}, ${u.avatar_hex}, ${u.initials}, ${g.id})`;
+      await pushIfEnabled(g.created_by_user_id, 'groups', { title: `Join request: ${g.name}`, body: `${u.name} requested to join ${g.name}`, data: { type: 'group_join_request', groupId: g.id } }).catch(() => {});
     }
     return res.json({ requested: true });
   }
@@ -3570,6 +3577,7 @@ app.post('/api/group-posts/:postId/like', requireAuth(async (req, res) => {
     await sql`INSERT INTO group_post_likes (post_id, user_id) VALUES (${req.params.postId}, ${userId})`;
     if (p.author_id !== userId) {
       await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id) VALUES (${p.author_id}, 'group_like', ${`${req.currentUser.name} liked your post`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials}, ${req.params.postId})`;
+      await pushIfEnabled(p.author_id, 'groups', { title: 'New like on your group post', body: `${req.currentUser.name} liked your post`, data: { type: 'group_like', postId: req.params.postId } }).catch(() => {});
     }
   }
   const [{ n }] = await sql`SELECT COUNT(*)::int AS n FROM group_post_likes WHERE post_id=${req.params.postId}`;
@@ -3608,6 +3616,7 @@ app.post('/api/group-posts/:postId/comments', requireAuth(async (req, res) => {
   const [c] = await sql`INSERT INTO group_post_comments (post_id, author_id, content) VALUES (${req.params.postId}, ${userId}, ${content.trim()}) RETURNING *`;
   if (p.author_id !== userId) {
     await sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id) VALUES (${p.author_id}, 'group_comment', ${`${req.currentUser.name} commented on your post`}, ${req.currentUser.avatar_hex}, ${req.currentUser.initials}, ${req.params.postId})`;
+    await pushIfEnabled(p.author_id, 'groups', { title: 'New comment on your group post', body: `${req.currentUser.name} commented on your post`, data: { type: 'group_comment', postId: req.params.postId } }).catch(() => {});
   }
   await notifyMentions({
     text: content,
@@ -3857,6 +3866,11 @@ app.post('/api/transport/carts', requireAuth(async (req, res) => {
       sql`INSERT INTO notifications (user_id, type, message, avatar_hex, initials, related_id)
           VALUES (${n.id}, 'cart_listing', ${msg}, ${u.avatar_hex}, ${u.initials}, ${cart.id})`
     ));
+    const results = await Promise.allSettled(neighbors.map(n =>
+      pushIfEnabled(n.id, 'marketplace', { title: 'New golf cart for rent', body: `${makeModel}${rate ? ` — ${rate}` : ''}`, data: { type: 'cart_listing', cartId: cart.id } })
+    ));
+    const sent = results.reduce((n2, r) => n2 + (r.status === 'fulfilled' ? (r.value?.sent || 0) : 0), 0);
+    console.log(`[push:cart_listing] cart=${cart.id} recipients=${neighbors.length} sent=${sent}`);
   }
 
   res.json(cart);
